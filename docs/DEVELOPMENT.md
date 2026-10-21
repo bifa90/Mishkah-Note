@@ -71,6 +71,19 @@ MUFAKKIRA_CLEAN_EXIT=1 QT_QPA_PLATFORM=offscreen pytest
 3. `pytest tests/test_widgets.py::test_every_string_exists_in_every_language`
    سيكشف أي مفتاح ناقص.
 
+## التكامل المستمر · Continuous integration
+
+ملف سير العمل جاهز في `docs/ci/github-actions.yml` (اختبار على Python 3.9 و3.11
+و3.13، ثم بناء sdist/wheel/.deb والتحقق من أن الأيقونات المُلتزمة ليست قديمة).
+لم يُوضع تحت `.github/workflows/` لأن صلاحية الدفع الحالية لا تسمح بتعديل ملفات
+سير العمل. لتفعيله:
+
+```bash
+mkdir -p .github/workflows
+git mv docs/ci/github-actions.yml .github/workflows/ci.yml
+git commit -m "ci: enable the test and packaging workflow"
+```
+
 ## الأيقونة · The icon
 
 الأيقونة مرسومة برمجيًا، لا صورة مولّدة، لتكون قابلة للمراجعة وإعادة التوليد:

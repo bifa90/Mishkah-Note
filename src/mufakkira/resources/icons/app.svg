@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <title>Notepad — مفكرتي</title>
+  <rect width="100" height="100" rx="22" fill="#8ED0E8"/>
+  <!-- tail -->
+  <polygon points="72,50 90,30 86,50 90,70" fill="#181C20"/>
+  <!-- body -->
+  <ellipse cx="46" cy="50" rx="30" ry="17" fill="#FFFFFF"/>
+  <!-- dorsal fin -->
+  <polygon points="38,36 50,18 58,37" fill="#181C20"/>
+  <!-- pelvic fin -->
+  <polygon points="42,63 52,78 58,62" fill="#181C20"/>
+  <!-- gill stripe -->
+  <path d="M51 35.5 A15 15 0 0 0 51 64.5 L60 64.5 A15 15 0 0 1 60 35.5 Z" fill="#181C20"/>
+  <!-- eye -->
+  <circle cx="29" cy="47" r="5" fill="#181C20"/>
+  <circle cx="28.2" cy="45.7" r="1.8" fill="#FFFFFF"/>
+  <!-- mouth -->
+  <polygon points="16.5,47 22,50 16.5,53" fill="#181C20"/>
+</svg>

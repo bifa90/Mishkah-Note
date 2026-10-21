@@ -1,0 +1,42 @@
+# Maintainer: Notepad-Linux contributors <noreply@github.com>
+pkgname=notepad-linux
+pkgver=2.0.0
+pkgrel=1
+pkgdesc="Windows 11-style text editor with first-class Arabic and RTL support"
+arch=('any')
+url="https://github.com/bifa90/Notepad-Linux"
+license=('MIT')
+depends=('python' 'pyside6' 'python-charset-normalizer')
+optdepends=(
+    'noto-fonts: Devanagari, Bengali, Cyrillic and CJK coverage'
+    'noto-fonts-cjk: Chinese interface and documents'
+    'ttf-liberation: Latin fallback'
+)
+makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
+options=('!strip')
+source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+sha256sums=('SKIP')
+
+build() {
+    cd "Notepad-Linux-$pkgver"
+    python -m build --wheel --no-isolation
+}
+
+package() {
+    cd "Notepad-Linux-$pkgver"
+
+    python -m installer --destdir="$pkgdir" dist/*.whl
+
+    install -Dm644 packaging/common/notepad.desktop \
+        "$pkgdir/usr/share/applications/notepad-linux.desktop"
+
+    for size in 16 24 32 48 64 128 256 512; do
+        install -Dm644 "src/mufakkira/resources/icons/app-${size}.png" \
+            "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/notepad-linux.png"
+    done
+    install -Dm644 src/mufakkira/resources/icons/app.svg \
+        "$pkgdir/usr/share/icons/hicolor/scalable/apps/notepad-linux.svg"
+
+    install -Dm644 packaging/common/notepad.1 "$pkgdir/usr/share/man/man1/notepad.1"
+    install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+}

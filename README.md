@@ -204,7 +204,7 @@ notepad            # أو: mufakkira
 ```bash
 pip install -e ".[dev]"
 python -m mufakkira
-pytest -q                      # 273 اختبارًا
+pytest -q                      # 274 اختبارًا
 ruff check src tests tools
 ```
 

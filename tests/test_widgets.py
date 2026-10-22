@@ -130,3 +130,17 @@ def test_progress_dialog_counts_bytes(qapp):
     assert dialog.value() == 1024 * 1024
     assert dialog.maximum() == 4 * 1024 * 1024
     dialog.close()
+
+
+def test_direction_chip_icon(qapp):
+    """The chip must never show an ambiguous glyph such as "@"."""
+    from mufakkira.core.text_direction import AUTO, LTR, RTL
+    from mufakkira.views import status_bar_widget
+
+    widget = status_bar_widget.StatusBarWidget()
+    widget.set_direction(AUTO, resolved=LTR)
+    assert "@" not in widget._direction.text()
+    widget.set_direction(RTL)
+    assert widget._direction.text() == f"{status_bar_widget._DIRECTION_ICONS[RTL]} RTL"
+    widget.set_direction(AUTO, resolved=RTL)
+    assert "RTL" in widget._direction.text()

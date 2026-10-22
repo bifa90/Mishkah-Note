@@ -16,7 +16,9 @@ from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePol
 from mufakkira.core.i18n import tr
 from mufakkira.core.text_direction import AUTO, LTR, RTL
 
-_DIRECTION_ICONS = {AUTO: "⌾", LTR: "→", RTL: "←"}
+#: A round glyph for "automatic" keeps the chip readable in both directions
+#: (the old target-like mark read as "@" at 12 px).
+_DIRECTION_ICONS = {AUTO: "◉", LTR: "→", RTL: "←"}
 _DIRECTION_ORDER = (AUTO, RTL, LTR)
 
 

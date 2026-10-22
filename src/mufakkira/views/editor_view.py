@@ -60,6 +60,8 @@ DEFAULT_FONT_SIZE = 13
 #: In *auto* mode alignment is resolved per paragraph; stop after this many
 #: blocks so that a 300 MB preview never pays for a full document walk.
 AUTO_DETECT_BLOCKS = 200
+#: Breathing room between the text and the viewport edge, in pixels.
+TEXT_MARGIN = 4
 
 # Hardware scan codes for the modifier keys.
 #   Linux/X11 and Wayland (evdev + 8)      : LCtrl 37, LShift 50, RShift 62, RCtrl 105
@@ -109,6 +111,10 @@ class EditorView(QPlainTextEdit):
             self.setFont(font)
 
         self.setUndoRedoEnabled(True)
+        # The document margin is direction-agnostic in Qt (it is always added
+        # on the left), which leaves RTL text glued to the right edge.  The
+        # margin is therefore applied as a *viewport* margin, mirrored for RTL.
+        self.document().setDocumentMargin(0)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setTabStopDistance(self.fontMetrics().horizontalAdvance(" ") * self._tab_width)
         self.setMouseTracking(True)
@@ -774,11 +780,11 @@ class EditorView(QPlainTextEdit):
         return 14 + self.fontMetrics().horizontalAdvance("9") * digits
 
     def _update_gutter_width(self, _=0) -> None:
-        width = self.gutter_width()
+        start = self.gutter_width() + TEXT_MARGIN
         if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
-            self.setViewportMargins(0, 0, width, 0)
+            self.setViewportMargins(TEXT_MARGIN, 0, start, 0)
         else:
-            self.setViewportMargins(width, 0, 0, 0)
+            self.setViewportMargins(start, 0, TEXT_MARGIN, 0)
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
         gutter = self._gutter

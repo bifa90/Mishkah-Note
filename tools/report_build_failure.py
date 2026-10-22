@@ -12,10 +12,15 @@ def main() -> int:
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
-        tail = "\n".join(text.splitlines()[-80:])[-14000:]
-        message = f"{path.name}:\n{tail}"
-        message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
-        print(f"::error::{message}")
+        # An annotation is truncated by GitHub at a few KiB. Emit the newest
+        # chunk first so the real exception is visible even for verbose pip.
+        text = text.replace("%0A", "\n").replace("%0D", "\r")
+        tail = "\n".join(text.splitlines()[-140:])[-18000:]
+        chunks = [tail[i:i + 2800] for i in range(0, len(tail), 2800)]
+        for index in reversed(range(len(chunks))):
+            message = f"{path.name} ({index + 1}/{len(chunks)}):\n{chunks[index]}"
+            message = message.replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
+            print(f"::error::{message}")
     return 0
 
 

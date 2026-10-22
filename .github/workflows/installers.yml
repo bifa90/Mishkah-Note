@@ -11,12 +11,26 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+  actions: read
 concurrency:
   group: installer-checks-${{ github.ref }}
   cancel-in-progress: true
 env:
   PYTHON_VERSION: "3.11"
 jobs:
+  diagnose:
+    name: Read failed installer logs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Report the recorded installer failures
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          mkdir -p build
+          gh api repos/${{ github.repository }}/actions/jobs/119838192973/logs > build/failed-flatpak.log
+          gh api repos/${{ github.repository }}/actions/jobs/119829601084/logs > build/failed-windows.log
+          python3 tools/report_build_failure.py build/failed-flatpak.log build/failed-windows.log
   flatpak:
     name: Flatpak
     runs-on: ubuntu-latest

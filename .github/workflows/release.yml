@@ -28,7 +28,9 @@ env:
 
 concurrency:
   group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
-  cancel-in-progress: false
+  # Superseded branch candidates must not block the approved build.
+  # Published-tag and manual release runs are never cancelled automatically.
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
 
 jobs:
   validate:

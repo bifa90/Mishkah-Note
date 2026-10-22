@@ -70,6 +70,8 @@ def test_arabic_font_resolves_to_bundled_family(qapp):
 
 @pytest.mark.parametrize("code", PREFERRED)
 def test_font_picker_supports_manual_and_automatic_for_every_language(qapp, code):
+    from PySide6.QtGui import QFontDatabase
+
     from mishkah.core import i18n
     from mishkah.widgets.settings_dialog import SettingsDialog
 
@@ -79,8 +81,9 @@ def test_font_picker_supports_manual_and_automatic_for_every_language(qapp, code
         assert dialog.values()["font_family"] == ""
         # Pick any actual installed face, distinct from the automatic entry.
         assert dialog.cmb_font.count() > 1
-        dialog.cmb_font.setCurrentIndex(dialog.cmb_font.count() - 1)
-        family = dialog.cmb_font.currentFont().family()
+        family = next(f for f in QFontDatabase.families()
+                      if dialog.cmb_font.findText(f) > 0)
+        dialog.cmb_font.setCurrentIndex(dialog.cmb_font.findText(family))
         assert dialog.values()["font_family"] == family
         dialog._load(Settings(ui_language=code, font_family=family))
         assert dialog.cmb_font.currentFont().family() == family

@@ -39,10 +39,10 @@ jobs:
     name: Test the release source
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-      - uses: actions/setup-python@v5
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Runtime libraries and validation tools
@@ -68,6 +68,16 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           MISHKAH_CLEAN_EXIT: "1"
         run: python tools/make_screenshots.py
+      - name: Save generated screenshots on the session branch
+        if: github.ref == 'refs/heads/arena/71ffd864-mishkah-note'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/screenshots/
+          if ! git diff --cached --quiet; then
+            git commit -m "Generate Mishkah Note screenshots from the real application"
+            git push origin HEAD:arena/71ffd864-mishkah-note
+          fi
       - uses: actions/upload-artifact@v4
         with:
           name: screenshots
@@ -80,10 +90,10 @@ jobs:
     name: sdist + wheel
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-      - uses: actions/setup-python@v5
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: |
@@ -104,9 +114,9 @@ jobs:
     name: Debian / Ubuntu (.deb)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends dpkg-dev lintian
@@ -133,9 +143,9 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False \
             git tar gzip rpm-build python3 python3-pip python3-build \
             python3-setuptools python3-wheel
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - name: Build
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -163,9 +173,9 @@ jobs:
           pacman -Syu --noconfirm --needed base-devel git python pyside6 \
             python-charset-normalizer python-build python-installer \
             python-wheel python-setuptools sudo
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - name: Build as an unprivileged user (makepkg refuses root)
         run: |
           useradd -m builder
@@ -188,10 +198,10 @@ jobs:
     name: AppImage
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-      - uses: actions/setup-python@v5
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Fetch appimagetool
@@ -218,9 +228,9 @@ jobs:
     name: Flatpak
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - name: Install flatpak-builder and the KDE runtime
         run: |
           sudo apt-get update
@@ -252,10 +262,10 @@ jobs:
     name: Windows (.msi)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
-      - uses: actions/setup-python@v5
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
@@ -288,9 +298,9 @@ jobs:
     needs: [python-packages, deb, rpm, arch, appimage, flatpak, windows-msi]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
-          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref }}
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
 
       - name: Collect every artefact
         uses: actions/download-artifact@v4

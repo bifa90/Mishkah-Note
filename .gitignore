@@ -31,6 +31,7 @@ MANIFEST
 #   before PyInstaller builds the exe, so as to inject date/other infos into it.
 *.manifest
 *.spec
+!packaging/rpm/*.spec
 
 # Installer logs
 pip-log.txt
@@ -218,3 +219,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# --- project specific ---------------------------------------------------
+/dist/
+/build/
+*.egg-info/
+.qtstub/
+.pytest_cache/
+.ruff_cache/
+packaging/arch/pkg/
+packaging/arch/src/
+packaging/arch/*.pkg.tar.*
+*.AppImage
+
+# built packages (kept in the workspace, not in git)
+/release/

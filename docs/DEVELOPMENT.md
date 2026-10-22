@@ -1,0 +1,138 @@
+# دليل التطوير · Development guide
+
+## تشغيل البيئة · Setting up
+
+```bash
+python3 -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+تشغيل التطبيق:
+
+```bash
+python -m mufakkira            # أو: notepad
+python -m mufakkira README.md  # فتح ملف مباشرة
+notepad --safe-mode            # بلا جلسة سابقة وبإعدادات افتراضية
+```
+
+## الاختبارات · Tests
+
+```bash
+pytest                        # كل الاختبارات
+pytest -m "not gui"           # المنطق الخالص فقط (بلا Qt)
+pytest tests/test_editor_direction.py -v
+```
+
+### بلا شاشة · Headless
+
+```bash
+QT_QPA_PLATFORM=offscreen pytest
+```
+
+### ملاحظة عن إنهاء العمليات · Known teardown note
+
+على بعض الأنظمة (PySide6 6.12 مع Python 3.11) يُنهي المفسّر نفسه بـ:
+
+```
+Fatal Python error: bool_dealloc: deallocating True or False
+```
+
+بعد أن تنجح **كل** الاختبارات. السبب خلل في تفكيك كائنات الربط أثناء التجميع
+النهائي للذاكرة (final GC)، وليس في التطبيق: كل assertions مرّت، والمخرج قبل
+الإنهاء سليم، ولا يظهر الخلل عند تعريف أصناف إضافية في السكربت، ولا مع عدد
+أقل من الودجات.
+
+للحصول على رمز خروج حتمي في CI:
+
+```bash
+MUFAKKIRA_CLEAN_EXIT=1 QT_QPA_PLATFORM=offscreen pytest
+```
+
+هذا المتغيّر يجعل `tests/conftest.py` يُفرِّغ المخازن المؤقتة ثم يخرج عبر
+`os._exit(status)` بعد انتهاء الجلسة، فلا يدخل CPython مرحلة التفكيك التي
+تُسبّب الانهيار. لا يُفعَّل تلقائيًا كي لا يخفي أخطاء حقيقية في بيئات أخرى.
+
+## البنية · Layout
+
+| المسار | المسؤولية | يستورد Qt؟ |
+|--------|-----------|-------------|
+| `core/` | اتجاه النص، الترميز، الملفات الكبيرة، اللغات، الترجمة، الإعدادات | لا |
+| `models/` | حالة المستند | لا |
+| `services/` | إدخال/إخراج في خيوط خلفية | نعم (QThread/Signal) |
+| `views/` | النافذة، المحرّر، شريط الحالة | نعم |
+| `widgets/` | الحوارات | نعم |
+| `controllers/` | الربط بين الطبقات | نعم |
+
+## أدوات الكتابة · Editing aids
+
+| الملف | المسؤولية |
+|-------|-----------|
+| `core/autocomplete.py` | قواعد الإقران والإزاحة وإكمال الكلمات (بلا Qt) |
+| `core/syntax.py` | جداول قواعد 16 لغة (بلا Qt) |
+| `widgets/syntax_highlighter.py` | تحويل الجداول إلى ألوان عبر QSyntaxHighlighter |
+| `core/tab_style.py` | ألوان الملاحظات الستة |
+
+القاعدة: كل سلوك جديد يوضع في `core/` أولًا مع اختبار، ثم يُربط بالودجة.
+التلوين معطّل افتراضيًا عبر `settings.syntax_highlighting`؛ لا تجعله افتراضيًا
+دون طلب صريح من صاحب المشروع.
+
+## إضافة لغة تلوين · Adding a highlighted language
+
+1. أضف `LanguageSpec` في `core/syntax.py` (التعابير النمطية + الامتدادات).
+2. أضف مجموعة ألوان جديدة في `PALETTE` داخل `widgets/syntax_highlighter.py`
+   إن احتجت مجموعة غير الموجودة.
+3. أضف حالة إلى `tests/test_syntax.py` — الاختبار يتحقق من أن كل قاعدة تُترجم.
+
+## إضافة ترجمة · Adding a translation
+
+1. أضف رمز اللغة إلى `_LANGUAGES` في `core/languages.py` (مع حزمة الخطوط
+   واتجاه الكتابة).
+2. أضف الرمز إلى كل جدول في `core/i18n_data.py`.
+3. `pytest tests/test_widgets.py::test_every_string_exists_in_every_language`
+   سيكشف أي مفتاح ناقص.
+
+## التكامل المستمر · Continuous integration
+
+ملف سير العمل جاهز في `docs/ci/github-actions.yml` (اختبار على Python 3.9 و3.11
+و3.13، ثم بناء sdist/wheel/.deb والتحقق من أن الأيقونات المُلتزمة ليست قديمة).
+لم يُوضع تحت `.github/workflows/` لأن صلاحية الدفع الحالية لا تسمح بتعديل ملفات
+سير العمل. لتفعيله:
+
+```bash
+mkdir -p .github/workflows
+git mv docs/ci/github-actions.yml .github/workflows/ci.yml
+git commit -m "ci: enable the test and packaging workflow"
+```
+
+## الشعار والأيقونة · Logo and icon
+
+الشعار المتجهي هو المصدر الوحيد: `src/mufakkira/resources/branding/logo.svg`
+(والنسخة النقطية `logo.webp` للتوثيق فقط). لا تُحرّر ملفات `icons/app-*.png`
+يدويًا — أعد توليدها:
+
+```bash
+QT_QPA_PLATFORM=offscreen python tools/make_icon.py
+```
+
+يستخدم المولّد اقتصاصًا أضيق للأحجام 16–32 بكسل كي يبقى الشكل واضحًا في
+شريط المهام، والشكل الكامل من 48 بكسل فما فوق.
+
+## الأيقونة · The icon
+
+الأيقونة مرسومة برمجيًا، لا صورة مولّدة، لتكون قابلة للمراجعة وإعادة التوليد:
+
+```bash
+python tools/make_icon.py
+```
+
+يُخرج `app.svg` و`app-16…512.png` و`app.ico` في
+`src/mufakkira/resources/icons/`.
+
+## التغليف · Packaging
+
+راجع [PACKAGING.md](PACKAGING.md). البناء الكامل:
+
+```bash
+scripts/build-all.sh          # deb + wheel + sdist
+scripts/build-deb.sh          # .deb فقط
+```

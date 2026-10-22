@@ -1,0 +1,9 @@
+include LICENSE README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md
+include pyproject.toml
+recursive-include src/mufakkira/resources *.ttf *.otf *.qss *.png *.svg *.ico
+recursive-include docs *.md *.png
+recursive-include packaging *.desktop *.1 *.spec PKGBUILD *.json *.sh
+recursive-include scripts *.sh
+recursive-include tools *.py
+recursive-exclude * __pycache__
+recursive-exclude * *.py[co]

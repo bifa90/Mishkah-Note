@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Build the RPM package (Fedora / RHEL / openSUSE) without polluting ~/rpmbuild.
 #
-#   scripts/build-rpm.sh                 → dist/notepad-linux-<version>-1.*.noarch.rpm
-#   VERSION=2.0.0 scripts/build-rpm.sh
+#   scripts/build-rpm.sh                 → dist/mishkah-note-<version>-1.*.noarch.rpm
+#   VERSION=1.0.01 scripts/build-rpm.sh
 #
 # Needs rpmbuild (`dnf install rpm-build` / `apt install rpm`).  The spec builds
 # from a source tarball created here with `git archive`, so no network access
@@ -14,7 +14,7 @@ cd "$ROOT"
 
 if ! command -v rpmbuild >/dev/null 2>&1; then
     echo "rpmbuild not found — install rpm-build (dnf) or rpm (apt) first." >&2
-    echo "The spec is still valid: packaging/rpm/notepad-linux.spec" >&2
+    echo "The spec is still valid: packaging/rpm/mishkah-note.spec" >&2
     exit 2
 fi
 
@@ -26,7 +26,7 @@ EOF
 )}"
 TOP="$ROOT/build/rpm"
 OUT="${OUT:-$ROOT/dist}"
-NAME="Notepad-Linux-$VERSION"
+NAME="Mishkah-Note-$VERSION"
 
 rm -rf "$TOP"
 mkdir -p "$TOP"/{SOURCES,SPECS,BUILD,RPMS,SRPMS} "$OUT"
@@ -34,13 +34,13 @@ mkdir -p "$TOP"/{SOURCES,SPECS,BUILD,RPMS,SRPMS} "$OUT"
 echo "==> staging source tarball $NAME"
 git archive --format=tar.gz --prefix="$NAME/" -o "$TOP/SOURCES/$NAME.tar.gz" HEAD
 
-cp packaging/rpm/notepad-linux.spec "$TOP/SPECS/"
+cp packaging/rpm/mishkah-note.spec "$TOP/SPECS/"
 
 echo "==> rpmbuild"
 rpmbuild -ba \
     --define "_topdir $TOP" \
     --define "version_override $VERSION" \
-    "$TOP/SPECS/notepad-linux.spec"
+    "$TOP/SPECS/mishkah-note.spec"
 
 find "$TOP/RPMS" -name '*.rpm' -exec cp -v {} "$OUT/" \;
 echo "==> done — artifacts in $OUT"

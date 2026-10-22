@@ -2,7 +2,7 @@
 """Render every README screenshot from the real application.
 
 Nothing here is a mock-up: the script boots the same :class:`MainController`
-the ``notepad`` entry point builds, loads sample documents through the normal
+the ``mishkah`` entry point builds, loads sample documents through the normal
 document model, and grabs the widget with ``QWidget.grab()``.  Run it after a
 visual change so the README never shows an older interface::
 
@@ -28,21 +28,21 @@ from PySide6.QtCore import Qt  # noqa: E402
 from PySide6.QtGui import QFont  # noqa: E402
 from PySide6.QtWidgets import QApplication  # noqa: E402
 
-from mufakkira.app import apply_theme, install_bundled_fonts  # noqa: E402
-from mufakkira.controllers.main_controller import MainController  # noqa: E402
-from mufakkira.core import i18n  # noqa: E402
-from mufakkira.core.settings import Settings  # noqa: E402
-from mufakkira.services.file_service import FileService  # noqa: E402
-from mufakkira.views.main_window import MainWindow  # noqa: E402
+from mishkah.app import apply_theme, install_bundled_fonts  # noqa: E402
+from mishkah.controllers.main_controller import MainController  # noqa: E402
+from mishkah.core import i18n  # noqa: E402
+from mishkah.core.settings import Settings  # noqa: E402
+from mishkah.services.file_service import FileService  # noqa: E402
+from mishkah.views.main_window import MainWindow  # noqa: E402
 
 OUT = ROOT / "docs" / "screenshots"
 WIDTH, HEIGHT = 1000, 640
 #: Grab at this device pixel ratio when a real screen is present.
-SCALE = int(os.environ.get("MUFAKKIRA_SHOT_SCALE", "2"))
+SCALE = int(os.environ.get("MISHKAH_SHOT_SCALE", "2"))
 
 ARABIC_NOTE = """# خطة الأسبوع
 
-- [x] مراجعة المفكرة على **لينكس**
+- [x] مراجعة مفكرة مشكاة على **لينكس**
 - [x] ضبط اتجاه النص تلقائيًا
 - [ ] كتابة ملاحظات الاجتماع
 
@@ -54,7 +54,7 @@ ARABIC_NOTE = """# خطة الأسبوع
 | التسليم | الجمعة |
 """
 
-MARKDOWN_NOTE = """# المفكرة · Notepad
+MARKDOWN_NOTE = """# مفكرة مشكاة · Mishkah Note
 
 نص **عربي** و *إنجليزي* في المستند نفسه، مع `كود` مضمَّن و~~نص محذوف~~.
 
@@ -62,7 +62,7 @@ MARKDOWN_NOTE = """# المفكرة · Notepad
 
 - يقرأ المستند منسّقًا **دون حذف حرف واحد**.
 - `Ctrl+Shift+M` يبدّل العرض، والملف يبقى كما هو.
-- [رابط إلى المشروع](https://github.com/bifa90/Notepad-Linux)
+- [رابط إلى المشروع](https://github.com/bifa90/Mishkah-Note)
 - خط فاصل، جداول، واقتباسات:
 
 > ما تراه هو ما كتبته — لا أكثر ولا أقل.
@@ -80,10 +80,10 @@ def greet(name: str) -> str:
 ```
 """
 
-ENGLISH_NOTE = """# Notepad for Linux
+ENGLISH_NOTE = """# Mishkah Note
 
 Write **Arabic** and English in one buffer, with `inline code`, ~~strikethrough~~
-and [links](https://github.com/bifa90/Notepad-Linux) — all of it unedited.
+and [links](https://github.com/bifa90/Mishkah-Note) — all of it unedited.
 
 ## Live Markdown is a view, not an edit
 
@@ -128,7 +128,7 @@ def resolve(mode: str, text: str) -> str:
 
 def build_app() -> QApplication:
     app = QApplication.instance() or QApplication([])
-    app.setApplicationName("Notepad")
+    app.setApplicationName("Mishkah Note")
     install_bundled_fonts()
     return app
 
@@ -136,7 +136,7 @@ def build_app() -> QApplication:
 def make_window(theme: str, language: str = "ar") -> MainController:
     settings = Settings(theme=theme, ui_language=language, font_size=13,
                         word_wrap=True, restore_session=False,
-                        path=Path("/tmp/mufakkira-shot-settings.json"))
+                        path=Path("/tmp/mishkah-shot-settings.json"))
     i18n.set_language(language)          # menus are built in this language
     window = MainWindow()
     controller = MainController(window, settings, FileService())
@@ -262,7 +262,7 @@ def shot_tabs(app: QApplication) -> None:
 
 
 def shot_settings(app: QApplication) -> None:
-    from mufakkira.widgets.settings_dialog import SettingsDialog
+    from mishkah.widgets.settings_dialog import SettingsDialog
 
     controller = make_window("light", "ar")
     scale_ui(controller)
@@ -275,7 +275,7 @@ def shot_settings(app: QApplication) -> None:
 
 
 def shot_about(app: QApplication) -> None:
-    from mufakkira.widgets.about_dialog import AboutDialog
+    from mishkah.widgets.about_dialog import AboutDialog
 
     i18n.set_language("ar")
     dialog = AboutDialog()

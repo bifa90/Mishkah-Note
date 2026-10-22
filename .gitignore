@@ -235,3 +235,8 @@ packaging/arch/*.pkg.tar.*
 
 # built packages (kept in the workspace, not in git)
 /release/
+
+*.orig
+*.rej
+*.bak
+*.old

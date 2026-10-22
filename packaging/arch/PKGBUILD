@@ -1,13 +1,13 @@
-# Maintainer: Notepad-Linux contributors <noreply@github.com>
+# Maintainer: Mishkah-Note contributors <noreply@github.com>
 # Build:        cd packaging/arch && makepkg -si
 # Check:        namcap PKGBUILD  ·  makepkg --printsrcinfo > .SRCINFO
 
-pkgname=notepad-linux
+pkgname=mishkah-note
 pkgver=1.0.01
 pkgrel=1
 pkgdesc="Windows 11-style text editor with first-class Arabic, RTL and Markdown support"
 arch=('any')
-url="https://github.com/bifa90/Notepad-Linux"
+url="https://github.com/bifa90/Mishkah-Note"
 license=('MIT')
 depends=('python' 'pyside6' 'python-charset-normalizer')
 makedepends=('python-build' 'python-installer' 'python-wheel' 'python-setuptools')
@@ -16,35 +16,35 @@ optdepends=(
     'noto-fonts-cjk: Chinese interface and documents'
     'ttf-liberation: Latin fallback'
 )
-provides=('notepad')
-conflicts=('notepad')
+provides=('mishkah')
+conflicts=('mishkah')
 options=('!strip' '!emptydirs')
 source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
 sha256sums=('SKIP')
 
 build() {
-    cd "Notepad-Linux-$pkgver"
+    cd "Mishkah-Note-$pkgver"
     python -m build --wheel --no-isolation
 }
 
 package() {
-    cd "Notepad-Linux-$pkgver"
+    cd "Mishkah-Note-$pkgver"
 
     python -m installer --destdir="$pkgdir" dist/*.whl
 
-    install -Dm644 packaging/common/notepad.desktop \
-        "$pkgdir/usr/share/applications/notepad-linux.desktop"
-    install -Dm644 packaging/common/org.notepadlinux.Notepad.metainfo.xml \
-        "$pkgdir/usr/share/metainfo/org.notepadlinux.Notepad.metainfo.xml"
+    install -Dm644 packaging/common/mishkah.desktop \
+        "$pkgdir/usr/share/applications/mishkah-note.desktop"
+    install -Dm644 packaging/common/org.mishkahnote.Mishkah.metainfo.xml \
+        "$pkgdir/usr/share/metainfo/org.mishkahnote.Mishkah.metainfo.xml"
 
     for size in 16 24 32 48 64 128 256 512; do
-        install -Dm644 "src/mufakkira/resources/icons/app-${size}.png" \
-            "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/notepad-linux.png"
+        install -Dm644 "src/mishkah/resources/icons/app-${size}.png" \
+            "$pkgdir/usr/share/icons/hicolor/${size}x${size}/apps/mishkah-note.png"
     done
-    install -Dm644 src/mufakkira/resources/icons/app.svg \
-        "$pkgdir/usr/share/icons/hicolor/scalable/apps/notepad-linux.svg"
+    install -Dm644 src/mishkah/resources/icons/app.svg \
+        "$pkgdir/usr/share/icons/hicolor/scalable/apps/mishkah-note.svg"
 
-    install -Dm644 packaging/common/notepad.1 \
-        "$pkgdir/usr/share/man/man1/notepad.1"
+    install -Dm644 packaging/common/mishkah.1 \
+        "$pkgdir/usr/share/man/man1/mishkah.1"
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
 }

@@ -29,7 +29,7 @@ sudo pacman -S noto-fonts noto-fonts-cjk ttf-liberation
 
 ## الخط المضمَّن · Bundled typeface
 
-`src/mufakkira/resources/fonts/IBMPlexSansArabic-Light.ttf`
+`src/mishkah/resources/fonts/IBMPlexSansArabic-Light.ttf`
 
 * **IBM Plex Sans Arabic Light**
 * الرخصة: SIL Open Font License 1.1

@@ -1,0 +1,56 @@
+{
+  "app-id": "org.mishkahnote.Mishkah",
+  "runtime": "org.kde.Platform",
+  "runtime-version": "6.7",
+  "sdk": "org.kde.Sdk",
+  "command": "mishkah",
+  "rename-desktop-file": "mishkah-note.desktop",
+  "rename-icon": "mishkah-note",
+  "rename-appdata-file": "org.mishkahnote.Mishkah.metainfo.xml",
+  "finish-args": [
+    "--share=ipc",
+    "--socket=fallback-x11",
+    "--socket=wayland",
+    "--device=dri",
+    "--filesystem=home",
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.portal.Documents",
+    "--talk-name=org.freedesktop.portal.FileChooser",
+    "--env=QT_QPA_PLATFORMTHEME=KDE"
+  ],
+  "modules": [
+    {
+      "name": "python-dependencies",
+      "buildsystem": "simple",
+      "build-options": {
+        "env": {
+          "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+          "PIP_NO_CACHE_DIR": "1"
+        }
+      },
+      "build-commands": [
+        "pip3 install --verbose --prefix=${FLATPAK_DEST} \"setuptools>=68\" wheel",
+        "pip3 install --verbose --prefix=${FLATPAK_DEST} \"PySide6>=6.5,<7\" \"charset-normalizer>=3.0\""
+      ],
+      "sources": []
+    },
+    {
+      "name": "mishkah-note",
+      "buildsystem": "simple",
+      "build-commands": [
+        "pip3 install --verbose --no-build-isolation --no-deps --prefix=${FLATPAK_DEST} .",
+        "install -Dm644 packaging/common/mishkah.desktop /app/share/applications/mishkah-note.desktop",
+        "install -Dm644 packaging/common/org.mishkahnote.Mishkah.metainfo.xml /app/share/metainfo/org.mishkahnote.Mishkah.metainfo.xml",
+        "install -Dm644 src/mishkah/resources/icons/app.svg /app/share/icons/hicolor/scalable/apps/mishkah-note.svg",
+        "install -Dm644 packaging/common/mishkah.1 /app/share/man/man1/mishkah.1",
+        "for s in 16 24 32 48 64 128 256 512; do install -Dm644 src/mishkah/resources/icons/app-$s.png /app/share/icons/hicolor/${s}x${s}/apps/mishkah-note.png; done"
+      ],
+      "sources": [
+        {
+          "type": "dir",
+          "path": "../.."
+        }
+      ]
+    }
+  ]
+}

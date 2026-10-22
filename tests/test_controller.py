@@ -6,17 +6,17 @@ from pathlib import Path
 
 import pytest
 
-from mufakkira.core.settings import Settings
-from mufakkira.core.text_direction import AUTO, LTR, RTL
+from mishkah.core.settings import Settings
+from mishkah.core.text_direction import AUTO, LTR, RTL
 
 pytestmark = pytest.mark.usefixtures("qapp")
 
 
 @pytest.fixture()
 def controller(qapp, tmp_path):
-    from mufakkira.controllers.main_controller import MainController
-    from mufakkira.services.file_service import FileService
-    from mufakkira.views.main_window import MainWindow
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
 
     settings = Settings(path=tmp_path / "settings.json", restore_session=False)
     window = MainWindow()
@@ -76,10 +76,10 @@ def test_save_refuses_read_only_preview(controller):
 # ---------------------------------------------------------------------
 def test_window_title_uses_the_document_title(controller):
     controller.new_document()
-    controller.window.setWindowTitle("notes.txt - Notepad")
+    controller.window.setWindowTitle("notes.txt - Mishkah Note")
     controller._sync_ui(controller.window.current_editor())
     title = controller.window.windowTitle()
-    assert title.endswith("Notepad")
+    assert title.endswith("Mishkah Note")
     assert "بلال" not in title and "Bilal" not in title
 
 

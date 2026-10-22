@@ -9,9 +9,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from mufakkira.core import large_file  # noqa: E402
-from mufakkira.core.encoding import CRLF, LF, TextFormat  # noqa: E402
-from mufakkira.core.large_file import (  # noqa: E402
+from mishkah.core import large_file  # noqa: E402
+from mishkah.core.encoding import CRLF, LF, TextFormat  # noqa: E402
+from mishkah.core.large_file import (  # noqa: E402
     BinaryFileError,
     OperationCancelled,
     human_size,

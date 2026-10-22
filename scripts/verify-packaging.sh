@@ -59,8 +59,8 @@ from pathlib import Path
 # Only *module-level* imports count: a lazily imported Qt helper inside a
 # rendering function keeps the modules importable without a display.
 bad = []
-paths = list(Path("src/mufakkira/core").rglob("*.py")) + \
-        list(Path("src/mufakkira/models").rglob("*.py"))
+paths = list(Path("src/mishkah/core").rglob("*.py")) + \
+        list(Path("src/mishkah/models").rglob("*.py"))
 for path in paths:
     tree = ast.parse(path.read_text(encoding="utf-8"))
     for node in tree.body:
@@ -87,9 +87,9 @@ done
 head2 "Debian package"
 if [ "$QUICK" = 0 ]; then
     if bash scripts/build-deb.sh >/tmp/verify-deb.log 2>&1; then
-        DEB="dist/notepad-linux_${VERSION}_all.deb"
+        DEB="dist/mishkah-note_${VERSION}_all.deb"
         if [ -f "$DEB" ]; then ok "built $DEB"; else bad "build script did not produce $DEB"; fi
-        if dpkg-deb --info "$DEB" | grep -q "^ Package: notepad-linux"; then
+        if dpkg-deb --info "$DEB" | grep -q "^ Package: mishkah-note"; then
             ok "control metadata"
         else
             bad "control metadata"
@@ -100,10 +100,10 @@ if [ "$QUICK" = 0 ]; then
             bad "version mismatch in the .deb"
         fi
         dpkg-deb -c "$DEB" > /tmp/verify-deb-contents.txt
-        for entry in usr/bin/notepad usr/share/applications/notepad-linux.desktop \
-                     usr/share/man/man1/notepad.1.gz \
-                     usr/share/metainfo/org.notepadlinux.Notepad.metainfo.xml \
-                     usr/lib/notepad-linux/mufakkira/app.py; do
+        for entry in usr/bin/mishkah usr/share/applications/mishkah-note.desktop \
+                     usr/share/man/man1/mishkah.1.gz \
+                     usr/share/metainfo/org.mishkahnote.Mishkah.metainfo.xml \
+                     usr/lib/mishkah-note/mishkah/app.py; do
             if grep -q "\./$entry\$" /tmp/verify-deb-contents.txt; then ok "contains $entry"
             else bad "missing $entry"; fi
         done
@@ -114,14 +114,14 @@ if [ "$QUICK" = 0 ]; then
         fi
         rm -rf /tmp/deb-extract && mkdir -p /tmp/deb-extract
         dpkg-deb -x "$DEB" /tmp/deb-extract
-        if PYTHONPATH=/tmp/deb-extract/usr/lib/notepad-linux QT_QPA_PLATFORM=offscreen \
-             $PYTHON -m mufakkira --version > /tmp/verify-deb-run.txt 2>&1 \
+        if PYTHONPATH=/tmp/deb-extract/usr/lib/mishkah-note QT_QPA_PLATFORM=offscreen \
+             $PYTHON -m mishkah --version > /tmp/verify-deb-run.txt 2>&1 \
              && grep -q "$VERSION" /tmp/verify-deb-run.txt; then
             ok "the packaged tree runs (--version)"
         else
             bad "the packaged tree does not run"
         fi
-        if [ -x /tmp/deb-extract/usr/bin/notepad ]; then ok "launcher is executable"; else bad "launcher mode"; fi
+        if [ -x /tmp/deb-extract/usr/bin/mishkah ]; then ok "launcher is executable"; else bad "launcher mode"; fi
     else
         bad "scripts/build-deb.sh"
         tail -5 /tmp/verify-deb.log
@@ -133,7 +133,7 @@ fi
 # --------------------------------------------------------------------- rpm ---
 head2 "RPM spec"
 if command -v rpmspec >/dev/null 2>&1; then
-    if rpmspec -q --qf '%{VERSION}\n' packaging/rpm/notepad-linux.spec 2>/dev/null | grep -qx "$VERSION"; then
+    if rpmspec -q --qf '%{VERSION}\n' packaging/rpm/mishkah-note.spec 2>/dev/null | grep -qx "$VERSION"; then
         ok "rpmspec parses and reports $VERSION"
     else
         bad "rpmspec could not parse the spec"
@@ -141,7 +141,7 @@ if command -v rpmspec >/dev/null 2>&1; then
 else
     skip "rpmspec not installed (spec syntax checked by the workflow in a Fedora container)"
 fi
-if grep -q "^Version:.*version_override" packaging/rpm/notepad-linux.spec; then
+if grep -q "^Version:.*version_override" packaging/rpm/mishkah-note.spec; then
     ok "version comes from one place (%{version_override})"
 else
     bad "spec version is hard-coded"
@@ -167,14 +167,14 @@ fi
 
 # ----------------------------------------------------------------- flatpak ---
 head2 "Flatpak"
-if $PYTHON -c "import json,sys; json.load(open('packaging/flatpak/org.notepadlinux.Notepad.json'))"; then
+if $PYTHON -c "import json,sys; json.load(open('packaging/flatpak/org.mishkahnote.Mishkah.json'))"; then
     ok "manifest is valid JSON"
 else
     bad "manifest JSON"
 fi
 if $PYTHON - <<'EOF'
 import json, sys
-m = json.load(open("packaging/flatpak/org.notepadlinux.Notepad.json"))
+m = json.load(open("packaging/flatpak/org.mishkahnote.Mishkah.json"))
 required = ["app-id", "runtime", "sdk", "command", "modules"]
 missing = [k for k in required if k not in m]
 sys.exit(1 if missing else 0)
@@ -188,15 +188,15 @@ fi
 
 # ----------------------------------------------------------------- windows ---
 head2 "Windows MSI"
-if $PYTHON -c "import xml.dom.minidom as m; m.parse('packaging/windows/notepad.wxs')"; then
-    ok "notepad.wxs is well-formed XML"
+if $PYTHON -c "import xml.dom.minidom as m; m.parse('packaging/windows/mishkah.wxs')"; then
+    ok "mishkah.wxs is well-formed XML"
 else
-    bad "notepad.wxs"
+    bad "mishkah.wxs"
 fi
 for piece in 'Scope="perMachine"' 'WixUI_InstallDir' 'Files Include=' 'MajorUpgrade'; do
-    if grep -q "$piece" packaging/windows/notepad.wxs; then ok "wxs declares $piece"; else bad "wxs lacks $piece"; fi
+    if grep -q "$piece" packaging/windows/mishkah.wxs; then ok "wxs declares $piece"; else bad "wxs lacks $piece"; fi
 done
-if [ -f packaging/windows/notepad.spec ] && [ -f packaging/windows/launcher.py ]; then
+if [ -f packaging/windows/mishkah.spec ] && [ -f packaging/windows/launcher.py ]; then
     ok "PyInstaller recipe and launcher are present"
 else
     bad "PyInstaller recipe missing"
@@ -210,27 +210,27 @@ fi
 # ------------------------------------------------------------------ desktop ---
 head2 "desktop entry and AppStream"
 if command -v desktop-file-validate >/dev/null 2>&1; then
-    desktop-file-validate packaging/common/notepad.desktop && ok "desktop-file-validate" \
+    desktop-file-validate packaging/common/mishkah.desktop && ok "desktop-file-validate" \
         || bad "desktop-file-validate"
 else
     if /usr/bin/env python3 - <<'EOF'
 from pathlib import Path
-text = Path("packaging/common/notepad.desktop").read_text(encoding="utf-8")
-required = ["[Desktop Entry]", "Type=Application", "Name=", "Exec=notepad %F",
-            "Icon=notepad-linux", "Categories=Utility;TextEditor;"]
+text = Path("packaging/common/mishkah.desktop").read_text(encoding="utf-8")
+required = ["[Desktop Entry]", "Type=Application", "Name=", "Exec=mishkah %F",
+            "Icon=mishkah-note", "Categories=Utility;TextEditor;"]
 missing = [key for key in required if key not in text]
 raise SystemExit(1 if missing else 0)
 EOF
     then ok "desktop entry has the required keys"; else bad "desktop entry"; fi
     skip "desktop-file-validate not installed"
 fi
-if $PYTHON -c "import xml.dom.minidom as m; m.parse('packaging/common/org.notepadlinux.Notepad.metainfo.xml')"; then
+if $PYTHON -c "import xml.dom.minidom as m; m.parse('packaging/common/org.mishkahnote.Mishkah.metainfo.xml')"; then
     ok "AppStream metadata is well-formed"
 else
     bad "AppStream metadata"
 fi
 if command -v appstreamcli >/dev/null 2>&1; then
-    appstreamcli validate --no-net packaging/common/org.notepadlinux.Notepad.metainfo.xml \
+    appstreamcli validate --no-net packaging/common/org.mishkahnote.Mishkah.metainfo.xml \
         && ok "appstreamcli validate" || bad "appstreamcli validate"
 else
     skip "appstreamcli not installed"
@@ -239,15 +239,15 @@ fi
 # --------------------------------------------------------------------- man ---
 head2 "manual page"
 if command -v groff >/dev/null 2>&1; then
-    if groff -man -Tutf8 packaging/common/notepad.1 >/dev/null 2>&1; then
-        ok "groff renders notepad.1"
+    if groff -man -Tutf8 packaging/common/mishkah.1 >/dev/null 2>&1; then
+        ok "groff renders mishkah.1"
     else
-        bad "groff rejected notepad.1"
+        bad "groff rejected mishkah.1"
     fi
 else
     skip "groff not installed"
 fi
-if grep -q "$VERSION" packaging/common/notepad.1; then ok "man page carries $VERSION"; else bad "man page version"; fi
+if grep -q "$VERSION" packaging/common/mishkah.1; then ok "man page carries $VERSION"; else bad "man page version"; fi
 
 # ------------------------------------------------------------------- wheel ---
 head2 "sdist + wheel"
@@ -255,7 +255,7 @@ if [ "$QUICK" = 0 ]; then
     rm -rf dist/*.whl dist/*.tar.gz 2>/dev/null
     if $PYTHON -m build --no-isolation >/tmp/verify-build.log 2>&1; then
         ok "python -m build"
-        WHEEL="$(ls dist/notepad_linux-*.whl 2>/dev/null | head -1)"
+        WHEEL="$(ls dist/mishkah_note-*.whl 2>/dev/null | head -1)"
         if [ -n "$WHEEL" ]; then
             ok "wheel built: $(basename "$WHEEL") (PEP 440 name for $VERSION)"
         else
@@ -269,14 +269,14 @@ if [ "$QUICK" = 0 ]; then
             if "$VENV/bin/pip" install --quiet --upgrade pip >/tmp/verify-pip.log 2>&1 \
                && "$VENV/bin/pip" install --quiet "$WHEEL" >>/tmp/verify-pip.log 2>&1; then
                 ok "wheel + dependencies install into a clean venv"
-                if QT_QPA_PLATFORM=offscreen "$VENV/bin/notepad" --version > /tmp/verify-cli.txt 2>&1 \
+                if QT_QPA_PLATFORM=offscreen "$VENV/bin/mishkah" --version > /tmp/verify-cli.txt 2>&1 \
                    && grep -q "$VERSION" /tmp/verify-cli.txt; then
                     ok "installed console script runs (--version)"
                 else
                     bad "console script"
                     tail -3 /tmp/verify-cli.txt
                 fi
-                if "$VENV/bin/python" -c "import mufakkira, mufakkira.core.markdown" >/dev/null 2>&1; then
+                if "$VENV/bin/python" -c "import mishkah, mishkah.core.markdown" >/dev/null 2>&1; then
                     ok "package imports from site-packages"
                 else
                     bad "package import"

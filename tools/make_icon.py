@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Regenerate every application icon from the brand logo.
 
-The logo ships as ``src/mufakkira/resources/branding/logo.svg`` — a vector
+The logo ships as ``src/mishkah/resources/branding/logo.svg`` — a vector
 master, so the icons stay sharp at any DPI and can be re-rendered at any size
 instead of being hand-painted per size.
 
@@ -16,7 +16,7 @@ Usage::
 
     python tools/make_icon.py            # needs PySide6 (QSvgRenderer)
 
-Outputs, all in ``src/mufakkira/resources/icons/``::
+Outputs, all in ``src/mishkah/resources/icons/``::
 
     app.svg                vector master (copy of the branding logo)
     app-16 … app-512.png   desktop entry sizes
@@ -37,8 +37,8 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parent
 sys.path.insert(0, str(ROOT / "src"))
 
-BRANDING = ROOT / "src" / "mufakkira" / "resources" / "branding"
-ICON_DIR = ROOT / "src" / "mufakkira" / "resources" / "icons"
+BRANDING = ROOT / "src" / "mishkah" / "resources" / "branding"
+ICON_DIR = ROOT / "src" / "mishkah" / "resources" / "icons"
 
 LOGO_SVG = BRANDING / "logo.svg"
 BACKGROUND = "#5FC1EA"          # the logo's own sky blue

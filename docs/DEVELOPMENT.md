@@ -10,9 +10,9 @@ pip install -e ".[dev]"
 تشغيل التطبيق:
 
 ```bash
-python -m mufakkira            # أو: notepad
-python -m mufakkira README.md  # فتح ملف مباشرة
-notepad --safe-mode            # بلا جلسة سابقة وبإعدادات افتراضية
+python -m mishkah            # أو: mishkah
+python -m mishkah README.md  # فتح ملف مباشرة
+mishkah --safe-mode            # بإعدادات افتراضية وجلسة فارغة
 ```
 
 ## الاختبارات · Tests
@@ -45,7 +45,7 @@ Fatal Python error: bool_dealloc: deallocating True or False
 للحصول على رمز خروج حتمي في CI:
 
 ```bash
-MUFAKKIRA_CLEAN_EXIT=1 QT_QPA_PLATFORM=offscreen pytest
+MISHKAH_CLEAN_EXIT=1 QT_QPA_PLATFORM=offscreen pytest
 ```
 
 هذا المتغيّر يجعل `tests/conftest.py` يُفرِّغ المخازن المؤقتة ثم يخرج عبر
@@ -135,7 +135,7 @@ git add .github/workflows && git commit -m "ci: enable the workflows" && git pus
 
 ## الشعار والأيقونة · Logo and icon
 
-الشعار المتجهي هو المصدر الوحيد: `src/mufakkira/resources/branding/logo.svg`
+الشعار المتجهي هو المصدر الوحيد: `src/mishkah/resources/branding/logo.svg`
 (والنسخة النقطية `logo.webp` للتوثيق فقط). لا تُحرّر ملفات `icons/app-*.png`
 يدويًا — أعد توليدها:
 
@@ -155,7 +155,7 @@ python tools/make_icon.py
 ```
 
 يُخرج `app.svg` و`app-16…512.png` و`app.ico` في
-`src/mufakkira/resources/icons/`.
+`src/mishkah/resources/icons/`.
 
 ## التغليف · Packaging
 
@@ -166,3 +166,7 @@ scripts/build-all.sh             # كل صيغة تتوفر أداتها
 scripts/build-deb.sh             # .deb فقط
 scripts/verify-packaging.sh      # بناء + فحص كل ما يمكن فحصه
 ```
+
+## نافذة حول التطبيق
+
+![نافذة حول التطبيق](screenshots/about.png)

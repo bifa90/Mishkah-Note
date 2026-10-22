@@ -20,19 +20,19 @@ git push
 ## ما يحتاجه السير
 
 * لا أسرار إضافية: يُستخدم `GITHUB_TOKEN` المدمج (صلاحية `contents: write`).
-* الأصول تُرفع عبر `gh release upload`، أي عبر `api.github.com` — لا حاجة إلى
-  `uploads.github.com` يدويًا.
+* الأصول تُرفع عبر `gh release upload` من GitHub Actions؛ الرفع يحتاج الوصول إلى
+  `uploads.github.com`، وهو محجوب في بيئة هذه الجلسة.
 * وظيفة Flatpak هي الأبطأ (تنزيل `org.kde.Sdk//6.7` من Flathub، نحو 1.5 GB).
 
 ## البناء يدويًا على جهازك
 
 ```bash
 bash scripts/verify-packaging.sh     # كل ما يمكن التحقق منه محليًا
-bash scripts/build-deb.sh            # dist/notepad-linux_<version>_all.deb
+bash scripts/build-deb.sh            # dist/mishkah-note_<version>_all.deb
 bash scripts/build-rpm.sh            # يحتاج rpmbuild
 bash scripts/build-arch.sh           # يحتاج makepkg (Arch)
 bash packaging/appimage/build-appimage.sh   # يحتاج appimagetool
 flatpak-builder --user --install-deps-from=flathub build/flatpak-build \
-    packaging/flatpak/org.notepadlinux.Notepad.json
+    packaging/flatpak/org.mishkahnote.Mishkah.json
 pwsh scripts/build-msi.ps1 -Version <version>   # على Windows فقط
 ```

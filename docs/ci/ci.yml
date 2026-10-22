@@ -54,13 +54,13 @@ jobs:
       - name: Unit and GUI tests (headless)
         env:
           QT_QPA_PLATFORM: offscreen
-          MUFAKKIRA_CLEAN_EXIT: "1"
+          MISHKAH_CLEAN_EXIT: "1"
         run: pytest -q
 
       - name: The Markdown view never changes a byte
         env:
           QT_QPA_PLATFORM: offscreen
-          MUFAKKIRA_CLEAN_EXIT: "1"
+          MISHKAH_CLEAN_EXIT: "1"
         run: pytest tests/test_markdown.py -q
 
   packaging-check:
@@ -85,7 +85,7 @@ jobs:
         run: |
           pip install pillow
           python tools/make_icon.py
-          if ! git diff --quiet -- src/mufakkira/resources/icons; then
+          if ! git diff --quiet -- src/mishkah/resources/icons; then
             echo "::error::icons are stale: run python tools/make_icon.py"
             exit 1
           fi
@@ -93,7 +93,7 @@ jobs:
       - name: Verify every packaging file that can be verified here
         env:
           QT_QPA_PLATFORM: offscreen
-          MUFAKKIRA_CLEAN_EXIT: "1"
+          MISHKAH_CLEAN_EXIT: "1"
         run: bash scripts/verify-packaging.sh
 
       - name: Upload the built packages

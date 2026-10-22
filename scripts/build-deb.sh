@@ -1,12 +1,12 @@
 #!/usr/bin/env bash
-# Build a Debian package for Notepad-Linux using dpkg-deb alone (no debhelper,
+# Build a Debian package for Mishkah-Note using dpkg-deb alone (no debhelper,
 # no fakeroot, no root):
 #
-#   scripts/build-deb.sh                 → dist/notepad-linux_<version>_all.deb
-#   VERSION=2.0.0 scripts/build-deb.sh   → override the version
+#   scripts/build-deb.sh                 → dist/mishkah-note_<version>_all.deb
+#   VERSION=1.0.01 scripts/build-deb.sh   → override the version
 #
 # The package is architecture-independent: the Python sources live in
-# /usr/lib/notepad-linux, /usr/bin/notepad is a two-line launcher, and the
+# /usr/lib/mishkah-note, /usr/bin/mishkah is a two-line launcher, and the
 # system interpreter (python3 + python3-pyside6) does the rest.
 set -euo pipefail
 
@@ -19,11 +19,11 @@ text = pathlib.Path("pyproject.toml").read_text(encoding="utf-8")
 print(re.search(r'^version = "([^"]+)"', text, re.M).group(1))
 EOF
 )}"
-PKG=notepad-linux
+PKG=mishkah-note
 ARCH=all
 STAGE="$ROOT/build/deb/${PKG}_${VERSION}_${ARCH}"
 OUT="${OUT:-$ROOT/dist}"
-LIBDIR=/usr/lib/notepad-linux
+LIBDIR=/usr/lib/mishkah-note
 APPDIR=/usr/share/applications
 ICONDIR=/usr/share/icons/hicolor
 MANDIR=/usr/share/man/man1
@@ -42,41 +42,41 @@ mkdir -p "$OUT"
 echo "==> staging $PKG $VERSION ($ARCH)"
 
 # ---------------------------------------------------------------- payload ---
-cp -r src/mufakkira "$STAGE$LIBDIR/"
+cp -r src/mishkah "$STAGE$LIBDIR/"
 find "$STAGE$LIBDIR" -name '__pycache__' -type d -prune -exec rm -rf {} +
 find "$STAGE$LIBDIR" -name '*.pyc' -delete
 find "$STAGE$LIBDIR" -name '*.pyo' -delete
 
 for size in 16 24 32 48 64 128 256 512; do
-    install -Dm644 "src/mufakkira/resources/icons/app-${size}.png" \
+    install -Dm644 "src/mishkah/resources/icons/app-${size}.png" \
         "$STAGE$ICONDIR/${size}x${size}/apps/${PKG}.png"
 done
-install -Dm644 src/mufakkira/resources/icons/app.svg \
+install -Dm644 src/mishkah/resources/icons/app.svg \
     "$STAGE$ICONDIR/scalable/apps/${PKG}.svg"
 
-install -Dm644 packaging/common/notepad.desktop \
+install -Dm644 packaging/common/mishkah.desktop \
     "$STAGE$APPDIR/${PKG}.desktop"
-install -Dm644 packaging/common/org.notepadlinux.Notepad.metainfo.xml \
-    "$STAGE$METAINFO/org.notepadlinux.Notepad.metainfo.xml"
-install -Dm644 packaging/common/notepad.1 \
-    "$STAGE$MANDIR/notepad.1"
+install -Dm644 packaging/common/org.mishkahnote.Mishkah.metainfo.xml \
+    "$STAGE$METAINFO/org.mishkahnote.Mishkah.metainfo.xml"
+install -Dm644 packaging/common/mishkah.1 \
+    "$STAGE$MANDIR/mishkah.1"
 
-cat > "$STAGE/usr/bin/notepad" <<'LAUNCHER'
+cat > "$STAGE/usr/bin/mishkah" <<'LAUNCHER'
 #!/bin/sh
-# Notepad-Linux launcher: the sources live in /usr/lib/notepad-linux so the
+# Mishkah-Note launcher: the sources live in /usr/lib/mishkah-note so the
 # application never fights with a pip-installed copy in site-packages.
 set -e
-LIBDIR=/usr/lib/notepad-linux
-PY=${NOTEPAD_PYTHON:-python3}
-PYTHONPATH="$LIBDIR${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m mufakkira "$@"
+LIBDIR=/usr/lib/mishkah-note
+PY=${MISHKAH_PYTHON:-python3}
+PYTHONPATH="$LIBDIR${PYTHONPATH:+:$PYTHONPATH}" exec "$PY" -m mishkah "$@"
 LAUNCHER
-chmod 0755 "$STAGE/usr/bin/notepad"
+chmod 0755 "$STAGE/usr/bin/mishkah"
 
 install -Dm644 LICENSE "$STAGE/usr/share/doc/$PKG/copyright"
 install -Dm644 README.md "$STAGE/usr/share/doc/$PKG/README.md"
 install -Dm644 CHANGELOG.md "$STAGE/usr/share/doc/$PKG/CHANGELOG.md"
-gzip -9n -c packaging/common/notepad.1 > "$STAGE$MANDIR/notepad.1.gz"
-chmod 0644 "$STAGE$MANDIR/notepad.1.gz"
+gzip -9n -c packaging/common/mishkah.1 > "$STAGE$MANDIR/mishkah.1.gz"
+chmod 0644 "$STAGE$MANDIR/mishkah.1.gz"
 
 # ------------------------------------------------------------- control ---
 INSTALLED_KB="$(du -sk --exclude=DEBIAN "$STAGE" | cut -f1)"
@@ -90,8 +90,8 @@ Depends: python3 (>= 3.9), python3-pyside6.qtwidgets | python3-pyside6 | python3
 Recommends: fonts-noto-core, fonts-liberation, python3-pyside6.qtprintsupport | python3-pyside6
 Suggests: fonts-noto-cjk
 Installed-Size: $INSTALLED_KB
-Maintainer: Notepad-Linux contributors <noreply@github.com>
-Homepage: https://github.com/bifa90/Notepad-Linux
+Maintainer: Mishkah-Note contributors <noreply@github.com>
+Homepage: https://github.com/bifa90/Mishkah-Note
 Description: Windows 11-style text editor with first-class RTL support
  A fast, minimal text editor for the Linux desktop, styled after the
  Windows 11 Notepad.  It resolves the writing direction per document
@@ -130,7 +130,7 @@ if [ "$1" = remove ] || [ "$1" = purge ]; then
     fi
 fi
 if [ "$1" = purge ]; then
-    rm -rf /var/lib/notepad-linux 2>/dev/null || true
+    rm -rf /var/lib/mishkah-note 2>/dev/null || true
 fi
 exit 0
 EOF

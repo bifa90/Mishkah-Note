@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Build the Windows installer (MSI) for Notepad.
+    Build the Windows installer (MSI) for Mishkah Note.
 
 .DESCRIPTION
     Freezes the application with PyInstaller (onedir, windowed) and wraps the
@@ -52,7 +52,7 @@ function Get-ProjectVersion {
 }
 
 if (-not $Version) { $Version = Get-ProjectVersion }
-Write-Step "Notepad $Version — Windows MSI"
+Write-Step "Mishkah Note $Version — Windows MSI"
 
 # ---------------------------------------------------------------------------
 # 1. tooling
@@ -80,7 +80,7 @@ wix extension add --global WixToolset.UI.wixext
 # 2. freeze the application
 # ---------------------------------------------------------------------------
 $PyInstallerDir = Join-Path $Root "build/pyinstaller"
-$SourceDir = Join-Path $PyInstallerDir "notepad"
+$SourceDir = Join-Path $PyInstallerDir "mishkah"
 
 if ($SkipFreeze -and (Test-Path $SourceDir)) {
     Write-Step "reusing $SourceDir"
@@ -92,10 +92,10 @@ if ($SkipFreeze -and (Test-Path $SourceDir)) {
         --noconfirm --clean --onedir `
         --distpath $PyInstallerDir `
         --workpath (Join-Path $PyInstallerDir "work") `
-        "packaging/windows/notepad.spec"
+        "packaging/windows/mishkah.spec"
 
-    if (-not (Test-Path (Join-Path $SourceDir "Notepad.exe"))) {
-        throw "PyInstaller did not produce Notepad.exe"
+    if (-not (Test-Path (Join-Path $SourceDir "Mishkah Note.exe"))) {
+        throw "PyInstaller did not produce Mishkah Note.exe"
     }
 }
 
@@ -119,9 +119,9 @@ $escaped = $escaped.Replace("`r`n", " \par ").Replace("`n", " \par ")
 # ---------------------------------------------------------------------------
 Write-Step "building the MSI"
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$Msi = Join-Path $OutputDirectory "Notepad-$Version-x64.msi"
+$Msi = Join-Path $OutputDirectory "Mishkah_Note_${Version}_x64.msi"
 
-wix build "packaging/windows/notepad.wxs" `
+wix build "packaging/windows/mishkah.wxs" `
     -d "SourceDir=$SourceDir" `
     -d "Version=$Version" `
     -d "LicenseRtf=$LicenseRtf" `

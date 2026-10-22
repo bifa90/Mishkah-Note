@@ -1,4 +1,4 @@
-# Contributing to Notepad-Linux
+# Contributing to Mishkah-Note
 
 Thanks for taking the time to help. This project aims to stay small, readable
 and dependable: a text editor that opens in a blink, handles a 200 MB log file
@@ -7,11 +7,11 @@ without freezing, and gets Arabic right.
 ## Getting set up
 
 ```bash
-git clone https://github.com/bifa90/Notepad-Linux.git
-cd Notepad-Linux
+git clone https://github.com/bifa90/Mishkah-Note.git
+cd Mishkah-Note
 python3 -m venv .venv && . .venv/bin/activate
 pip install -e ".[dev]"
-python -m mufakkira          # run the app
+python -m mishkah          # run the app
 pytest                       # run the suite
 ```
 
@@ -72,4 +72,4 @@ Why the change was needed, and anything a reviewer should watch for.
 
 Please include the distribution, Qt/PySide6 version, the file size and encoding
 if the problem involves a specific document, and whether it reproduces with
-`notepad --safe-mode` (which skips session restore and starts with defaults).
+`mishkah --safe-mode` (which skips session restore and starts with defaults).

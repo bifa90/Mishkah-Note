@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
-os.environ.setdefault("XDG_CONFIG_HOME", "/tmp/mufakkira-test-config")
+os.environ.setdefault("XDG_CONFIG_HOME", "/tmp/mishkah-test-config")
 
 SRC = Path(__file__).resolve().parent.parent / "src"
 if str(SRC) not in sys.path:
@@ -59,9 +59,9 @@ def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     PySide6 6.12 aborts inside CPython's final GC on some hosts (the traceback
     is ``Fatal Python error: bool_dealloc``) *after* every test has run.  The
     crash is in the Qt binding's teardown, not in the application, so CI can
-    opt into a clean, deterministic exit with ``MUFAKKIRA_CLEAN_EXIT=1``.
+    opt into a clean, deterministic exit with ``MISHKAH_CLEAN_EXIT=1``.
     """
-    if os.environ.get("MUFAKKIRA_CLEAN_EXIT") != "1":
+    if os.environ.get("MISHKAH_CLEAN_EXIT") != "1":
         return
     try:
         from PySide6.QtCore import QCoreApplication

@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from mufakkira.core import syntax
+from mishkah.core import syntax
 
 
 @pytest.mark.parametrize("name,expected", [

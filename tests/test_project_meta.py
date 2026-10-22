@@ -13,21 +13,10 @@ AUTHOR_MARKERS = ("بلال", "Bilal", "bifa90")
 
 def _tracked_text_files() -> list[Path]:
     """Every source file that ships in the repository (no build dirs)."""
-    skip = {".git", "build", "dist", ".pytest_cache", "__pycache__", ".venv",
-            ".qtstub", "node_modules"}
-    out: list[Path] = []
-    for path in REPO.rglob("*"):
-        if not path.is_file():
-            continue
-        if any(part in skip for part in path.parts):
-            continue
-        if path.suffix.lower() in {".png", ".ico", ".ttf", ".otf", ".deb",
-                                   ".whl", ".gz", ".zst", ".AppImage"}:
-            continue
-        if "egg-info" in path.parts:
-            continue
-        out.append(path)
-    return out
+    import subprocess
+
+    names = subprocess.check_output(["git", "ls-files", "-z"], cwd=REPO).decode().split("\0")
+    return [REPO / name for name in names if name and (REPO / name).is_file()]
 
 
 def test_author_appears_only_in_the_about_box():
@@ -56,7 +45,7 @@ def test_author_appears_only_in_the_about_box():
 
 
 def test_about_dialog_credits_author_and_assistants():
-    from mufakkira.widgets.about_dialog import AI_ASSISTANTS, AUTHOR, about_html
+    from mishkah.widgets.about_dialog import AI_ASSISTANTS, AUTHOR, about_html
 
     assert "بلال" in AUTHOR
     html = about_html()
@@ -73,7 +62,7 @@ def test_about_dialog_credits_author_and_assistants():
 
 def test_about_dialog_has_no_rtl_explanation():
     """The direction essay was removed from the About box on request."""
-    from mufakkira.widgets.about_dialog import about_html
+    from mishkah.widgets.about_dialog import about_html
 
     html = about_html().lower()
     for forbidden in ("rtl", "right-to-left", "اتجاه", "ctrl+shift"):
@@ -81,21 +70,21 @@ def test_about_dialog_has_no_rtl_explanation():
 
 
 def test_window_title_has_no_author():
-    from mufakkira.core import i18n
+    from mishkah.core import i18n
 
     i18n.set_language("en")
     title = i18n.tr("app.title", title="notes.txt", app=i18n.tr("app.name"))
-    assert title == "notes.txt - Notepad"
+    assert title == "notes.txt - Mishkah Note"
     assert not any(marker in title for marker in AUTHOR_MARKERS)
 
 
 def test_version_is_consistent_everywhere():
-    import mufakkira
+    import mishkah
 
     pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
     version = re.search(r'^version = "([^"]+)"', pyproject, re.M).group(1)
-    assert version == mufakkira.__version__
-    assert version == mufakkira.APP_VERSION
+    assert version == mishkah.__version__
+    assert version == mishkah.APP_VERSION
 
     changelog = (REPO / "CHANGELOG.md").read_text(encoding="utf-8")
     assert f"## [{version}]" in changelog
@@ -103,7 +92,7 @@ def test_version_is_consistent_everywhere():
 
 def test_pyproject_declares_entry_points_and_assets():
     pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'notepad = "mufakkira.app:main"' in pyproject
+    assert 'mishkah = "mishkah.app:main"' in pyproject
     assert "resources/icons/*.png" in pyproject
     assert "resources/fonts/*.ttf" in pyproject
     assert "resources/styles/*.qss" in pyproject
@@ -111,11 +100,11 @@ def test_pyproject_declares_entry_points_and_assets():
 
 def test_packaging_files_exist():
     for relative in (
-        "packaging/common/notepad.desktop",
-        "packaging/common/notepad.1",
-        "packaging/rpm/notepad-linux.spec",
+        "packaging/common/mishkah.desktop",
+        "packaging/common/mishkah.1",
+        "packaging/rpm/mishkah-note.spec",
         "packaging/arch/PKGBUILD",
-        "packaging/flatpak/org.notepadlinux.Notepad.json",
+        "packaging/flatpak/org.mishkahnote.Mishkah.json",
         "packaging/appimage/build-appimage.sh",
         "scripts/build-deb.sh",
         "scripts/build-all.sh",
@@ -125,21 +114,62 @@ def test_packaging_files_exist():
 
 
 def test_desktop_entry_is_valid():
-    text = (REPO / "packaging/common/notepad.desktop").read_text(encoding="utf-8")
+    text = (REPO / "packaging/common/mishkah.desktop").read_text(encoding="utf-8")
     assert text.startswith("[Desktop Entry]")
-    for key in ("Type=Application", "Exec=notepad %F", "Icon=notepad-linux",
+    for key in ("Type=Application", "Exec=mishkah %F", "Icon=mishkah-note",
                 "Categories=Utility;TextEditor;", "Name[ar]="):
         assert key in text, key
     assert "bifa90" not in text or "github.com" in text
 
 
-def test_legacy_files_are_gone():
-    assert not (REPO / "p.py").exists()
-    assert not (REPO / "Notepad_Linux_1.0.0.deb").exists()
-
-
 @pytest.mark.parametrize("size", [16, 24, 32, 48, 64, 128, 256, 512])
 def test_every_icon_size_exists(size):
-    from mufakkira.core import resources
+    from mishkah.core import resources
 
     assert (resources.ICONS_DIR / f"app-{size}.png").exists()
+
+def test_single_identity():
+    """Source, configuration and documentation share one identity."""
+    forbidden = ("muf" + "akkira", "MUF" + "AKKIRA", "Muf" + "akkira",
+                 "notepad" + "-linux", "Notepad" + "-Linux", "org." + "notepadlinux")
+    for path in _tracked_text_files():
+        try:
+            text = path.read_text(encoding="utf-8")
+        except (UnicodeDecodeError, OSError):
+            continue
+        assert not any(word in text for word in forbidden), str(path)
+
+
+def test_single_release():
+    """All release metadata carries the literal application version."""
+    import xml.etree.ElementTree as ET
+
+    import mishkah
+
+    assert mishkah.__version__ == "1.0.01"
+    declarations = {
+        "pyproject.toml": r'^version = "([^"]+)"',
+        "src/mishkah/__init__.py": r'^__version__ = "([^"]+)"',
+        "packaging/arch/PKGBUILD": r'^pkgver=(\S+)',
+        "packaging/common/mishkah.1": r'"Mishkah Note ([^"]+)"',
+        "packaging/windows/mishkah.wxs": r'<\?define Version="([^"]+)"',
+        "packaging/rpm/mishkah-note.spec": r'version_override ([\d.]+)',
+    }
+    for relative, pattern in declarations.items():
+        text = (REPO / relative).read_text()
+        matches = re.findall(pattern, text, re.M)
+        assert matches and all(v == "1.0.01" for v in matches), (relative, matches)
+    tree = ET.parse(REPO / "packaging/common/org.mishkahnote.Mishkah.metainfo.xml")
+    assert [r.attrib["version"] for r in tree.findall("releases/release")] == ["1.0.01"]
+    spec = (REPO / "packaging/rpm/mishkah-note.spec").read_text().split("%changelog")[1]
+    assert len(re.findall(r'^\* ', spec, re.M)) == 1
+    assert "1.0.01" in spec
+    for path in _tracked_text_files():
+        try:
+            text = path.read_text()
+        except (UnicodeDecodeError, OSError):
+            continue
+        for line in text.splitlines():
+            if "PEP 440" in line:
+                continue
+            assert not re.search(r'(?<!\d)1\.0\.(?:0|1)(?!\d)', line), (str(path), line)

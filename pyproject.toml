@@ -3,13 +3,13 @@ requires = ["setuptools>=68", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "notepad-linux"
+name = "mishkah-note"
 version = "1.0.01"
-description = "مفكرتي — a Windows 11-style text editor for Linux, built for Arabic and every other script"
+description = "مفكرة مشكاة — a Windows 11-style text editor for Linux, built for Arabic and every other script"
 readme = "README.md"
 requires-python = ">=3.9"
 license = { text = "MIT" }
-keywords = ["notepad", "editor", "arabic", "rtl", "qt", "linux", "text"]
+keywords = ["mishkah", "editor", "arabic", "rtl", "qt", "linux", "text"]
 classifiers = [
     "Development Status :: 5 - Production/Stable",
     "Environment :: X11 Applications :: Qt",
@@ -35,22 +35,21 @@ dependencies = [
 dev = ["pytest>=7", "pytest-qt>=4", "build", "ruff"]
 
 [project.urls]
-Homepage = "https://github.com/bifa90/Notepad-Linux"
-Repository = "https://github.com/bifa90/Notepad-Linux"
-Issues = "https://github.com/bifa90/Notepad-Linux/issues"
+Homepage = "https://github.com/bifa90/Mishkah-Note"
+Repository = "https://github.com/bifa90/Mishkah-Note"
+Issues = "https://github.com/bifa90/Mishkah-Note/issues"
 
 [project.scripts]
-notepad = "mufakkira.app:main"
-mufakkira = "mufakkira.app:main"
+mishkah = "mishkah.app:main"
 
 [project.gui-scripts]
-notepad-gui = "mufakkira.app:main"
+mishkah-gui = "mishkah.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
 
 [tool.setuptools.package-data]
-mufakkira = [
+mishkah = [
     "resources/fonts/*.ttf",
     "resources/fonts/*.otf",
     "resources/styles/*.qss",

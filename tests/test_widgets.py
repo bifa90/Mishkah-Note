@@ -6,10 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from mufakkira.core import i18n, resources
-from mufakkira.core.i18n_data import STRINGS
-from mufakkira.core.languages import all_languages
-from mufakkira.core.settings import Settings
+from mishkah.core import i18n, resources
+from mishkah.core.i18n_data import STRINGS
+from mishkah.core.languages import all_languages
+from mishkah.core.settings import Settings
 
 pytestmark = pytest.mark.usefixtures("qapp")
 
@@ -69,7 +69,7 @@ def test_bundled_arabic_font_exists():
 # ---------------------------------------------------------------------------
 def test_settings_dialog_round_trip(qapp):
 
-    from mufakkira.widgets.settings_dialog import SettingsDialog
+    from mishkah.widgets.settings_dialog import SettingsDialog
 
     settings = Settings(path=Path("/tmp/does-not-exist.json"))
     dialog = SettingsDialog(settings)
@@ -97,7 +97,7 @@ def test_settings_dialog_round_trip(qapp):
 def test_settings_dialog_has_ok_and_cancel(qapp):
     from PySide6.QtWidgets import QDialogButtonBox
 
-    from mufakkira.widgets.settings_dialog import SettingsDialog
+    from mishkah.widgets.settings_dialog import SettingsDialog
 
     dialog = SettingsDialog(Settings())
     box = dialog.findChild(QDialogButtonBox)
@@ -108,7 +108,7 @@ def test_settings_dialog_has_ok_and_cancel(qapp):
 
 
 def test_progress_dialog_cancel_emits_once(qapp):
-    from mufakkira.widgets.progress_dialog import ProgressDialog
+    from mishkah.widgets.progress_dialog import ProgressDialog
 
     dialog = ProgressDialog("loading")
     hits = []
@@ -123,7 +123,7 @@ def test_progress_dialog_cancel_emits_once(qapp):
 
 
 def test_progress_dialog_counts_bytes(qapp):
-    from mufakkira.widgets.progress_dialog import ProgressDialog
+    from mishkah.widgets.progress_dialog import ProgressDialog
 
     dialog = ProgressDialog("loading")
     dialog.report_bytes(1024 * 1024, 4 * 1024 * 1024)
@@ -134,8 +134,8 @@ def test_progress_dialog_counts_bytes(qapp):
 
 def test_direction_chip_icon(qapp):
     """The chip must never show an ambiguous glyph such as "@"."""
-    from mufakkira.core.text_direction import AUTO, LTR, RTL
-    from mufakkira.views import status_bar_widget
+    from mishkah.core.text_direction import AUTO, LTR, RTL
+    from mishkah.views import status_bar_widget
 
     widget = status_bar_widget.StatusBarWidget()
     widget.set_direction(AUTO, resolved=LTR)

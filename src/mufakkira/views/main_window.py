@@ -239,6 +239,7 @@ class MainWindow(QMainWindow):
     recent_chosen = Signal(str)
     recent_cleared = Signal()
     syntax_highlighting_toggled = Signal(bool)
+    live_markdown_toggled = Signal(bool)
     language_override_chosen = Signal(str)
     auto_close_toggled = Signal(bool)
     auto_indent_toggled = Signal(bool)
@@ -385,6 +386,10 @@ class MainWindow(QMainWindow):
         self.act_syntax = self._action(m_view, tr("action.syntax"),
                                        None, "Ctrl+Shift+H",
                                        checkable=True, checked=False)
+        self.act_markdown = self._action(m_view, tr("action.markdown"),
+                                         None, "Ctrl+Shift+M",
+                                         checkable=True, checked=False)
+        self.act_markdown.toggled.connect(self.live_markdown_toggled)
         self.act_syntax.toggled.connect(self.syntax_highlighting_toggled)
         self.menu_language_override = m_view.addMenu(tr("action.language_override"))
         self.language_override_group = QActionGroup(self)
@@ -540,10 +545,12 @@ class MainWindow(QMainWindow):
         self.act_on_top.blockSignals(blocked)
 
     def set_typing_menu_state(self, auto_close: bool, auto_indent: bool,
-                              highlighting: bool, language: str) -> None:
+                              highlighting: bool, language: str,
+                              markdown: bool = False) -> None:
         for widget, value in ((self.act_auto_close, auto_close),
                               (self.act_auto_indent, auto_indent),
-                              (self.act_syntax, highlighting)):
+                              (self.act_syntax, highlighting),
+                              (self.act_markdown, markdown)):
             blocked = widget.blockSignals(True)
             widget.setChecked(value)
             widget.blockSignals(blocked)

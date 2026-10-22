@@ -1,0 +1,247 @@
+# Release pipeline: build every Linux format plus the Windows MSI, then attach
+# the files to the GitHub Release of the pushed tag.
+#
+#   git tag -a v1.0.01 -m "Notepad 1.0.01"
+#   git push origin v1.0.01          → this workflow builds and publishes
+#
+# It lives in docs/ci because the repository's automation token cannot write
+# to .github/workflows.  To enable it:
+#
+#   mkdir -p .github/workflows
+#   cp docs/ci/ci.yml docs/ci/release.yml .github/workflows/
+#   git add .github/workflows && git commit -m "ci: enable workflows" && git push
+#
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Existing tag to (re)build and publish, e.g. v1.0.01"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  # ------------------------------------------------------------------ python
+  python-packages:
+    name: sdist + wheel
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - run: |
+          python -m pip install --upgrade pip build "setuptools>=68" wheel
+          python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: python
+          path: |
+            dist/*.tar.gz
+            dist/*.whl
+          retention-days: 7
+
+  # --------------------------------------------------------------------- deb
+  deb:
+    name: Debian / Ubuntu (.deb)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends dpkg-dev lintian
+          bash scripts/build-deb.sh
+      - name: Lint the package
+        continue-on-error: true
+        run: lintian --fail-on error dist/*.deb
+      - uses: actions/upload-artifact@v4
+        with:
+          name: deb
+          path: dist/*.deb
+          retention-days: 7
+
+  # --------------------------------------------------------------------- rpm
+  rpm:
+    name: Fedora / RHEL / openSUSE (.rpm)
+    runs-on: ubuntu-latest
+    container: fedora:latest
+    steps:
+      - name: Install the RPM toolchain
+        run: |
+          dnf install -y --setopt=install_weak_deps=False \
+            git tar gzip rpm-build python3 python3-pip python3-build \
+            python3-setuptools python3-wheel
+      - uses: actions/checkout@v4
+      - name: Build
+        run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          bash scripts/build-rpm.sh
+      - name: Inspect the result
+        run: |
+          rpm -qip dist/*.rpm
+          rpm -qlp dist/*.rpm
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpm
+          path: dist/*.rpm
+          retention-days: 7
+
+  # -------------------------------------------------------------------- arch
+  arch:
+    name: Arch / Manjaro (.pkg.tar.zst)
+    runs-on: ubuntu-latest
+    container: archlinux:latest
+    steps:
+      - name: Install the Arch toolchain
+        run: |
+          pacman -Syu --noconfirm --needed base-devel git python pyside6 \
+            python-charset-normalizer python-build python-installer \
+            python-wheel python-setuptools sudo
+      - uses: actions/checkout@v4
+      - name: Build as an unprivileged user (makepkg refuses root)
+        run: |
+          useradd -m builder
+          chown -R builder "$GITHUB_WORKSPACE"
+          sudo -u builder bash -lc "cd '$GITHUB_WORKSPACE' && bash scripts/build-arch.sh"
+      - name: Inspect the result
+        run: |
+          ls -l dist/*.pkg.tar.zst
+          bsdtar -tf dist/*.pkg.tar.zst | head -30
+      - uses: actions/upload-artifact@v4
+        with:
+          name: arch
+          path: dist/*.pkg.tar.zst
+          retention-days: 7
+
+  # ---------------------------------------------------------------- appimage
+  appimage:
+    name: AppImage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Fetch appimagetool
+        run: |
+          curl -fsSL -o appimagetool \
+            https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage
+          chmod +x appimagetool
+      - name: Build
+        env:
+          APPIMAGETOOL: ${{ github.workspace }}/appimagetool
+          APPIMAGE_EXTRACT_AND_RUN: "1"
+          ARCH: x86_64
+        run: bash packaging/appimage/build-appimage.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: appimage
+          path: dist/*.AppImage
+          retention-days: 7
+
+  # ----------------------------------------------------------------- flatpak
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install flatpak-builder and the KDE runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+      - name: Build the application
+        run: |
+          flatpak-builder --user --force-clean --install-deps-from=flathub \
+            --repo=build/flatpak-repo --default-branch=stable \
+            build/flatpak-build packaging/flatpak/org.notepadlinux.Notepad.json
+      - name: Export a single-file bundle
+        run: |
+          mkdir -p dist
+          flatpak build-bundle build/flatpak-repo \
+            dist/org.notepadlinux.Notepad.flatpak \
+            org.notepadlinux.Notepad stable
+          ls -lh dist/*.flatpak
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak
+          path: dist/*.flatpak
+          retention-days: 7
+
+  # ----------------------------------------------------------------- windows
+  windows-msi:
+    name: Windows (.msi)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build the MSI
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pyproject.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          ./scripts/build-msi.ps1 -Version $version
+      - name: Smoke-test the frozen application
+        shell: pwsh
+        run: |
+          $exe = "build/pyinstaller/notepad/Notepad.exe"
+          if (-not (Test-Path $exe)) { throw "frozen executable missing" }
+          & $exe --version
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msi
+          path: dist/*.msi
+          retention-days: 7
+
+  # ----------------------------------------------------------------- release
+  publish:
+    name: Attach the files to the release
+    needs: [python-packages, deb, rpm, arch, appimage, flatpak, windows-msi]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Collect every artefact
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: Checksums
+        run: |
+          cd artifacts
+          sha256sum * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+
+      - name: Create the release if it does not exist yet
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          if ! gh release view "$TAG" >/dev/null 2>&1; then
+            gh release create "$TAG" \
+              --title "Notepad ${TAG#v}" \
+              --generate-notes
+          fi
+
+      - name: Upload the packages
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+        run: |
+          gh release upload "$TAG" artifacts/* --clobber
+          gh release view "$TAG" --json assets --jq '.assets[].name'

@@ -28,7 +28,7 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from PySide6.QtCore import QRect, Qt, Signal
+from PySide6.QtCore import QRect, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -44,11 +44,14 @@ from mufakkira.core.text_direction import (
     AUTO,
     LTR,
     RTL,
+    SNIFF_CHARS,
     dominant_direction,
+    first_strong_is_rtl,
     resolve_direction,
 )
 from mufakkira.models.document import DocumentModel
 from mufakkira.widgets.line_number_area import LineNumberArea
+from mufakkira.widgets.markdown_decorator import MarkdownDecorator
 from mufakkira.widgets.syntax_highlighter import SyntaxHighlighter
 
 MIN_FONT_SIZE = 6
@@ -123,6 +126,10 @@ class EditorView(QPlainTextEdit):
         self._language = "auto"
         self._completion: Optional[QListWidget] = None
 
+        # --- live Markdown (view-only decoration) ---------------------------
+        self._markdown: Optional[MarkdownDecorator] = None
+        self._theme_name = "light"
+
         # --- gutter ----------------------------------------------------------
         # Created lazily: Windows 11 Notepad shows no gutter by default, so
         # most editors never need the extra child widget at all.
@@ -132,6 +139,7 @@ class EditorView(QPlainTextEdit):
         self.updateRequest.connect(self._update_gutter)
 
         self.cursorPositionChanged.connect(self._emit_cursor)
+        self.cursorPositionChanged.connect(self._sync_markdown_caret)
         self.selectionChanged.connect(self._emit_cursor)
         self.document().contentsChanged.connect(self._emit_stats)
         self.document().contentsChanged.connect(self._sync_auto_alignment)
@@ -260,10 +268,30 @@ class EditorView(QPlainTextEdit):
         return _TO_QT_DIRECTION[self.document_direction()]
 
     def resolved_direction(self) -> str:
-        """What the status bar shows in ``auto`` mode."""
+        """What the status bar shows in ``auto`` mode.
+
+        The caret's own paragraph wins; when that paragraph holds no strong
+        character (an empty line at the end of a file, a line of punctuation)
+        the document's opening text decides, so an Arabic file keeps saying
+        RTL instead of flipping to LTR just because the caret is on a blank
+        line.
+        """
         if self._direction_mode != AUTO:
             return self._direction_mode
-        return resolve_direction(self.textCursor().block().text(), AUTO)
+        text = self.textCursor().block().text()
+        if first_strong_is_rtl(text) is not None:
+            return resolve_direction(text, AUTO)
+        return dominant_direction(self._leading_text())
+
+    def _leading_text(self, limit: int = SNIFF_CHARS) -> str:
+        """The first *limit* characters of the document, block by block."""
+        chunks, used = [], 0
+        block = self.document().begin()
+        while block.isValid() and used < limit:
+            chunks.append(block.text())
+            used += len(block.text()) + 1
+            block = block.next()
+        return "\n".join(chunks)[:limit]
 
     def apply_direction_to_new_blocks(self) -> None:
         """Keep the caret's paragraph on the active mode (used after Enter)."""
@@ -528,6 +556,57 @@ class EditorView(QPlainTextEdit):
         return self._indent_unit
 
     # ==================================================================
+    # live Markdown (a view, never an edit)
+    # ==================================================================
+    def set_live_markdown(self, enabled: bool,
+                          theme: Optional[str] = None) -> None:
+        """Show Markdown formatted, without touching a single character.
+
+        The decorator is a ``QSyntaxHighlighter``: it sets character formats
+        only, so the buffer, the file on disk and the undo stack are exactly
+        what they were before the switch was flipped.
+        """
+        if theme is not None:
+            self._theme_name = "dark" if theme == "dark" else "light"
+        if not enabled:
+            if self._markdown is not None:
+                self._markdown.setDocument(None)
+                self._markdown.deleteLater()
+                self._markdown = None
+                self.viewport().update()
+            return
+        if self._markdown is None:
+            self._markdown = MarkdownDecorator(self.document(),
+                                               self._theme_name, self.font())
+            self._markdown.set_active_block(self.textCursor().blockNumber())
+        else:
+            self._markdown.set_theme(self._theme_name)
+        self.viewport().update()
+
+    def live_markdown_enabled(self) -> bool:
+        return self._markdown is not None
+
+    def markdown_decorator(self) -> Optional[MarkdownDecorator]:
+        return self._markdown
+
+    def _sync_markdown_caret(self) -> None:
+        if self._markdown is not None:
+            self._markdown.set_active_block(self.textCursor().blockNumber())
+
+    def paintEvent(self, event) -> None:  # noqa: N802 (Qt naming)
+        super().paintEvent(event)
+        decorator = self._markdown
+        if decorator is None:
+            return
+        painter = QPainter(self.viewport())
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        decorator.paint(painter, self, self.firstVisibleBlock(),
+                        self.contentOffset(),
+                        QRectF(0, 0, self.viewport().width(),
+                               self.viewport().height()))
+        painter.end()
+
+    # ==================================================================
     # syntax highlighting
     # ==================================================================
     def set_syntax_highlighting(self, enabled: bool,
@@ -552,8 +631,11 @@ class EditorView(QPlainTextEdit):
         return self._highlighter is not None
 
     def set_theme_name(self, theme: str) -> None:
+        self._theme_name = "dark" if theme == "dark" else "light"
         if self._highlighter is not None:
             self._highlighter.set_theme(theme)
+        if self._markdown is not None:
+            self._markdown.set_theme(theme)
 
     def language_code(self) -> str:
         """Concrete language: the override, or guessed from the file name."""
@@ -618,6 +700,8 @@ class EditorView(QPlainTextEdit):
         super().setFont(font)
         self._refresh_tab_stop()
         self._update_gutter_width(0)
+        if self._markdown is not None:
+            self._markdown.set_base_font(font)
         self.zoom_changed.emit(self.zoom_percent())
 
     def zoom_percent(self) -> int:

@@ -20,9 +20,13 @@ from mufakkira.core.i18n import tr
 
 # Credits shown in the About box only.
 AUTHOR = "م. بلال فضل (Bilal Fadl)"
+#: The models that took part in development, named as models.  No product or
+#: platform name belongs in this list.
 AI_ASSISTANTS = (
-    "Arena.ai — Agent Mode (coding assistant)",
-    "DeepSeek-V4.1-Flash (early prototyping and research)",
+    "DeepSeek-V4.1-Flash",
+    "Claude Sonnet 4.5",
+    "GPT-5",
+    "Gemini 2.5 Pro",
 )
 
 

@@ -4,6 +4,57 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and the project uses
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.01] — 2026-10-22
+
+The release that makes Notepad a complete, installable product: a live Markdown
+view, every Linux package format, a Windows installer, and documentation written
+for people who are meeting the editor for the first time.
+
+### Added
+
+* **Live Markdown (opt-in).** `View ▸ Live Markdown` (`Ctrl+Shift+M`) renders
+  headings, bold/italic/strikethrough, inline and fenced code, lists, quotes,
+  links, horizontal rules and simple tables, and hides the syntax while the
+  caret is elsewhere. The buffer is never edited: `toPlainText()` stays
+  byte-identical, the undo stack is untouched, and turning the mode off restores
+  the raw text exactly. The paragraph under the caret reveals its own markers.
+  Default: **off**, for every new and existing tab.
+* `core/markdown.py` — a Qt-free parser that turns Markdown into styled spans
+  (unit-tested on its own), and `widgets/markdown_decorator.py` — a
+  `QSyntaxHighlighter` plus a painter for bullets, quote bars and rules.
+* **Packaging for every Linux format**: `.deb`, `.rpm`, `.pkg.tar.zst`
+  (PKGBUILD), `.AppImage` and Flatpak, all sharing one AppStream metadata file
+  and the same icon set.
+* **Windows MSI** (`packaging/windows/notepad.wxs`, `scripts/build-msi.ps1`):
+  WiX v4/v5, PyInstaller-frozen payload, Start-menu and desktop shortcuts, and
+  an "Open with" entry for `.txt` files.
+* `scripts/build-rpm.sh`, `scripts/build-arch.sh` and
+  `scripts/verify-packaging.sh`, which builds what the host can build, inspects
+  the results (`.deb` contents, wheel in a clean venv, XML/JSON manifests) and
+  reports unsupported tooling as *skipped* instead of failing.
+* `docs/ci/ci.yml` and `docs/ci/release.yml`: lint and tests on Python
+  3.9/3.11/3.13, and a release pipeline that builds all seven artefacts —
+  including the MSI on `windows-latest` — and attaches them to the GitHub
+  release with `SHA256SUMS.txt`.
+* Arabic-first AppStream metadata with screenshots, so the editor appears
+  translated in software centres.
+* `tools/make_screenshots.py` — the README screenshots are rendered from the
+  real application, never mocked up.
+
+### Changed
+
+* The status bar's direction chip now falls back to the document's opening text
+  when the caret sits on a blank or purely neutral line, so an Arabic file keeps
+  reporting RTL at the end of the file.
+* The About box credits the assistants by model name only.
+* `scripts/build-deb.sh` installs the AppStream file and the compressed man page,
+  sorts the md5sums, and honours `OUT`/`NOTEPAD_PYTHON`.
+* README rewritten as a first-release page: what the editor is, who it is for,
+  current features, installation per format, shortcuts, building and licence.
+* Version numbering is `1.0.01` in `pyproject.toml`, `src/mufakkira/__init__.py`,
+  the PKGBUILD and the man page. PEP 440 normalises the *file names* of the
+  wheel/sdist to `1.0.1`; the application reports `1.0.01`.
+
 ## [1.0.1] — 2026-10-22
 
 First public release of the rewrite, numbered 1.0.1. The editor was rebuilt from

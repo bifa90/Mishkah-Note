@@ -71,6 +71,30 @@ MUFAKKIRA_CLEAN_EXIT=1 QT_QPA_PLATFORM=offscreen pytest
 | `core/syntax.py` | جداول قواعد 16 لغة (بلا Qt) |
 | `widgets/syntax_highlighter.py` | تحويل الجداول إلى ألوان عبر QSyntaxHighlighter |
 | `core/tab_style.py` | ألوان الملاحظات الستة |
+| `core/markdown.py` | تحليل Markdown إلى مقاطع نصية منسّقة (بلا Qt) |
+| `widgets/markdown_decorator.py` | عرض Markdown الحيّ: `QSyntaxHighlighter` + رسّام |
+| `tools/make_screenshots.py` | توليد لقطات README من الواجهة الحقيقية |
+
+### Markdown الحيّ · Live Markdown
+
+المبدأ: **العرض لا يكتب في المستند**. `core/markdown.py` يُرجع لكل سطر
+`(start, end, style, hidden, collapse)`؛ والودجة تُخفي الرموز بتنسيقات محارف
+فقط:
+
+* `collapse=True` → لون الخلفية + `letter-spacing = -advance / length`، فيصبح
+  عرض الرمز صفرًا حرفيًا (`**bold**` يُرسم بعرض `bold` نفسه، والبكسل متطابق).
+* `collapse=False` → إخفاء مع حفظ العرض، ثم يُرسم الرمز البديل في مكانه
+  (النقطة `•` بدل `-`، والشريط `▏` بدل `>`).
+
+الفقرة التي فيها المؤشر تُظهر رموزها باهتة كي يسهل التعديل. لا تُعدّل
+`toPlainText()` ولا `QTextCursor` ولا مستند Qt إطلاقًا.
+
+## إضافة صيغة Markdown
+
+أضف النمط في `core/markdown.py` (دالة `parse_line`) كمقطع `Span`، ثم أضف
+تنسيقه في `_format` داخل `widgets/markdown_decorator.py`، وأضف حالة في
+`tests/test_markdown.py`. الاختبارات تقرأ `QTextLayout.formats()` لأن
+`QPlainTextEdit` يبني مقاطعه بتأخير.
 
 القاعدة: كل سلوك جديد يوضع في `core/` أولًا مع اختبار، ثم يُربط بالودجة.
 التلوين معطّل افتراضيًا عبر `settings.syntax_highlighting`؛ لا تجعله افتراضيًا
@@ -93,15 +117,20 @@ MUFAKKIRA_CLEAN_EXIT=1 QT_QPA_PLATFORM=offscreen pytest
 
 ## التكامل المستمر · Continuous integration
 
-ملف سير العمل جاهز في `docs/ci/github-actions.yml` (اختبار على Python 3.9 و3.11
-و3.13، ثم بناء sdist/wheel/.deb والتحقق من أن الأيقونات المُلتزمة ليست قديمة).
-لم يُوضع تحت `.github/workflows/` لأن صلاحية الدفع الحالية لا تسمح بتعديل ملفات
-سير العمل. لتفعيله:
+سيرا العمل جاهزان في `docs/ci/`:
+
+| الملف | الوظيفة |
+|-------|---------|
+| `ci.yml` | `ruff` + `pytest` على Python 3.9/3.11/3.13، ثم بناء الحزم والتحقق منها |
+| `release.yml` | عند دفع وسم `v*`: بناء `.deb` و`.rpm` و`.pkg.tar.zst` و`.AppImage` و`.flatpak` و`.msi` ورفعها بالإصدار |
+
+لم يُوضعا تحت `.github/workflows/` لأن صلاحية الدفع الحالية لا تسمح بذلك.
+لتفعيلهما:
 
 ```bash
 mkdir -p .github/workflows
-git mv docs/ci/github-actions.yml .github/workflows/ci.yml
-git commit -m "ci: enable the test and packaging workflow"
+cp docs/ci/ci.yml docs/ci/release.yml .github/workflows/
+git add .github/workflows && git commit -m "ci: enable the workflows" && git push
 ```
 
 ## الشعار والأيقونة · Logo and icon
@@ -130,9 +159,10 @@ python tools/make_icon.py
 
 ## التغليف · Packaging
 
-راجع [PACKAGING.md](PACKAGING.md). البناء الكامل:
+راجع [PACKAGING.md](PACKAGING.md). البناء والتحقق:
 
 ```bash
-scripts/build-all.sh          # deb + wheel + sdist
-scripts/build-deb.sh          # .deb فقط
+scripts/build-all.sh             # كل صيغة تتوفر أداتها
+scripts/build-deb.sh             # .deb فقط
+scripts/verify-packaging.sh      # بناء + فحص كل ما يمكن فحصه
 ```

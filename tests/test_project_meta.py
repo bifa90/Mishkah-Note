@@ -44,8 +44,10 @@ def test_author_appears_only_in_the_about_box():
         except (UnicodeDecodeError, OSError):
             continue
         for number, line in enumerate(text.splitlines(), start=1):
-            if "github.com" in line:
-                continue          # the repository URL is the project, not a credit
+            if "github.com" in line or "githubusercontent.com" in line:
+                # A repository (or raw-content) URL names the project, not the
+                # person; only the About box may carry the developer's name.
+                continue
             for marker in AUTHOR_MARKERS:
                 if marker in line:
                     offenders.append(f"{path.relative_to(REPO)}:{number}: {line.strip()}")
@@ -63,7 +65,10 @@ def test_about_dialog_credits_author_and_assistants():
     assert "Bilal Fadl" in html
     for name in AI_ASSISTANTS:
         assert name in html
-    assert "DeepSeek" in html
+    assert "DeepSeek-V4.1-Flash" in html
+    # assistants are named by model, never by the platform they run on
+    assert "arena" not in html.lower()
+    assert "agent mode" not in html.lower()
 
 
 def test_about_dialog_has_no_rtl_explanation():

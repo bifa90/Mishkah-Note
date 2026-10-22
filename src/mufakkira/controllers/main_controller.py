@@ -73,6 +73,7 @@ class MainController(QObject):
         w.tab_cycle_color_requested.connect(self.cycle_tab_color)
         w.tab_close_others_requested.connect(self.close_other_tabs)
         w.syntax_highlighting_toggled.connect(self.set_syntax_highlighting)
+        w.live_markdown_toggled.connect(self.set_live_markdown)
         w.language_override_chosen.connect(self.set_tab_language)
         w.auto_close_toggled.connect(self.set_auto_close)
         w.auto_indent_toggled.connect(self.set_auto_indent)
@@ -190,6 +191,7 @@ class MainController(QObject):
         editor.set_tab_width(s.tab_width)
         editor.set_language("auto")
         self._apply_highlighting(editor)
+        editor.set_live_markdown(s.live_markdown, self.active_theme)
 
     def _apply_highlighting(self, editor: EditorView) -> None:
         editor.set_syntax_highlighting(
@@ -439,6 +441,7 @@ class MainController(QObject):
             self.settings.auto_indent,
             self.settings.syntax_highlighting,
             doc.language,
+            self.settings.live_markdown,
         )
         self.window.set_direction_menu(doc.direction_mode)
         self.window.set_encoding_menu(doc.encoding)
@@ -750,6 +753,22 @@ class MainController(QObject):
         for editor in self.window.editors():
             self._apply_highlighting(editor)
 
+    def set_live_markdown(self, enabled: bool) -> None:
+        """Toggle the view-only Markdown layer on every open tab."""
+        self.settings.live_markdown = enabled
+        for editor in self.window.editors():
+            editor.set_live_markdown(enabled, self.active_theme)
+        current = self.window.current_editor()
+        doc = self.document_for(current)
+        if doc is not None:
+            self.window.set_typing_menu_state(
+                self.settings.auto_close_brackets,
+                self.settings.auto_indent,
+                self.settings.syntax_highlighting,
+                doc.language,
+                self.settings.live_markdown,
+            )
+
     def set_tab_language(self, code: str) -> None:
         doc = self.current_document()
         editor = self.window.current_editor()
@@ -802,6 +821,7 @@ class MainController(QObject):
             self.settings.syntax_highlighting,
             (self.current_document().language
              if self.current_document() is not None else "auto"),
+            self.settings.live_markdown,
         )
 
         if old["ui_language"] != self.settings.ui_language:

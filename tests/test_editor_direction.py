@@ -354,3 +354,18 @@ def test_word_wrap_toggle(qapp):
     assert editor.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap
     editor.set_word_wrap(True)
     assert editor.lineWrapMode() == QPlainTextEdit.LineWrapMode.WidgetWidth
+
+
+def test_status_direction_on_a_blank_line_follows_the_document(qapp):
+    """An empty last line must not report LTR for an Arabic file."""
+    editor = make_editor(qapp, "خطة الأسبوع\n- مراجعة\n\n", mode=AUTO)
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.End)   # the blank trailing block
+    editor.setTextCursor(cursor)
+    assert editor.resolved_direction() == RTL
+
+    editor.setPlainText("notes\n\n")
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.End)
+    editor.setTextCursor(cursor)
+    assert editor.resolved_direction() == LTR

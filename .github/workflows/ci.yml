@@ -55,7 +55,11 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           MISHKAH_CLEAN_EXIT: "1"
-        run: pytest -q
+        run: pytest -q --junitxml=build/pytest.xml
+
+      - name: Report test failures
+        if: always()
+        run: python tools/report_test_failures.py build/pytest.xml
 
       - name: The Markdown view never changes a byte
         env:

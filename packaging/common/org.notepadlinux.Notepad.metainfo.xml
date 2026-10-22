@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>org.notepadlinux.Notepad</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>Notepad</name>
+  <name xml:lang="ar">المفكرة</name>
+  <summary>Text editor with first-class Arabic, RTL and Markdown support</summary>
+  <summary xml:lang="ar">محرّر نصوص سريع بدعم متكامل للعربية واتجاه النص وMarkdown</summary>
+  <developer id="org.notepadlinux">
+    <name>Notepad-Linux contributors</name>
+  </developer>
+  <description>
+    <p>
+      A fast, minimal text editor for the Linux desktop, styled after the Windows
+      11 Notepad. The writing direction is resolved per document — automatically
+      from the content, or explicitly right-to-left / left-to-right — so Arabic
+      and English files each render correctly.
+    </p>
+    <p>
+      It opens very large files in chunks with progress and cancellation, saves
+      atomically, speaks ten languages, and offers an optional live Markdown view
+      that formats the text without ever changing a byte of the file.
+    </p>
+    <ul>
+      <li>Tabs with sticky-note colours and a pin-on-top mode</li>
+      <li>Auto-pairing, smart indentation and word completion</li>
+      <li>Optional syntax highlighting for fourteen languages</li>
+      <li>Ten interface languages, with an Arabic typeface bundled</li>
+      <li>Live Markdown rendering that keeps the source untouched</li>
+    </ul>
+  </description>
+  <launchable type="desktop-id">notepad-linux.desktop</launchable>
+  <url type="homepage">https://github.com/bifa90/Notepad-Linux</url>
+  <url type="bugtracker">https://github.com/bifa90/Notepad-Linux/issues</url>
+  <url type="vcs-browser">https://github.com/bifa90/Notepad-Linux</url>
+  <categories>
+    <category>Utility</category>
+    <category>TextEditor</category>
+  </categories>
+  <keywords>
+    <keyword>notepad</keyword>
+    <keyword>text</keyword>
+    <keyword>editor</keyword>
+    <keyword>arabic</keyword>
+    <keyword>rtl</keyword>
+    <keyword>markdown</keyword>
+  </keywords>
+  <screenshots>
+    <!-- Screenshots live in the repository; AppStream needs absolute URLs. -->
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/bifa90/Notepad-Linux/main/docs/screenshots/light.png</image>
+      <caption>Live Markdown in the light theme</caption>
+      <caption xml:lang="ar">Markdown حيّ في السمة الفاتحة</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/bifa90/Notepad-Linux/main/docs/screenshots/dark-arabic.png</image>
+      <caption>Arabic text in the dark theme</caption>
+      <caption xml:lang="ar">نص عربي في السمة الداكنة</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="1.0.01" date="2026-10-22">
+      <description>
+        <p>First release of the rebuilt editor, with live Markdown as an opt-in view.</p>
+        <p xml:lang="ar">أول إصدار من المحرّر بعد إعادة البناء، مع Markdown حيّ كعرض اختياري.</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1"/>
+</component>

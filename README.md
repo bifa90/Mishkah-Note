@@ -1,223 +1,281 @@
-# المفكرة — Notepad for Linux
+<div align="center">
 
-نصّ بسيط وسريع لسطح مكتب لينكس، بواجهة تحاكي **Notepad في Windows 11**، مع دعم
-حقيقي للعربية واللغات ذات الاتجاه من اليمين إلى اليسار. حرّ ومفتوح المصدر تحت
-رخصة MIT.
+<img src="src/mufakkira/resources/icons/app-256.png" width="112" alt="Notepad — المفكرة">
 
-A fast, minimal text editor for the Linux desktop, styled after **Windows 11
-Notepad**, with first-class support for Arabic and other right-to-left scripts.
-Free and open source under the MIT license.
+# المفكرة · Notepad for Linux
 
-![Notepad in light theme](docs/screenshots/light.png)
+**محرّر نصوص لسطح مكتب لينكس بواجهة Windows 11، عربي أولًا وقارئ لكل لغة.**
+A fast, Windows 11-style text editor for the Linux desktop — built for Arabic
+and every other script.
 
-| الوضع الداكن مع العربية | الإعدادات |
-|---|---|
-| ![dark](docs/screenshots/dark-arabic.png) | ![settings](docs/screenshots/settings.png) |
+[![License: MIT](https://img.shields.io/badge/license-MIT-2F7D32.svg)](LICENSE)
+[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-0F6CBD.svg)](pyproject.toml)
+[![Qt 6](https://img.shields.io/badge/Qt-6.5%2B-41CD52.svg)](https://www.qt.io)
+[![Platform: Linux](https://img.shields.io/badge/platform-linux-F0A020.svg)](#التثبيت--installation)
+
+[المزايا](#المزايا--features) ·
+[التثبيت](#التثبيت--installation) ·
+[الاختصارات](#الاختصارات--shortcuts) ·
+[البناء من المصدر](#البناء-من-المصدر--build-from-source) ·
+[الأسئلة الشائعة](#الأسئلة-الشائعة--faq)
+
+</div>
+
+![المفكرة مع Markdown حيّ · Notepad with live Markdown](docs/screenshots/light.png)
 
 ---
 
-![الشعار · the logo](src/mufakkira/resources/icons/app-256.png)
+## ما هو؟ · What it is
+
+**المفكرة** محرّر نصوص خفيف يفتح فورًا، بلا مشروع ولا شريط أدوات مزدحم: تبويبات،
+حفظ ذرّي، وبحث سريع. الفرق أنه يبدأ من العربية لا من الإنجليزية — الاتجاه يُحسب
+لكل مستند على حدة، والخط العربي مضمَّن مع البرنامج، والواجهة نفسها مترجمة إلى
+عشر لغات.
+
+> A notepad that opens instantly: tabs, atomic saves, fast search — and a text
+> direction that is resolved per document instead of forced on the whole
+> application. The interface speaks ten languages; the Arabic typeface ships
+> inside the package.
+
+### لمن؟ · Who it is for
+
+* من يكتب العربية والإنجليزية في الملف نفسه ويريد أن يظهر كلٌّ منهما صحيحًا.
+* من يفتح ملفات سجلّ كبيرة (مئات الميغابايت) ولا يريد أن يتجمّد المحرّر.
+* من يريد محرّرًا صغيرًا يعرف Markdown ويقرأه منسّقًا **دون** أن يلمس الملف.
+* من يعمل على KDE أو GNOME أو Wayland أو X11، بسمة فاتحة أو داكنة.
+
+| الوضع الداكن · Dark | الإعدادات · Settings | التبويبات الملوّنة · Coloured tabs |
+|---|---|---|
+| ![dark](docs/screenshots/dark-arabic.png) | ![settings](docs/screenshots/settings.png) | ![tabs](docs/screenshots/tabs.png) |
+
+---
 
 ## المزايا · Features
 
-### واجهة Windows 11 · Windows 11 look
-* شريط تبويبات بزوايا مستديرة ونقطة تعديل، مثل Notepad 11.
-* شريط قوائم مسطّح وخفيف، وشريط حالة يعرض `السطر، العمود` وحجم النص والترميز ونهاية السطر.
-* سمتان فاتحة وداكنة تتبعان إعداد النظام تلقائيًا (`system` / `light` / `dark`).
+### Markdown حيّ — عرض لا تعديل · Live Markdown, a view and not an edit
 
-### الكتابة الذكية · Smart typing
-* **إكمال تلقائي للأقواس والعلامات**: اكتب `(` فيظهر `()` والمؤشر بالداخل، واكتب
-  `)` فيتخطى القوس الموجود بدل تكراره. يشمل `[] {} "" '' `` «» ‹› “” ‘’`،
-  ويلفّ التحديد المظلّل عند الضغط على أي منها.
-* **مسافة تراجع ذكية**: `Backspace` بين قوسين فارغين يحذفهما معًا.
-* **إزاحة تلقائية**: `Enter` يحافظ على الإزاحة ويضيف مستوى بعد فتح كتلة
-  (`(`، `[`، `{`، `:`) ويتراجع عند كتابة قوس إغلاق. ويتبع أسلوب الملف نفسه
+`View ▸ Live Markdown` أو `Ctrl+Shift+M`: تُنسَّق العناوين والعريض والمائل
+والمشطوب والشيفرة المضمَّنة والكتل والأقواس والجداول والفواصل، وتُخفى الرموز
+(`#`، `**`، `` ` ``، `-`، `>`، `[]()`) فيبقى النص مصمَّمًا بلا رموز.
+
+* **لا يتغيّر الملف ولو بحرف**: `toPlainText()` يبقى مطابقًا للمحتوى على القرص،
+  وسجل التراجع لا يُمسّ — الإيقاف يعيد النص الخام كما كتبته تمامًا.
+* الفقرة التي فيها المؤشر تكشف رموزها مؤقتًا (بلون باهت) لتتمكن من التعديل.
+* **معطّل افتراضيًا**، ويُحفظ تفضيلك ويُطبَّق على كل تبويب مفتوح.
+* مدعوم كحد أدنى: عناوين `#`–`######`، عريض/مائل/يتوسطه خط، `inline code`
+  وكتل ```` ``` ````، قوائم مرقّمة ونقطية، اقتباس `>`، روابط، خط فاصل، جداول.
+
+![Markdown](docs/screenshots/markdown.png)
+
+### الاتجاه واللغة · Direction and language
+
+* الاتجاه **تلقائي** افتراضيًا: يُستنتج من أول حرف قوي في الفقرة، مثل Unicode
+  Bidi Algorithm ومثل Notepad في Windows 11.
+* يمكن تثبيته من `Format ▸ Direction` (`Ctrl+Shift+A/R/L`) أو من شريحة شريط
+  الحالة، و`Ctrl+Shift` + يمين/يسار يبدّل الاتجاه فورًا — دون تعارض مع تبديل
+  لوحة المفاتيح في النظام.
+* عشر لغات للواجهة: `en, zh-Hans, hi, es, fr, ar, bn, pt, ru, ur`، وتبديلها
+  فوري بلا إعادة تشغيل.
+* خط **IBM Plex Sans Arabic** مضمَّن (SIL OFL 1.1)، وسلسلة خطوط مناسبة لكل
+  نظام كتابة: Devanagari للهندية، Bengali للبنغالية، وCJK للصينية.
+
+### الكتابة · Writing
+
+* **إكمال تلقائي للأقواس والعلامات** `() [] {} "" '' «» “”`، مع تخطّي القوس
+  المكرر ولفّ التحديد المظلّل.
+* `Backspace` بين قوسين فارغين يحذفهما معًا.
+* **إزاحة تلقائية** تحافظ على المستوى وتزيده بعد فتح كتلة، وتتبع أسلوب الملف
   (Tab أو مسافتان أو أربع).
-* **`Tab` / `Shift+Tab`** يزيح/يرجع كتلة كاملة.
-* **إكمال الكلمات** بـ`Ctrl+Space`: يقترح كلمات موجودة في مستندك مرتّبة
-  بالتكرار والحداثة، ويدعم العربية.
+* `Tab` / `Shift+Tab` يزيحان الكتلة المحدّدة.
+* **إكمال الكلمات** بـ`Ctrl+Space` من كلمات مستندك نفسه، بالعربية والإنجليزية.
 
-### تبويبات ملوّنة ومثبّتة · Coloured and pinned tabs
-* ستة ألوان على نمط أوراق الملاحظات اللاصقة تُطبَّق على التبويب من قائمة
-  **Tab** أو من قائمة السياق بالزر الأيمن، و`Ctrl+Shift+K` يدوّر الألوان.
-* **التثبيت فوق التطبيقات**: `Ctrl+P` (أو دبّوس التبويب) يجعل التبويب النشط
-  يرفع النافذة فوق كل البرامج، ويظهر دبّوس على التبويب بلون النص المناسب.
-  تبويب واحد مثبّت في الوقت نفسه، ويُرفع القيد تلقائيًا عند تبديل التبويب
-  أو إغلاقه. `Ctrl+T` يفعل الشيء نفسه من القائمة.
+### الملفات الكبيرة · Large files
 
-### تلوين الشيفرة (اختياري) · Syntax highlighting (opt-in)
-* **معطّل افتراضيًا** كما طُلب: مفكرة عادية لا يجب أن تلوّن شيئًا من تلقاء نفسها.
-* عند تشغيله (`Ctrl+Shift+H` أو View ▸ Syntax highlighting) يتعرّف على اللغة من
-  اسم الملف: Python، JavaScript، TypeScript، JSON، HTML، CSS، C، C++، Rust،
-  Go، Java، shell، SQL، YAML، Markdown.
-* `View ▸ Highlight language` يتجاوز التخمين لكل تبويب، والألوان تتبع
-  السمة الفاتحة أو الداكنة.
+* فحص الترميز على أول 64 KiB، ثم فكّه على دفعات 1 MiB مع شريط تقدّم وإلغاء.
+* فوق 8 MiB: معاينة للقراءة فقط (اختيارية)، وفوق 512 MiB: تأكيد صريح.
+* فوق مليوني سطر: **وضع الأداء** يعطّل الالتفاف وسجل التراجع ويخفي أرقام
+  الأسطر تلقائيًا.
+* **حفظ ذرّي**: الكتابة إلى ملف مؤقت ثم `os.replace`، فلا يبقى ملف نصف مكتوب.
 
-### الاتجاه (RTL) — الإصلاح الجذري
-كان الخلل في النسخة السابقة أنّ التطبيق يفرض `RightToLeft` على مستوى
-`QApplication`، فينقلب كل شيء — القوائم والنوافذ وحتى الملفات الإنجليزية.
+### الترميز والتبويبات · Encodings and tabs
 
-الآن:
-
-* **لا يوجد أي فرض عالمي للاتجاه.** واجهة التطبيق تتبع لغة الواجهة فقط، أما
-  اتجاه *النص* فيُضبط لكل مستند على حدة عبر
-  `QTextBlockFormat.setLayoutDirection()` على كل فقرة (هذا هو المفتاح الحقيقي في
-  Qt؛ `setTextBlockDirection` غير موجود أصلًا).
-* **الاتجاه الافتراضي = تلقائي**: يُستنتج من أول حرف قوي في أول سطر غير فارغ
-  (عربي/عبري ← من اليمين، غير ذلك ← من اليسار)، مع إمكانية التجاوز من القائمة.
-* **Ctrl+Shift يعمل بثبات**: يمين = RTL، يسار = LTR. يُنفَّذ فقط عند اكتمال
-  الإيعاز (Ctrl+Shift وحدهما دون أي مفتاح ثالث) وعند رفع المفتاح، فلا يتعارض مع
-  تبديل لوحة المفاتيح في النظام ولا مع `Ctrl+Shift+N` وأخواتها.
-  مسجّل أيضًا في القائمة (`Ctrl+Shift+A/R/L`) وكشريحة قابلة للنقر في شريط الحالة.
-
-### ملفات كبيرة — Large files
-* فحص الترميز على أول 64 كيلوبايت، ثم فكّ ترميز على دفعات 1 ميجابايت مع شريط تقدّم
-  وإمكانية إلغاء.
-* الملفات فوق 8 ميجابايت تُفتح في **وضع معاينة للقراءة فقط** اختياري، وفوق 512
-  ميجابايت يُطلب تأكيد صريح.
-* الحفظ ذرّي: كتابة إلى ملف مؤقت ثم `os.replace` — لا يبقى ملف نصف مكتوب عند
-  انقطاع الكهرباء.
-* تنبيه عند تجاوز مليوني سطر، مع إمكانية تعطيل الالتفاف وسجل التراجع
-  (وضع الأداء) تلقائيًا.
-
-### اللغات — Languages
-أكثر عشر لغات استخدامًا في العالم، ولكل لغة **حزمة خطوط مناسبة لنظام كتابتها**
-(يُختار أول خط متاح على النظام، ثم البديل التالي):
-
-| # | اللغة | الرمز | الخط المفضّل | الاتجاه |
-|---|-------|-------|--------------|---------|
-| 1 | English | `en` | Segoe UI → Roboto → Liberation Sans | LTR |
-| 2 | 简体中文 | `zh-Hans` | Microsoft YaHei → Noto Sans CJK SC | LTR |
-| 3 | हिन्दी | `hi` | Nirmala UI → Noto Sans Devanagari | LTR |
-| 4 | Español | `es` | Segoe UI → Roboto → Liberation Sans | LTR |
-| 5 | Français | `fr` | Segoe UI → Roboto → Liberation Sans | LTR |
-| 6 | العربية | `ar` | **IBM Plex Sans Arabic** (مضمَّن) → Noto Naskh Arabic | RTL |
-| 7 | বাংলা | `bn` | Nirmala UI → Noto Sans Bengali | LTR |
-| 8 | Português | `pt` | Segoe UI → Roboto → Liberation Sans | LTR |
-| 9 | Русский | `ru` | Segoe UI → Roboto → DejaVu Sans | LTR |
-| 10 | اردو | `ur` | Noto Nastaliq Urdu → Jameel Noori Nastaleeq | RTL |
-
-خط `IBM Plex Sans Arabic Light` مضمَّن مع التطبيق (SIL OFL 1.1)، لذا تظهر العربية
-بشكل صحيح حتى على توزيعة بلا خطوط عربية. بقية الخطوط تُستعار من النظام عند
-توفرها؛ راجع [docs/FONTS.md](docs/FONTS.md) لطريقة تثبيتها.
-
-واجهة التطبيق نفسها مترجمة إلى اللغات العشر، وتتبدّل مباشرة من
-`الإعدادات ← لغة الواجهة` دون إعادة تشغيل.
-
-### الترميز — Encodings
-UTF-8، UTF-8 مع BOM، UTF-16 LE/BE، UTF-32، Windows-1256، Windows-1252،
-ISO-8859-6، ISO-8859-1، CP720، ASCII — مع كشف تلقائي عبر `charset-normalizer`
-وإمكانية إعادة الفتح بترميز آخر.
+* UTF-8، UTF-8 مع BOM، UTF-16 LE/BE، UTF-32، Windows-1256/1252، ISO-8859-6/1،
+  CP720، ASCII — مع كشف تلقائي وإعادة فتح بترميز آخر.
+* نهايات الأسطر LF / CRLF / CR، وتبديلها من شريط الحالة.
+* ألوان تبويبات على نمط أوراق الملاحظات (`Ctrl+Shift+K` للتدوير)، وتثبيت
+  التبويب فوق التطبيقات (`Ctrl+P`).
+* تلوين الشيفرة **اختياري ومعطّل افتراضيًا** (`Ctrl+Shift+H`)، لأربعة عشر لغة،
+  وتتبعه السمة الفاتحة أو الداكنة.
 
 ---
 
 ## التثبيت · Installation
 
-### من الحزم الجاهزة · Packages
+الإصدار الحالي **1.0.01**. تنزيل الصيغ الجاهزة من صفحة
+[Releases](https://github.com/bifa90/Notepad-Linux/releases).
+
+### Debian / Ubuntu · `.deb`
+
 ```bash
-# Debian / Ubuntu
-sudo apt install ./notepad-linux_1.0.1_all.deb
+sudo apt install ./notepad-linux_1.0.01_all.deb
+notepad
+```
 
-# Fedora / RHEL / openSUSE  (بناء محلي)
-rpmbuild -ba packaging/rpm/notepad-linux.spec
+### Fedora / RHEL / openSUSE · `.rpm`
 
-# Arch / Manjaro
+```bash
+sudo rpm -i notepad-linux-1.0.01-1.noarch.rpm
+# أو: sudo dnf install ./notepad-linux-1.0.01-1.noarch.rpm
+```
+
+### Arch / Manjaro · `.pkg.tar.zst`
+
+```bash
+sudo pacman -U notepad-linux-1.0.01-1-any.pkg.tar.zst
+```
+
+أو من `PKGBUILD` مباشرة:
+
+```bash
 cd packaging/arch && makepkg -si
+```
 
-# AppImage (محمول — portable)
-./packaging/appimage/build-appimage.sh
+### AppImage — محمول بلا تثبيت · portable
 
-# Flatpak
-flatpak-builder --install --user build packaging/flatpak/org.notepadlinux.Notepad.json
+```bash
+chmod +x Notepad-1.0.01-x86_64.AppImage
+./Notepad-1.0.01-x86_64.AppImage
+```
+
+### Flatpak
+
+```bash
+flatpak install --user org.notepadlinux.Notepad.flatpak
+flatpak run org.notepadlinux.Notepad
+```
+
+> Flatpak يحتاج `org.kde.Platform//6.7` من Flathub.
+> Flatpak needs the KDE runtime from Flathub.
+
+### Windows · `.msi`
+
+```powershell
+msiexec /i Notepad-1.0.01-x64.msi
 ```
 
 ### من المصدر · From source
+
 ```bash
+git clone https://github.com/bifa90/Notepad-Linux
+cd Notepad-Linux
 python3 -m venv .venv && . .venv/bin/activate
 pip install .
 notepad            # أو: mufakkira
 ```
 
-يتطلب Python ≥ 3.9، وPySide6 ≥ 6.5، و`charset-normalizer`.
+متطلبات: Python ≥ 3.9، PySide6 ≥ 6.5، `charset-normalizer` ≥ 3.0.
 
-### التشغيل للتطوير · Development run
+---
+
+## الاختصارات · Shortcuts
+
+| الاختصار | الوظيفة | Action |
+|---|---|---|
+| `Ctrl+N` · `Ctrl+O` · `Ctrl+S` | جديد · فتح · حفظ | New · Open · Save |
+| `Ctrl+Shift+S` | حفظ باسم | Save as |
+| `Ctrl+W` · `Ctrl+Tab` | إغلاق التبويب · التنقل | Close tab · cycle |
+| `Ctrl+F` · `Ctrl+H` · `F3` | بحث · استبدال · التالي | Find · Replace · Next |
+| `Ctrl+G` | الانتقال إلى سطر | Go to line |
+| `Ctrl++` · `Ctrl+-` · `Ctrl+0` | تكبير · تصغير · إعادة ضبط | Zoom |
+| `F5` | التاريخ والوقت | Date and time |
+| `Ctrl+,` | الإعدادات | Settings |
+| `Ctrl+Space` | إكمال الكلمة | Word completion |
+| **`Ctrl+Shift+M`** | **Markdown حيّ** | **Live Markdown** |
+| `Ctrl+Shift+H` | تلوين الشيفرة | Syntax highlighting |
+| `Ctrl+P` · `Ctrl+T` | تثبيت التبويب · فوق التطبيقات | Pin tab · always on top |
+| `Ctrl+Shift+K` | تدوير لون التبويب | Cycle tab colour |
+| **`Ctrl+Shift+→` / `←`** | **اتجاه النص: RTL / LTR** | **Text direction** |
+| `Ctrl+Shift+A` | اتجاه تلقائي | Automatic direction |
+
+---
+
+## البناء من المصدر · Build from source
+
 ```bash
 pip install -e ".[dev]"
-python -m mufakkira            # مع PYTHONPATH=src أو بعد pip install -e
+python -m mufakkira
+pytest -q                      # 274 اختبارًا
+ruff check src tests tools
 ```
 
----
+### الحزم · Packages
 
-## لوحة المفاتيح · Keyboard shortcuts
+```bash
+bash scripts/build-deb.sh                     # .deb
+bash scripts/build-rpm.sh                     # .rpm   (rpm-build)
+bash scripts/build-arch.sh                    # Arch   (makepkg)
+bash packaging/appimage/build-appimage.sh     # AppImage (appimagetool)
+flatpak-builder --user --install-deps-from=flathub build/flatpak-build \
+    packaging/flatpak/org.notepadlinux.Notepad.json
+pwsh scripts/build-msi.ps1 -Version 1.0.01    # MSI على Windows فقط
+```
 
-| الاختصار | الوظيفة |
-|-----------|----------|
-| `Ctrl+N` / `Ctrl+O` / `Ctrl+S` | جديد / فتح / حفظ |
-| `Ctrl+Shift+S` | حفظ باسم |
-| `Ctrl+W` / `Ctrl+Tab` | إغلاق التبويب / التنقل بين التبويبات |
-| `Ctrl+F` / `Ctrl+H` / `F3` | بحث / استبدال / التالي |
-| `Ctrl+G` | الانتقال إلى سطر |
-| `Ctrl+Plus` / `Ctrl+Minus` / `Ctrl+0` | تكبير / تصغير / إعادة ضبط |
-| `F5` / `Ctrl+Shift+D` | التاريخ والوقت |
-| `Ctrl+,` | الإعدادات |
-| `Ctrl+Space` | إكمال الكلمة |
-| `Ctrl+Shift+H` | تشغيل/إيقاف تلوين الشيفرة |
-| `Ctrl+P` / `Ctrl+T` | تثبيت التبويب / النافذة فوق التطبيقات |
-| `Ctrl+Shift+K` | تدوير لون التبويب |
-| **`Ctrl+Shift+→` / `Ctrl+Shift+←`** | **اتجاه النص: من اليمين / من اليسار** |
-| `Ctrl+Shift+A` | اتجاه تلقائي (حسب المحتوى) |
+للتحقق من كل ما تسمح به أدوات جهازك:
 
----
+```bash
+bash scripts/verify-packaging.sh
+```
 
-## البنية · Architecture
+سير عمل GitHub يبني الصيغ السبع على Runnerات نظيفة ويرفقها بالإصدار؛ ملفاته في
+[`docs/ci/`](docs/ci/README.md) لأن صلاحية الأتمتة هنا لا تكتب
+`.github/workflows/`.
+
+### البنية · Architecture
 
 ```
 src/mufakkira/
-├── core/            منطق خالص بلا Qt — قابل للاختبار وحده
-│   ├── languages.py       سجل اللغات وحزم الخطوط
-│   ├── autocomplete.py    إقران الأقواس، الإزاحة، إكمال الكلمات
-│   ├── syntax.py          تعريف 16 لغة للتلوين
-│   ├── tab_style.py       ألوان الملاحظات للتبويبات
-│   ├── text_direction.py  كشف الاتجاه بقواعد bidi
-│   ├── encoding.py        كشف الترميز ونهايات الأسطر
-│   ├── large_file.py      القراءة/الكتابة المجزّأة والذرّية
-│   ├── i18n.py            الترجمة (140 مفتاحًا × 10 لغات)
-│   └── settings.py        الإعدادات في ~/.config/Mufakkira
-├── models/document.py     حالة المستند (مسار، ترميز، تعديل…)
-├── services/file_service.py  عمليات الإدخال/الإخراج في خيوط خلفية
-├── views/           النافذة والمحرّر وشريط الحالة
-├── widgets/         الحوارات + الملوّن النحوي
-└── controllers/main_controller.py  الربط بين الواجهة والخدمات
+├── core/        منطق خالص بلا Qt: markdown, syntax, autocomplete, encoding,
+│                large_file, text_direction, i18n, settings, tab_style
+├── models/      DocumentModel (مسار، ترميز، تعديل، لون، تثبيت)
+├── services/    FileService — إدخال/إخراج في خيوط خلفية
+├── views/       MainWindow · EditorView · StatusBar
+├── widgets/     الحوارات + الملوّن + MarkdownDecorator
+└── controllers/ MainController — الربط بينها
 ```
 
-القاعدة: `core/` و`models/` لا تستوردان PySide6 مطلقًا، لذا تُختبر بسرعة وبدون
-شاشة. الطبقات الأخرى رقيقة وتُختبر بـ`pytest-qt`.
+`core/` و`models/` لا تستوردان Qt على مستوى الوحدة، لذا تُختبر بلا شاشة.
 
 ---
 
-## الاختبارات · Tests
+## الأسئلة الشائعة · FAQ
 
-```bash
-pytest                       # 216 اختبارًا
-pytest -m "not gui"          # اختبارات المنطق فقط
-```
+**هل يغيّر Markdown الملف؟**
+لا. هو طبقة عرض فوق المحرّر؛ المحتوى وسجل التراجع يبقيان كما هما، والإيقاف
+يعيد النص الخام حرفيًا.
 
-على الخوادم بلا شاشة:
-```bash
-QT_QPA_PLATFORM=offscreen pytest
-```
+**هل يعمل بلا خطوط عربية على النظام؟**
+نعم — IBM Plex Sans Arabic مضمَّن داخل الحزمة.
 
-تفاصيل بيئة الاختبار والملاحظة المعروفة عن إنهاء العمليات في
-[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
+**هل يفتح ملفات ضخمة؟**
+نعم، على دفعات مع شريط تقدّم وإلغاء، ووضع أداء تلقائي فوق مليوني سطر.
+
+**هل يحتاج Python؟**
+`MSI` لا يحتاج Python إطلاقًا. `.deb` و`.rpm` و`.pkg.tar.zst` تطلب
+`python3` و`python3-pyside6` من مستودع التوزيعة، و`AppImage` يستخدم `python3`
+الموجود على النظام، وFlatpak يوفّره من بيئة التشغيل `org.kde.Platform`.
+
+**هل توجد نسخة Windows أصلية؟**
+نعم، عبر MSI مبني بـWiX فوق نسخة مجمّدة بـPyInstaller — دون Python على الجهاز.
 
 ---
 
 ## المساهمة · Contributing
 
-نرحّب بكل مساهمة — راجع [CONTRIBUTING.md](CONTRIBUTING.md). المهام المقترحة
-والتحليل الكامل في [docs/SWOT.md](docs/SWOT.md).
+المساهمات مرحّب بها: [CONTRIBUTING.md](CONTRIBUTING.md) · [SECURITY.md](SECURITY.md).
+تفاصيل التطوير في [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md)، والتغليف في
+[docs/PACKAGING.md](docs/PACKAGING.md)، والخطوط في [docs/FONTS.md](docs/FONTS.md).
 
 ## الرخصة · License
 
-MIT — راجع [LICENSE](LICENSE). الخطوط المضمّنة لها رخصتها الخاصة
-(SIL OFL 1.1)، مذكورة في [docs/FONTS.md](docs/FONTS.md).
+MIT — راجع [LICENSE](LICENSE). خط IBM Plex Sans Arabic المضمَّن تحت
+SIL OFL 1.1، وتفاصيله في [docs/FONTS.md](docs/FONTS.md).

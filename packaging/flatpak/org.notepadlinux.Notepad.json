@@ -6,21 +6,41 @@
   "command": "notepad",
   "rename-desktop-file": "notepad-linux.desktop",
   "rename-icon": "notepad-linux",
+  "rename-appdata-file": "org.notepadlinux.Notepad.metainfo.xml",
   "finish-args": [
     "--share=ipc",
     "--socket=fallback-x11",
     "--socket=wayland",
     "--device=dri",
     "--filesystem=home",
-    "--talk-name=org.freedesktop.portal.*"
+    "--talk-name=org.freedesktop.portal.Desktop",
+    "--talk-name=org.freedesktop.portal.Documents",
+    "--talk-name=org.freedesktop.portal.FileChooser",
+    "--env=QT_QPA_PLATFORMTHEME=KDE"
   ],
   "modules": [
+    {
+      "name": "python-dependencies",
+      "buildsystem": "simple",
+      "build-options": {
+        "env": {
+          "PIP_DISABLE_PIP_VERSION_CHECK": "1",
+          "PIP_NO_CACHE_DIR": "1"
+        }
+      },
+      "build-commands": [
+        "pip3 install --verbose --prefix=${FLATPAK_DEST} \"setuptools>=68\" wheel",
+        "pip3 install --verbose --prefix=${FLATPAK_DEST} \"PySide6>=6.5,<7\" \"charset-normalizer>=3.0\""
+      ],
+      "sources": []
+    },
     {
       "name": "notepad-linux",
       "buildsystem": "simple",
       "build-commands": [
-        "pip3 install --verbose --no-deps --prefix=/app .",
+        "pip3 install --verbose --no-build-isolation --no-deps --prefix=${FLATPAK_DEST} .",
         "install -Dm644 packaging/common/notepad.desktop /app/share/applications/notepad-linux.desktop",
+        "install -Dm644 packaging/common/org.notepadlinux.Notepad.metainfo.xml /app/share/metainfo/org.notepadlinux.Notepad.metainfo.xml",
         "install -Dm644 src/mufakkira/resources/icons/app.svg /app/share/icons/hicolor/scalable/apps/notepad-linux.svg",
         "install -Dm644 packaging/common/notepad.1 /app/share/man/man1/notepad.1",
         "for s in 16 24 32 48 64 128 256 512; do install -Dm644 src/mufakkira/resources/icons/app-$s.png /app/share/icons/hicolor/${s}x${s}/apps/notepad-linux.png; done"

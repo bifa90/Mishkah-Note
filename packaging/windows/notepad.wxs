@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Windows Installer (MSI) for Notepad — WiX Toolset v4/v5.
+
+  The payload is the folder produced by PyInstaller (scripts/build-msi.ps1):
+  Notepad.exe plus the Qt runtime and a Python interpreter, so the MSI needs
+  nothing pre-installed on the target machine.
+
+      wix build packaging\windows\notepad.wxs ^
+          -d SourceDir=build\pyinstaller\notepad ^
+          -d Version=1.0.01 ^
+          -ext WixToolset.UI.wixext ^
+          -o dist\Notepad-1.0.01-x64.msi
+
+  The build script also converts LICENSE into the RTF the licence page needs.
+-->
+<Wix xmlns="http://wixtoolset.org/schemas/v4/wxs"
+     xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
+
+  <Package
+      Name="Notepad"
+      Manufacturer="Notepad-Linux contributors"
+      Version="$(var.Version)"
+      UpgradeCode="8f1a3c62-6c2f-4c4e-9a6f-2d1b0e5f7a10"
+      Scope="perMachine"
+      Compressed="yes"
+      InstallerVersion="500"
+      Language="1033">
+
+    <SummaryInformation
+        Description="Notepad - text editor with Arabic, RTL and Markdown support"
+        Manufacturer="Notepad-Linux contributors" />
+
+    <MajorUpgrade
+        DowngradeErrorMessage="A newer version of Notepad is already installed."
+        Schedule="afterInstallExecute" />
+
+    <MediaTemplate EmbedCab="yes" CompressionLevel="high" />
+
+    <!-- The frozen application: every file under SourceDir is harvested into
+         one component group by the Files element (WiX v4 and later). -->
+    <StandardDirectory Id="ProgramFiles6432Folder">
+      <Directory Id="INSTALLFOLDER" Name="Notepad">
+        <Files Include="$(var.SourceDir)\**" />
+      </Directory>
+    </StandardDirectory>
+
+    <StandardDirectory Id="ProgramMenuFolder">
+      <Directory Id="ApplicationProgramsFolder" Name="Notepad" />
+    </StandardDirectory>
+
+    <StandardDirectory Id="DesktopFolder" />
+
+    <Feature Id="Main" Title="Notepad" Level="1" AllowAbsent="no">
+      <ComponentRef Id="StartMenuShortcut" />
+      <ComponentRef Id="DesktopShortcut" />
+      <ComponentRef Id="TextFileAssociation" />
+    </Feature>
+
+    <Component Id="StartMenuShortcut" Directory="ApplicationProgramsFolder"
+               Guid="c2a0f4a9-4a37-4a5e-9d3e-7a6b1f2c8d21">
+      <Shortcut Id="StartMenuShortcutEntry"
+                Name="Notepad"
+                Description="Text editor with Arabic, RTL and Markdown support"
+                Target="[INSTALLFOLDER]Notepad.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RemoveFolder Id="RemoveProgramMenuFolder" On="uninstall" />
+      <RegistryValue Root="HKCU" Key="Software\Notepad-Linux\Notepad"
+                     Name="startMenu" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <Component Id="DesktopShortcut" Directory="DesktopFolder"
+               Guid="d4b1e6c3-52fd-4f7b-b2c1-9e0a7d3f5b42">
+      <Shortcut Id="DesktopShortcutEntry"
+                Name="Notepad"
+                Description="Text editor with Arabic, RTL and Markdown support"
+                Target="[INSTALLFOLDER]Notepad.exe"
+                WorkingDirectory="INSTALLFOLDER" />
+      <RegistryValue Root="HKCU" Key="Software\Notepad-Linux\Notepad"
+                     Name="desktopShortcut" Type="integer" Value="1" KeyPath="yes" />
+    </Component>
+
+    <!-- Offer Notepad in "Open with" for plain text; the default handler is
+         left to the user, as Windows expects. -->
+    <Component Id="TextFileAssociation" Directory="INSTALLFOLDER"
+               Guid="e5c2f7d4-63ae-4a8c-83d2-af1b8e4c6d53">
+      <RegistryKey Root="HKLM" Key="Software\Classes\.txt\OpenWithProgids">
+        <RegistryValue Type="string" Name="NotepadLinux.txt" Value="" KeyPath="yes" />
+      </RegistryKey>
+      <RegistryKey Root="HKLM" Key="Software\Classes\NotepadLinux.txt">
+        <RegistryValue Type="string" Value="Text Document" />
+      </RegistryKey>
+      <RegistryKey Root="HKLM" Key="Software\Classes\NotepadLinux.txt\DefaultIcon">
+        <RegistryValue Type="string" Value="[INSTALLFOLDER]Notepad.exe,0" />
+      </RegistryKey>
+      <RegistryKey Root="HKLM" Key="Software\Classes\NotepadLinux.txt\shell\open\command">
+        <RegistryValue Type="string" Value="&quot;[INSTALLFOLDER]Notepad.exe&quot; &quot;%1&quot;" />
+      </RegistryKey>
+    </Component>
+
+    <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
+    <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
+  </Package>
+</Wix>

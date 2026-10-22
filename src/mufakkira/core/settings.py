@@ -41,6 +41,8 @@ class Settings:
     word_completion: bool = True
     #: Off by default: a plain notepad should not colour code unprompted.
     syntax_highlighting: bool = False
+    #: Off by default: live Markdown is a view, opt-in like highlighting.
+    live_markdown: bool = False
 
     # large files
     ask_before_mb: int = 64

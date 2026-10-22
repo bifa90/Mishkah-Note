@@ -971,6 +971,18 @@ STRINGS: Dict[str, S] = {
         "ru": "Подсветка синтаксиса",
         "ur": "سنیٹیکس ہائی لائٹنگ",
     },
+    "action.markdown": {
+        "en": "Live Markdown",
+        "ar": "Markdown حيّ",
+        "zh-Hans": "实时 Markdown",
+        "hi": "लाइव मार्कडाउन",
+        "es": "Markdown en vivo",
+        "fr": "Markdown en direct",
+        "bn": "লাইভ মার্কডাউন",
+        "pt": "Markdown ao vivo",
+        "ru": "Живой Markdown",
+        "ur": "لائیو مارک ڈاؤن",
+    },
     "action.language_override": {
         "en": "Highlight language",
         "ar": "لغة التلوين",
@@ -1054,6 +1066,18 @@ STRINGS: Dict[str, S] = {
         "pt": "Desativado por predefinição. As cores seguem o tipo de ficheiro; Ctrl+Shift+H.",
         "ru": "Отключено по умолчанию. Цвета зависят от типа файла; Ctrl+Shift+H.",
         "ur": "بطور طے شدہ بند۔ رنگ فائل کی قسم کے مطابق؛ Ctrl+Shift+H دبائیں۔",
+    },
+    "settings.markdown_note": {
+        "en": "Off by default. Formats Markdown for reading only — the file and the undo history never change. Ctrl+Shift+M toggles it.",
+        "ar": "معطّل افتراضيًا. يعرض Markdown منسّقًا للقراءة فقط — لا يتغيّر الملف ولا سجل التراجع. Ctrl+Shift+M للتبديل.",
+        "zh-Hans": "默认关闭。仅为阅读而排版 Markdown——文件与撤销历史永不改变。Ctrl+Shift+M 切换。",
+        "hi": "डिफ़ॉल्ट रूप से बंद। केवल पढ़ने के लिए Markdown सजाता है — फ़ाइल और अनडू इतिहास कभी नहीं बदलते। Ctrl+Shift+M।",
+        "es": "Desactivado por defecto. Da formato a Markdown solo para lectura: el archivo y el historial de deshacer no cambian. Ctrl+Shift+M.",
+        "fr": "Désactivé par défaut. Met en forme le Markdown pour la lecture seulement — le fichier et l'historique ne changent jamais. Ctrl+Shift+M.",
+        "bn": "ডিফল্টে বন্ধ। শুধু পড়ার জন্য Markdown সাজায় — ফাইল ও আনডু ইতিহাস কখনো বদলায় না। Ctrl+Shift+M।",
+        "pt": "Desativado por predefinição. Formata Markdown só para leitura — o ficheiro e o histórico não mudam. Ctrl+Shift+M.",
+        "ru": "Отключено по умолчанию. Оформляет Markdown только для чтения — файл и история отмены не меняются. Ctrl+Shift+M.",
+        "ur": "بطور طے شدہ بند۔ صرف پڑھنے کے لیے Markdown سجاتا ہے — فائل اور انڈو تاریخ کبھی نہیں بدلتی۔ Ctrl+Shift+M۔",
     },
     # ------------------------------------------------------------ filters
     "filter.text": {

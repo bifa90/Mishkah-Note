@@ -150,14 +150,19 @@ class SettingsDialog(QDialog):
         self.chk_auto_close = QCheckBox(tr("action.auto_close"))
         self.chk_auto_indent = QCheckBox(tr("action.auto_indent"))
         self.chk_syntax = QCheckBox(tr("action.syntax"))
+        self.chk_markdown = QCheckBox(tr("action.markdown"))
         form.addRow(self.chk_auto_close)
         form.addRow(self.chk_auto_indent)
         form.addRow(self.chk_syntax)
+        form.addRow(self.chk_markdown)
 
         note = QLabel(tr("settings.syntax_note"))
         note.setWordWrap(True)
         note.setObjectName("settingsNote")
-        return self._group(tr("settings.editing"), form, note)
+        markdown_note = QLabel(tr("settings.markdown_note"))
+        markdown_note.setWordWrap(True)
+        markdown_note.setObjectName("settingsNote")
+        return self._group(tr("settings.editing"), form, note, markdown_note)
 
     def _files_group(self) -> QGroupBox:
         form = QFormLayout()
@@ -211,6 +216,7 @@ class SettingsDialog(QDialog):
         self.chk_auto_close.setChecked(s.auto_close_brackets)
         self.chk_auto_indent.setChecked(s.auto_indent)
         self.chk_syntax.setChecked(s.syntax_highlighting)
+        self.chk_markdown.setChecked(s.live_markdown)
 
     @staticmethod
     def _select(combo: QComboBox, value: Any) -> None:
@@ -243,6 +249,7 @@ class SettingsDialog(QDialog):
             "auto_close_brackets": self.chk_auto_close.isChecked(),
             "auto_indent": self.chk_auto_indent.isChecked(),
             "syntax_highlighting": self.chk_syntax.isChecked(),
+            "live_markdown": self.chk_markdown.isChecked(),
         }
 
     def apply_to(self, settings: Settings) -> Dict[str, Any]:

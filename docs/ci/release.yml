@@ -4,12 +4,8 @@
 #   git tag -a v1.0.01 -m "Mishkah Note 1.0.01"
 #   git push origin v1.0.01          → this workflow builds and publishes
 #
-# It lives in docs/ci because the repository's automation token cannot write
-# to .github/workflows.  To enable it:
-#
-#   mkdir -p .github/workflows
-#   cp docs/ci/ci.yml docs/ci/release.yml .github/workflows/
-#   git add .github/workflows && git commit -m "ci: enable workflows" && git push
+# The docs/ci copy is kept identical. An explicitly approved branch push with
+# [publish 1.0.01] publishes only after all package jobs succeed.
 #
 name: Release
 
@@ -357,6 +353,11 @@ jobs:
           python ../tools/check_release_assets.py .
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - name: Require the canonical release version
+        env:
+          REQUESTED_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_type == 'tag' && github.ref_name || 'v1.0.01' }}
+        run: test "$REQUESTED_TAG" = v1.0.01
 
       - name: Point the canonical tag at the validated source
         env:

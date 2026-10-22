@@ -235,3 +235,14 @@ packaging/arch/*.pkg.tar.*
 
 # built packages (kept in the workspace, not in git)
 /release/
+
+*.orig
+*.rej
+*.bak
+*.old
+
+# Local source archive used by makepkg
+packaging/arch/mishkah-note-*.tar.gz
+
+# Flatpak builder state
+.flatpak-builder/

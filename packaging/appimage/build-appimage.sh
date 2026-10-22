@@ -17,14 +17,14 @@ cd "$ROOT"
 VERSION="$(python3 - <<'EOF'
 import pathlib, re
 print(re.search(r'^version = "([^"]+)"',
-      pathlib.Path("pyproject.toml").read_text(encoding="utf-8")).group(1))
+      pathlib.Path("pyproject.toml").read_text(encoding="utf-8"), re.M).group(1))
 EOF
 )"
 ARCH="${ARCH:-$(uname -m)}"
-APPDIR="$ROOT/build/Notepad.AppDir"
+APPDIR="$ROOT/build/Mishkah_Note.AppDir"
 OUT="${OUT:-$ROOT/dist}"
 TOOL="${APPIMAGETOOL:-appimagetool}"
-TARGET="$OUT/Notepad-${VERSION}-${ARCH}.AppImage"
+TARGET="$OUT/Mishkah_Note-${VERSION}-${ARCH}.AppImage"
 
 if ! command -v "$TOOL" >/dev/null 2>&1 && [ ! -x "$TOOL" ]; then
     cat >&2 <<EOF
@@ -47,7 +47,7 @@ python3 -m pip install --quiet --no-compile --upgrade \
     "PySide6>=6.5" "charset-normalizer>=3.0"
 
 echo "==> copying application"
-cp -r src/mufakkira "$APPDIR/usr/lib/python-packages/"
+cp -r src/mishkah "$APPDIR/usr/lib/python-packages/"
 find "$APPDIR/usr/lib/python-packages" -name '__pycache__' -type d -prune -exec rm -rf {} +
 
 cat > "$APPDIR/AppRun" <<'EOF'
@@ -58,22 +58,22 @@ export PYTHONPATH="$HERE/usr/lib/python-packages${PYTHONPATH:+:$PYTHONPATH}"
 export QT_PLUGIN_PATH="$HERE/usr/lib/python-packages/PySide6/Qt/plugins"
 export LD_LIBRARY_PATH="$HERE/usr/lib/python-packages/PySide6/Qt/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
 export QT_QPA_PLATFORMTHEME="${QT_QPA_PLATFORMTHEME:-}"
-exec python3 -m mufakkira "$@"
+exec python3 -m mishkah "$@"
 EOF
 chmod 0755 "$APPDIR/AppRun"
 
-install -m644 packaging/common/notepad.desktop \
-    "$APPDIR/notepad-linux.desktop"
-install -m644 src/mufakkira/resources/icons/app-256.png \
-    "$APPDIR/notepad-linux.png"
-install -m644 src/mufakkira/resources/icons/app-256.png \
-    "$APPDIR/usr/share/icons/hicolor/256x256/apps/notepad-linux.png"
-install -m644 src/mufakkira/resources/icons/app.svg \
-    "$APPDIR/notepad-linux.svg"
-install -m644 packaging/common/notepad.desktop \
-    "$APPDIR/usr/share/applications/notepad-linux.desktop"
-install -m644 packaging/common/org.notepadlinux.Notepad.metainfo.xml \
-    "$APPDIR/usr/share/metainfo/org.notepadlinux.Notepad.metainfo.xml"
+install -m644 packaging/common/mishkah.desktop \
+    "$APPDIR/mishkah-note.desktop"
+install -m644 src/mishkah/resources/icons/app-256.png \
+    "$APPDIR/mishkah-note.png"
+install -m644 src/mishkah/resources/icons/app-256.png \
+    "$APPDIR/usr/share/icons/hicolor/256x256/apps/mishkah-note.png"
+install -m644 src/mishkah/resources/icons/app.svg \
+    "$APPDIR/mishkah-note.svg"
+install -m644 packaging/common/mishkah.desktop \
+    "$APPDIR/usr/share/applications/mishkah-note.desktop"
+install -m644 packaging/common/org.mishkahnote.Mishkah.metainfo.xml \
+    "$APPDIR/usr/share/metainfo/org.mishkahnote.Mishkah.metainfo.xml"
 
 if command -v "$TOOL" >/dev/null 2>&1 || [ -x "$TOOL" ]; then
     echo "==> packaging"

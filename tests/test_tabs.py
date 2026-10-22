@@ -7,17 +7,17 @@ from pathlib import Path
 import pytest
 from PySide6.QtCore import Qt
 
-from mufakkira.core import tab_style
-from mufakkira.core.settings import Settings
+from mishkah.core import tab_style
+from mishkah.core.settings import Settings
 
 pytestmark = pytest.mark.usefixtures("qapp")
 
 
 @pytest.fixture()
 def controller(qapp, tmp_path):
-    from mufakkira.controllers.main_controller import MainController
-    from mufakkira.services.file_service import FileService
-    from mufakkira.views.main_window import MainWindow
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
 
     settings = Settings(path=tmp_path / "settings.json", restore_session=False)
     window = MainWindow()
@@ -200,7 +200,7 @@ def test_path_drives_the_detected_language(controller):
 
 
 def test_untitled_tab_follows_the_ui_language(controller, qapp):
-    from mufakkira.core import i18n
+    from mishkah.core import i18n
 
     editor = controller.new_document()
     assert controller.window.tabs.tabText(0) == i18n.tr("app.untitled")

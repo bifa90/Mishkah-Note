@@ -1,0 +1,33 @@
+[Desktop Entry]
+Type=Application
+Version=1.2
+Name=Mishkah Note
+Name[ar]=مفكرة مشكاة
+Name[ur]=Mishkah Note
+Name[es]=Mishkah Note
+Name[fr]=Mishkah Note
+Name[pt]=Mishkah Note
+Name[ru]=Mishkah Note
+Name[hi]=Mishkah Note
+Name[bn]=Mishkah Note
+Name[zh_CN]=Mishkah Note
+GenericName=Text Editor
+GenericName[ar]=محرّر نصوص
+Comment=A fast text editor with first-class Arabic and RTL support
+Comment[ar]=محرّر نصوص سريع بدعم متكامل للعربية والكتابة من اليمين
+TryExec=mishkah
+Exec=mishkah %F
+Icon=mishkah-note
+Terminal=false
+Categories=Utility;TextEditor;Qt;
+Keywords=text;editor;mishkah;arabic;rtl;مفكرة;نص;
+Keywords[ar]=نص;محرر;مفكرة;عربي;
+StartupNotify=true
+StartupWMClass=mishkah-note
+MimeType=text/plain;text/x-python;application/json;text/markdown;
+Actions=new-window;
+
+[Desktop Action new-window]
+Name=New Window
+Name[ar]=نافذة جديدة
+Exec=mishkah

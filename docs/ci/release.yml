@@ -1,26 +1,24 @@
 # Release pipeline: build every Linux format plus the Windows MSI, then attach
 # the files to the GitHub Release of the pushed tag.
 #
-#   git tag -a v1.0.01 -m "Notepad 1.0.01"
+#   git tag -a v1.0.01 -m "Mishkah Note 1.0.01"
 #   git push origin v1.0.01          → this workflow builds and publishes
 #
-# It lives in docs/ci because the repository's automation token cannot write
-# to .github/workflows.  To enable it:
-#
-#   mkdir -p .github/workflows
-#   cp docs/ci/ci.yml docs/ci/release.yml .github/workflows/
-#   git add .github/workflows && git commit -m "ci: enable workflows" && git push
+# The docs/ci copy is kept identical. An explicitly approved branch push with
+# [publish 1.0.01] publishes only after all package jobs succeed.
 #
 name: Release
 
 on:
   push:
-    tags: ["v*"]
+    tags: ["v1.0.01"]
+    branches: ["arena/71ffd864-mishkah-note"]
   workflow_dispatch:
     inputs:
       tag:
         description: "Existing tag to (re)build and publish, e.g. v1.0.01"
         required: true
+        default: "v1.0.01"
 
 permissions:
   contents: write
@@ -28,14 +26,72 @@ permissions:
 env:
   PYTHON_VERSION: "3.11"
 
+concurrency:
+  group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+  # Superseded branch candidates must not block the approved build.
+  # Published-tag and manual release runs are never cancelled automatically.
+  cancel-in-progress: ${{ github.event_name == 'push' && github.ref_type == 'branch' }}
+
 jobs:
+  validate:
+    name: Test the release source
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+      - name: Runtime libraries and validation tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libegl1 libgl1 libxkbcommon0 libdbus-1-3 fonts-noto-core fonts-noto-cjk desktop-file-utils libxml2-utils
+          python -m pip install -e ".[dev]" wheel "setuptools>=68"
+      - name: Lint, tests and packaging checks
+        env:
+          QT_QPA_PLATFORM: offscreen
+          MISHKAH_CLEAN_EXIT: "1"
+        run: |
+          test "$(python -m mishkah --version)" = "1.0.01"
+          ruff check src tests tools
+          pytest tests/ -q --junitxml=build/pytest.xml
+          bash scripts/verify-packaging.sh
+      - name: Report test failures
+        if: always()
+        run: python tools/report_test_failures.py build/pytest.xml
+
+      - name: Generate real application screenshots
+        env:
+          QT_QPA_PLATFORM: offscreen
+          MISHKAH_CLEAN_EXIT: "1"
+        run: python tools/make_screenshots.py
+      - name: Save generated screenshots on the session branch
+        if: github.ref == 'refs/heads/arena/71ffd864-mishkah-note'
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add docs/screenshots/
+          if ! git diff --cached --quiet; then
+            git commit -m "Generate Mishkah Note screenshots from the real application"
+            git push origin HEAD:arena/71ffd864-mishkah-note
+          fi
+      - uses: actions/upload-artifact@v4
+        with:
+          name: screenshots
+          path: docs/screenshots/*.png
+          if-no-files-found: error
+
   # ------------------------------------------------------------------ python
   python-packages:
+    needs: validate
     name: sdist + wheel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - run: |
@@ -43,18 +99,22 @@ jobs:
           python -m build
       - uses: actions/upload-artifact@v4
         with:
-          name: python
+          name: packages-python
           path: |
             dist/*.tar.gz
             dist/*.whl
           retention-days: 7
+          if-no-files-found: error
 
   # --------------------------------------------------------------------- deb
   deb:
+    needs: validate
     name: Debian / Ubuntu (.deb)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends dpkg-dev lintian
@@ -64,14 +124,16 @@ jobs:
         run: lintian --fail-on error dist/*.deb
       - uses: actions/upload-artifact@v4
         with:
-          name: deb
+          name: packages-deb
           path: dist/*.deb
           retention-days: 7
+          if-no-files-found: error
 
   # --------------------------------------------------------------------- rpm
   rpm:
+    needs: validate
     name: Fedora / RHEL / openSUSE (.rpm)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container: fedora:latest
     steps:
       - name: Install the RPM toolchain
@@ -79,7 +141,9 @@ jobs:
           dnf install -y --setopt=install_weak_deps=False \
             git tar gzip rpm-build python3 python3-pip python3-build \
             python3-setuptools python3-wheel
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - name: Build
         run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -90,14 +154,16 @@ jobs:
           rpm -qlp dist/*.rpm
       - uses: actions/upload-artifact@v4
         with:
-          name: rpm
+          name: packages-rpm
           path: dist/*.rpm
           retention-days: 7
+          if-no-files-found: error
 
   # -------------------------------------------------------------------- arch
   arch:
+    needs: validate
     name: Arch / Manjaro (.pkg.tar.zst)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container: archlinux:latest
     steps:
       - name: Install the Arch toolchain
@@ -105,7 +171,9 @@ jobs:
           pacman -Syu --noconfirm --needed base-devel git python pyside6 \
             python-charset-normalizer python-build python-installer \
             python-wheel python-setuptools sudo
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - name: Build as an unprivileged user (makepkg refuses root)
         run: |
           useradd -m builder
@@ -117,17 +185,21 @@ jobs:
           bsdtar -tf dist/*.pkg.tar.zst | head -30
       - uses: actions/upload-artifact@v4
         with:
-          name: arch
+          name: packages-arch
           path: dist/*.pkg.tar.zst
           retention-days: 7
+          if-no-files-found: error
 
   # ---------------------------------------------------------------- appimage
   appimage:
+    needs: validate
     name: AppImage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
       - name: Fetch appimagetool
@@ -143,47 +215,66 @@ jobs:
         run: bash packaging/appimage/build-appimage.sh
       - uses: actions/upload-artifact@v4
         with:
-          name: appimage
+          name: packages-appimage
           path: dist/*.AppImage
           retention-days: 7
+          if-no-files-found: error
 
   # ----------------------------------------------------------------- flatpak
   flatpak:
+    needs: validate
     name: Flatpak
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
       - name: Install flatpak-builder and the KDE runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils librsvg2-common
           flatpak remote-add --user --if-not-exists flathub \
             https://flathub.org/repo/flathub.flatpakrepo
       - name: Build the application
         run: |
+          mkdir -p build
           flatpak-builder --user --force-clean --install-deps-from=flathub \
             --repo=build/flatpak-repo --default-branch=stable \
-            build/flatpak-build packaging/flatpak/org.notepadlinux.Notepad.json
+            build/flatpak-build packaging/flatpak/org.mishkahnote.Mishkah.json > build/flatpak.log 2>&1 || {
+              appstreamcli compose --prefix=/ --origin=org.mishkahnote.Mishkah \
+                --components=org.mishkahnote.Mishkah,org.mishkahnote.Mishkah.desktop \
+                --result-root=build/flatpak-build/files \
+                --print-report=full --hints-dir=build/appstream-issues build/flatpak-build/files >> build/flatpak.log 2>&1 || true
+              python3 tools/report_build_failure.py build/flatpak.log build/appstream-issues/*
+              exit 1
+            }
+      - name: Check the packaged application runtime
+        run: |
+          flatpak build --env=QT_QPA_PLATFORM=offscreen build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert mishkah.__version__ == "1.0.01"; os._exit(0)'
       - name: Export a single-file bundle
         run: |
           mkdir -p dist
           flatpak build-bundle build/flatpak-repo \
-            dist/org.notepadlinux.Notepad.flatpak \
-            org.notepadlinux.Notepad stable
+            dist/org.mishkahnote.Mishkah.flatpak \
+            org.mishkahnote.Mishkah stable
           ls -lh dist/*.flatpak
       - uses: actions/upload-artifact@v4
         with:
-          name: flatpak
+          name: packages-flatpak
           path: dist/*.flatpak
           retention-days: 7
+          if-no-files-found: error
 
   # ----------------------------------------------------------------- windows
   windows-msi:
+    needs: validate
     name: Windows (.msi)
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ env.PYTHON_VERSION }}
           architecture: x64
@@ -194,54 +285,124 @@ jobs:
         shell: pwsh
         run: |
           $version = (Select-String -Path pyproject.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
-          ./scripts/build-msi.ps1 -Version $version
+          New-Item -ItemType Directory -Force build | Out-Null
+          try {
+            ./scripts/build-msi.ps1 -Version $version *> build/msi.log
+            if ($LASTEXITCODE -ne 0) { throw "MSI build returned $LASTEXITCODE" }
+          } catch {
+            python tools/report_build_failure.py build/msi.log
+            throw
+          }
       - name: Smoke-test the frozen application
         shell: pwsh
         run: |
-          $exe = "build/pyinstaller/notepad/Notepad.exe"
+          $exe = "build/pyinstaller/mishkah/Mishkah Note.exe"
           if (-not (Test-Path $exe)) { throw "frozen executable missing" }
-          & $exe --version
+          $process = Start-Process -FilePath $exe -ArgumentList "--version" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "frozen executable failed: $($process.ExitCode)" }
+      - name: Install and uninstall the MSI
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem dist/*.msi | Select-Object -First 1).FullName
+          $installed = $false
+          try {
+            $install = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart /l*v build/msi-install.log" -Wait -PassThru
+            if ($install.ExitCode -notin @(0, 3010)) { throw "MSI install failed: $($install.ExitCode)" }
+            $installed = $true
+            $directory = Join-Path $env:ProgramFiles "Mishkah Note"
+            $exe = Join-Path $directory "Mishkah Note.exe"
+            if (-not (Test-Path $exe)) { throw "installed executable missing" }
+            if (-not (Get-ChildItem $directory -Recurse -Filter IBMPlexSansArabic-Regular.ttf)) { throw "bundled Arabic font missing" }
+            $check = Start-Process $exe -ArgumentList "--version" -Wait -PassThru
+            if ($check.ExitCode -ne 0) { throw "installed executable failed" }
+          } catch {
+            python tools/report_build_failure.py build/msi-install.log
+            throw
+          } finally {
+            if ($installed) {
+              $remove = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /norestart" -Wait -PassThru
+              if ($remove.ExitCode -notin @(0, 3010)) { throw "MSI uninstall failed: $($remove.ExitCode)" }
+            }
+          }
       - uses: actions/upload-artifact@v4
         with:
-          name: msi
+          name: packages-msi
           path: dist/*.msi
           retention-days: 7
+          if-no-files-found: error
 
   # ----------------------------------------------------------------- release
   publish:
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || (github.ref == 'refs/heads/arena/71ffd864-mishkah-note' && contains(github.event.head_commit.message, '[publish 1.0.01]'))
     name: Attach the files to the release
     needs: [python-packages, deb, rpm, arch, appimage, flatpak, windows-msi]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.sha }}
 
       - name: Collect every artefact
         uses: actions/download-artifact@v4
         with:
           path: artifacts
+          pattern: "packages-*"
           merge-multiple: true
 
       - name: Checksums
         run: |
           cd artifacts
+          python ../tools/check_release_assets.py .
           sha256sum * > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+      - name: Require the canonical release version
+        env:
+          REQUESTED_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_type == 'tag' && github.ref_name || 'v1.0.01' }}
+        run: test "$REQUESTED_TAG" = v1.0.01
+
+      - name: Point the canonical tag at the validated source
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          source_sha="$(git rev-parse HEAD)"
+          if gh api repos/${{ github.repository }}/git/ref/tags/v1.0.01 >/dev/null 2>&1; then
+            gh api --method PATCH repos/${{ github.repository }}/git/refs/tags/v1.0.01 \
+              -f sha="$source_sha" -F force=true
+          else
+            gh api --method POST repos/${{ github.repository }}/git/refs \
+              -f ref=refs/tags/v1.0.01 -f sha="$source_sha"
+          fi
 
       - name: Create the release if it does not exist yet
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.0.01' }}
         run: |
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
-              --title "Notepad ${TAG#v}" \
-              --generate-notes
+              --title "Mishkah Note ${TAG#v}" \
+              --notes-file docs/RELEASE_NOTES.md
           fi
+          gh release edit "$TAG" --title "Mishkah Note ${TAG#v}" --notes-file docs/RELEASE_NOTES.md
 
       - name: Upload the packages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.0.01' }}
         run: |
           gh release upload "$TAG" artifacts/* --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name'
+
+      - name: Retain the canonical release only
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          for patch in 0 1; do
+            other_tag="v1.0.$patch"
+            if gh release view "$other_tag" >/dev/null 2>&1; then
+              gh release delete "$other_tag" --cleanup-tag --yes
+            elif gh api repos/${{ github.repository }}/git/ref/tags/"$other_tag" >/dev/null 2>&1; then
+              gh api --method DELETE repos/${{ github.repository }}/git/refs/tags/"$other_tag"
+            fi
+          done

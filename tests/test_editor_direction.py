@@ -30,9 +30,9 @@ def _dispose_widgets(qapp):
         widget.deleteLater()
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
-from mufakkira.core.text_direction import AUTO, LTR, RTL  # noqa: E402
-from mufakkira.models.document import DocumentModel  # noqa: E402
-from mufakkira.views.editor_view import (  # noqa: E402
+from mishkah.core.text_direction import AUTO, LTR, RTL  # noqa: E402
+from mishkah.models.document import DocumentModel  # noqa: E402
+from mishkah.views.editor_view import (  # noqa: E402
     EditorView,
     _ChordState,
 )

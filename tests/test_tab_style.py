@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mufakkira.core import tab_style
+from mishkah.core import tab_style
 
 
 def test_palette_is_complete_and_unique():

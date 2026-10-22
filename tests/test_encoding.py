@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from mufakkira.core.encoding import (  # noqa: E402
+from mishkah.core.encoding import (  # noqa: E402
     CRLF,
     LF,
     apply_line_ending,
@@ -68,7 +68,7 @@ def test_binary_detection():
 
 def test_normalize_and_apply_line_ending():
     assert normalize_newlines("a\r\nb\rc\nd") == "a\nb\nc\nd"
-    # apply_line_ending rewrites existing terminators; it never adds one.
+    # apply_line_ending converts existing terminators; it never adds one.
     assert apply_line_ending("a\nb", CRLF) == "a\r\nb"
     assert apply_line_ending("a\nb\n", CRLF) == "a\r\nb\r\n"
     assert apply_line_ending("a\r\nb", LF) == "a\nb"

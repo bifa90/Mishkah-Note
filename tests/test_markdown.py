@@ -18,9 +18,9 @@ from pathlib import Path
 import pytest
 from PySide6.QtGui import QFont, QTextCharFormat, QTextCursor
 
-from mufakkira.core import markdown
-from mufakkira.models.document import DocumentModel
-from mufakkira.views.editor_view import EditorView
+from mishkah.core import markdown
+from mishkah.models.document import DocumentModel
+from mishkah.views.editor_view import EditorView
 
 pytestmark = pytest.mark.usefixtures("qapp")
 
@@ -327,7 +327,7 @@ def test_set_document_keeps_the_mode(qapp):
 
 
 def test_decorator_limits_huge_documents(qapp):
-    from mufakkira.widgets.markdown_decorator import MAX_MARKDOWN_BLOCKS
+    from mishkah.widgets.markdown_decorator import MAX_MARKDOWN_BLOCKS
 
     editor = make_editor("line\n")
     editor.set_live_markdown(True, "light")
@@ -341,9 +341,9 @@ def test_decorator_limits_huge_documents(qapp):
 
 
 def test_markdown_strings_exist_in_every_language():
-    from mufakkira.core.i18n import tr
-    from mufakkira.core.i18n_data import STRINGS
-    from mufakkira.core.languages import all_languages
+    from mishkah.core.i18n import tr
+    from mishkah.core.i18n_data import STRINGS
+    from mishkah.core.languages import all_languages
 
     codes = {lang.code for lang in all_languages()}
     for key in ("action.markdown", "settings.markdown_note"):
@@ -356,10 +356,10 @@ def test_markdown_strings_exist_in_every_language():
 # ---------------------------------------------------------------------------
 @pytest.fixture()
 def controller(qapp, tmp_path):
-    from mufakkira.controllers.main_controller import MainController
-    from mufakkira.core.settings import Settings
-    from mufakkira.services.file_service import FileService
-    from mufakkira.views.main_window import MainWindow
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.core.settings import Settings
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
 
     settings = Settings(path=tmp_path / "settings.json", restore_session=False)
     window = MainWindow()
@@ -400,7 +400,7 @@ def test_preference_survives_a_restart(controller, tmp_path):
     controller.set_live_markdown(True)
     controller.settings.save()
 
-    from mufakkira.core.settings import Settings
+    from mishkah.core.settings import Settings
 
     reloaded = Settings.load(tmp_path / "settings.json")
     assert reloaded.live_markdown is True
@@ -413,7 +413,7 @@ def test_new_tabs_inherit_the_preference(controller):
 
 
 def test_settings_dialog_round_trip(controller):
-    from mufakkira.widgets.settings_dialog import SettingsDialog
+    from mishkah.widgets.settings_dialog import SettingsDialog
 
     dialog = SettingsDialog(controller.settings)
     assert dialog.chk_markdown.isChecked() is False

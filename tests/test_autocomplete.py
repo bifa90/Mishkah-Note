@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import pytest
 
-from mufakkira.core import autocomplete as ac
+from mishkah.core import autocomplete as ac
 
 
 # ---------------------------------------------------------------------

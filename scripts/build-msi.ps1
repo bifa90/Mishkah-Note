@@ -1,10 +1,10 @@
 <#
 .SYNOPSIS
-    Build the Windows installer (MSI) for Notepad.
+    Build the Windows installer (MSI) for Mishkah Note.
 
 .DESCRIPTION
     Freezes the application with PyInstaller (onedir, windowed) and wraps the
-    result with WiX Toolset v4/v5. The MSI installs into Program Files, creates
+    result with WiX Toolset v5. The MSI installs into Program Files, creates
     Start-menu and desktop shortcuts, and registers an "Open with" entry for
     .txt files. Nothing is bundled that requires Python on the target machine.
 
@@ -14,7 +14,7 @@
 
     Prerequisites (installed by the script when missing):
         * Python 3.9+ with pip
-        * .NET 6+ (for `dotnet tool install --global wix`)
+        * .NET 8+ (for `dotnet tool install --global wix`)
 
 .PARAMETER Version
     Product version written into the MSI; defaults to pyproject.toml.
@@ -44,6 +44,10 @@ function Write-Step([string]$Text) {
     Write-Host "==> $Text" -ForegroundColor Cyan
 }
 
+function Assert-NativeExit([string]$Stage) {
+    if ($LASTEXITCODE -ne 0) { throw "$Stage failed with exit code $LASTEXITCODE" }
+}
+
 function Get-ProjectVersion {
     $line = Select-String -Path "pyproject.toml" -Pattern '^version = "([^"]+)"' |
         Select-Object -First 1
@@ -52,7 +56,7 @@ function Get-ProjectVersion {
 }
 
 if (-not $Version) { $Version = Get-ProjectVersion }
-Write-Step "Notepad $Version — Windows MSI"
+Write-Step "Mishkah Note $Version — Windows MSI"
 
 # ---------------------------------------------------------------------------
 # 1. tooling
@@ -64,23 +68,28 @@ if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
 }
 
 python -m pip install --upgrade --quiet pip
+Assert-NativeExit "pip bootstrap"
 python -m pip install --quiet "pyinstaller>=6.6" "PySide6>=6.5" "charset-normalizer>=3.0" build
+Assert-NativeExit "Python dependencies"
 
 if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
     if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
         throw "dotnet was not found; install the .NET SDK to get the WiX CLI"
     }
-    dotnet tool install --global wix
+    dotnet tool install --global wix --version 5.0.2
+    Assert-NativeExit "WiX CLI installation"
     $env:PATH = "$env:PATH;$env:USERPROFILE\.dotnet\tools"
 }
 wix --version
-wix extension add --global WixToolset.UI.wixext
+Assert-NativeExit "WiX CLI"
+wix extension add --global WixToolset.UI.wixext/5.0.2
+Assert-NativeExit "WiX UI extension"
 
 # ---------------------------------------------------------------------------
 # 2. freeze the application
 # ---------------------------------------------------------------------------
 $PyInstallerDir = Join-Path $Root "build/pyinstaller"
-$SourceDir = Join-Path $PyInstallerDir "notepad"
+$SourceDir = Join-Path $PyInstallerDir "mishkah"
 
 if ($SkipFreeze -and (Test-Path $SourceDir)) {
     Write-Step "reusing $SourceDir"
@@ -89,13 +98,14 @@ if ($SkipFreeze -and (Test-Path $SourceDir)) {
     if (Test-Path $PyInstallerDir) { Remove-Item -Recurse -Force $PyInstallerDir }
 
     python -m PyInstaller `
-        --noconfirm --clean --onedir `
+        --noconfirm --clean `
         --distpath $PyInstallerDir `
         --workpath (Join-Path $PyInstallerDir "work") `
-        "packaging/windows/notepad.spec"
+        "packaging/windows/mishkah.spec"
+    Assert-NativeExit "PyInstaller"
 
-    if (-not (Test-Path (Join-Path $SourceDir "Notepad.exe"))) {
-        throw "PyInstaller did not produce Notepad.exe"
+    if (-not (Test-Path (Join-Path $SourceDir "Mishkah Note.exe"))) {
+        throw "PyInstaller did not produce Mishkah Note.exe"
     }
 }
 
@@ -119,15 +129,16 @@ $escaped = $escaped.Replace("`r`n", " \par ").Replace("`n", " \par ")
 # ---------------------------------------------------------------------------
 Write-Step "building the MSI"
 New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
-$Msi = Join-Path $OutputDirectory "Notepad-$Version-x64.msi"
+$Msi = Join-Path $OutputDirectory "Mishkah_Note_${Version}_x64.msi"
 
-wix build "packaging/windows/notepad.wxs" `
+wix build "packaging/windows/mishkah.wxs" `
     -d "SourceDir=$SourceDir" `
     -d "Version=$Version" `
     -d "LicenseRtf=$LicenseRtf" `
     -arch x64 `
     -ext WixToolset.UI.wixext `
     -o $Msi
+Assert-NativeExit "MSI compilation"
 
 if (-not (Test-Path $Msi)) { throw "wix did not produce an MSI" }
 $size = [math]::Round((Get-Item $Msi).Length / 1MB, 2)

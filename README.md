@@ -1,56 +1,41 @@
-<div align="center">
+# مفكرة مشكاة
 
-<img src="src/mufakkira/resources/icons/app-256.png" width="112" alt="Notepad — المفكرة">
+محرّر نصوص عربي أولًا لسطح مكتب Linux بواجهة مستوحاة من Windows 11.
 
-# المفكرة · Notepad for Linux
+## Mishkah Note
 
-**محرّر نصوص لسطح مكتب لينكس بواجهة Windows 11، عربي أولًا وقارئ لكل لغة.**
-A fast, Windows 11-style text editor for the Linux desktop — built for Arabic
-and every other script.
-
-[![License: MIT](https://img.shields.io/badge/license-MIT-2F7D32.svg)](LICENSE)
-[![Python 3.9+](https://img.shields.io/badge/python-3.9%2B-0F6CBD.svg)](pyproject.toml)
-[![Qt 6](https://img.shields.io/badge/Qt-6.5%2B-41CD52.svg)](https://www.qt.io)
-[![Platform: Linux](https://img.shields.io/badge/platform-linux-F0A020.svg)](#التثبيت--installation)
-
-[المزايا](#المزايا--features) ·
-[التثبيت](#التثبيت--installation) ·
-[الاختصارات](#الاختصارات--shortcuts) ·
-[البناء من المصدر](#البناء-من-المصدر--build-from-source) ·
-[الأسئلة الشائعة](#الأسئلة-الشائعة--faq)
-
-</div>
-
-![المفكرة مع Markdown حيّ · Notepad with live Markdown](docs/screenshots/light.png)
-
----
+Mishkah Note is an Arabic-first text editor for Linux, built with Python 3.9+ and PySide6. It combines multilingual editing, automatic text direction, coloured tabs and optional live Markdown in a lightweight Windows 11-style interface, with an MSI installer for Windows.
 
 ## ما هو؟ · What it is
 
-**المفكرة** محرّر نصوص خفيف يفتح فورًا، بلا مشروع ولا شريط أدوات مزدحم: تبويبات،
+**مفكرة مشكاة** محرّر نصوص خفيف يفتح فورًا، بلا مشروع ولا شريط أدوات مزدحم: تبويبات،
 حفظ ذرّي، وبحث سريع. الفرق أنه يبدأ من العربية لا من الإنجليزية — الاتجاه يُحسب
 لكل مستند على حدة، والخط العربي مضمَّن مع البرنامج، والواجهة نفسها مترجمة إلى
 عشر لغات.
 
-> A notepad that opens instantly: tabs, atomic saves, fast search — and a text
+> A mishkah that opens instantly: tabs, atomic saves, fast search — and a text
 > direction that is resolved per document instead of forced on the whole
 > application. The interface speaks ten languages; the Arabic typeface ships
 > inside the package.
 
-### لمن؟ · Who it is for
+## لمن؟
 
+* المدرّس والطالب والصحافي ومن يكتب نصوصًا طويلة.
+* من يريد بديل Notepad خفيفًا على Linux.
 * من يكتب العربية والإنجليزية في الملف نفسه ويريد أن يظهر كلٌّ منهما صحيحًا.
 * من يفتح ملفات سجلّ كبيرة (مئات الميغابايت) ولا يريد أن يتجمّد المحرّر.
 * من يريد محرّرًا صغيرًا يعرف Markdown ويقرأه منسّقًا **دون** أن يلمس الملف.
 * من يعمل على KDE أو GNOME أو Wayland أو X11، بسمة فاتحة أو داكنة.
 
+## لقطات
+
 | الوضع الداكن · Dark | الإعدادات · Settings | التبويبات الملوّنة · Coloured tabs |
 |---|---|---|
-| ![dark](docs/screenshots/dark-arabic.png) | ![settings](docs/screenshots/settings.png) | ![tabs](docs/screenshots/tabs.png) |
+| ![نص عربي بالسمة الداكنة](docs/screenshots/dark-arabic.png) | ![إعدادات الكتابة](docs/screenshots/settings.png) | ![التبويبات الملوّنة](docs/screenshots/tabs.png) |
 
 ---
 
-## المزايا · Features
+## المزايا الحالية
 
 ### Markdown حيّ — عرض لا تعديل · Live Markdown, a view and not an edit
 
@@ -65,7 +50,9 @@ and every other script.
 * مدعوم كحد أدنى: عناوين `#`–`######`، عريض/مائل/يتوسطه خط، `inline code`
   وكتل ```` ``` ````، قوائم مرقّمة ونقطية، اقتباس `>`، روابط، خط فاصل، جداول.
 
-![Markdown](docs/screenshots/markdown.png)
+| السمة الفاتحة | Markdown | Markdown الداكن |
+|---|---|---|
+| ![الواجهة الفاتحة](docs/screenshots/light.png) | ![عرض Markdown](docs/screenshots/markdown.png) | ![Markdown بالسمة الداكنة](docs/screenshots/markdown-dark.png) |
 
 ### الاتجاه واللغة · Direction and language
 
@@ -76,8 +63,10 @@ and every other script.
   لوحة المفاتيح في النظام.
 * عشر لغات للواجهة: `en, zh-Hans, hi, es, fr, ar, bn, pt, ru, ur`، وتبديلها
   فوري بلا إعادة تشغيل.
-* خط **IBM Plex Sans Arabic** مضمَّن (SIL OFL 1.1)، وسلسلة خطوط مناسبة لكل
+* خط الكتابة التلقائي للعربية **IBM Plex Sans Arabic Regular** مضمَّن (SIL OFL 1.1)، وسلسلة خطوط مناسبة لكل
   نظام كتابة: Devanagari للهندية، Bengali للبنغالية، وCJK للصينية.
+* اختيار خط مخصص متاح للجميع من **الإعدادات ← الخط**؛ «تلقائي» يتبع لغة
+  الواجهة، والاختيار المخصص محفوظ. [ترشيحات اللغات وتفاصيلها](docs/FONTS.md).
 
 ### الكتابة · Writing
 
@@ -103,8 +92,8 @@ and every other script.
   CP720، ASCII — مع كشف تلقائي وإعادة فتح بترميز آخر.
 * نهايات الأسطر LF / CRLF / CR، وتبديلها من شريط الحالة.
 * ألوان تبويبات على نمط أوراق الملاحظات (`Ctrl+Shift+K` للتدوير)، وتثبيت
-  التبويب فوق التطبيقات (`Ctrl+P`).
-* تلوين الشيفرة **اختياري ومعطّل افتراضيًا** (`Ctrl+Shift+H`)، لأربعة عشر لغة،
+  التبويب (`Ctrl+P`) وإبقاء النافذة فوق التطبيقات (`Ctrl+T`).
+* تلوين الشيفرة **اختياري ومعطّل افتراضيًا** (`Ctrl+Shift+H`)، لست عشرة لغة،
   وتتبعه السمة الفاتحة أو الداكنة.
 
 ---
@@ -112,26 +101,26 @@ and every other script.
 ## التثبيت · Installation
 
 الإصدار الحالي **1.0.01**. تنزيل الصيغ الجاهزة من صفحة
-[Releases](https://github.com/bifa90/Notepad-Linux/releases).
+[Releases](https://github.com/bifa90/Mishkah-Note/releases).
 
 ### Debian / Ubuntu · `.deb`
 
 ```bash
-sudo apt install ./notepad-linux_1.0.01_all.deb
-notepad
+sudo apt install ./mishkah-note_1.0.01_all.deb
+mishkah
 ```
 
 ### Fedora / RHEL / openSUSE · `.rpm`
 
 ```bash
-sudo rpm -i notepad-linux-1.0.01-1.noarch.rpm
-# أو: sudo dnf install ./notepad-linux-1.0.01-1.noarch.rpm
+sudo rpm -i mishkah-note-1.0.01-*.rpm
+# أو: sudo dnf install ./mishkah-note-1.0.01-1.noarch.rpm
 ```
 
 ### Arch / Manjaro · `.pkg.tar.zst`
 
 ```bash
-sudo pacman -U notepad-linux-1.0.01-1-any.pkg.tar.zst
+sudo pacman -U mishkah-note-1.0.01-1-any.pkg.tar.zst
 ```
 
 أو من `PKGBUILD` مباشرة:
@@ -143,15 +132,15 @@ cd packaging/arch && makepkg -si
 ### AppImage — محمول بلا تثبيت · portable
 
 ```bash
-chmod +x Notepad-1.0.01-x86_64.AppImage
-./Notepad-1.0.01-x86_64.AppImage
+chmod +x Mishkah_Note-1.0.01-x86_64.AppImage
+./Mishkah_Note-1.0.01-x86_64.AppImage
 ```
 
 ### Flatpak
 
 ```bash
-flatpak install --user org.notepadlinux.Notepad.flatpak
-flatpak run org.notepadlinux.Notepad
+flatpak install --user org.mishkahnote.Mishkah.flatpak
+flatpak run org.mishkahnote.Mishkah
 ```
 
 > Flatpak يحتاج `org.kde.Platform//6.7` من Flathub.
@@ -160,17 +149,17 @@ flatpak run org.notepadlinux.Notepad
 ### Windows · `.msi`
 
 ```powershell
-msiexec /i Notepad-1.0.01-x64.msi
+msiexec /i Mishkah_Note_1.0.01_x64.msi
 ```
 
 ### من المصدر · From source
 
 ```bash
-git clone https://github.com/bifa90/Notepad-Linux
-cd Notepad-Linux
+git clone https://github.com/bifa90/Mishkah-Note
+cd Mishkah-Note
 python3 -m venv .venv && . .venv/bin/activate
 pip install .
-notepad            # أو: mufakkira
+mishkah
 ```
 
 متطلبات: Python ≥ 3.9، PySide6 ≥ 6.5، `charset-normalizer` ≥ 3.0.
@@ -196,6 +185,11 @@ notepad            # أو: mufakkira
 | `Ctrl+Shift+K` | تدوير لون التبويب | Cycle tab colour |
 | **`Ctrl+Shift+→` / `←`** | **اتجاه النص: RTL / LTR** | **Text direction** |
 | `Ctrl+Shift+A` | اتجاه تلقائي | Automatic direction |
+| `Ctrl+Shift+R` · `Ctrl+Shift+L` | يمين إلى يسار · يسار إلى يمين | RTL · LTR |
+| `Ctrl+Z` · `Ctrl+Y` · `Ctrl+A` | تراجع · إعادة · تحديد الكل | Undo · Redo · Select all |
+| `Ctrl+X` · `Ctrl+C` · `Ctrl+V` | قص · نسخ · لصق | Cut · Copy · Paste |
+| `Shift+F3` | نتيجة البحث التالية عكسيًا | Find backward |
+| `Tab` · `Shift+Tab` | إزاحة · إزاحة عكسية | Indent · Unindent |
 
 ---
 
@@ -203,8 +197,8 @@ notepad            # أو: mufakkira
 
 ```bash
 pip install -e ".[dev]"
-python -m mufakkira
-pytest -q                      # 274 اختبارًا
+python -m mishkah
+pytest -q
 ruff check src tests tools
 ```
 
@@ -216,7 +210,7 @@ bash scripts/build-rpm.sh                     # .rpm   (rpm-build)
 bash scripts/build-arch.sh                    # Arch   (makepkg)
 bash packaging/appimage/build-appimage.sh     # AppImage (appimagetool)
 flatpak-builder --user --install-deps-from=flathub build/flatpak-build \
-    packaging/flatpak/org.notepadlinux.Notepad.json
+    packaging/flatpak/org.mishkahnote.Mishkah.json
 pwsh scripts/build-msi.ps1 -Version 1.0.01    # MSI على Windows فقط
 ```
 
@@ -233,7 +227,7 @@ bash scripts/verify-packaging.sh
 ### البنية · Architecture
 
 ```
-src/mufakkira/
+src/mishkah/
 ├── core/        منطق خالص بلا Qt: markdown, syntax, autocomplete, encoding,
 │                large_file, text_direction, i18n, settings, tab_style
 ├── models/      DocumentModel (مسار، ترميز، تعديل، لون، تثبيت)

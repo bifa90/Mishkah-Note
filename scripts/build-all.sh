@@ -31,7 +31,7 @@ if command -v rpmbuild >/dev/null 2>&1; then
     say "rpm package"
     bash scripts/build-rpm.sh
 else
-    say "rpmbuild not found — skipping RPM (spec: packaging/rpm/notepad-linux.spec)"
+    say "rpmbuild not found — skipping RPM (spec: packaging/rpm/mishkah-note.spec)"
 fi
 
 if command -v makepkg >/dev/null 2>&1; then
@@ -52,11 +52,11 @@ if [ "${WITH_FLATPAK:-0}" = "1" ]; then
     if command -v flatpak-builder >/dev/null 2>&1; then
         say "flatpak"
         flatpak-builder --user --force-clean --install-deps-from=flathub \
-            --repo=build/flatpak-repo build/flatpak-build \
-            packaging/flatpak/org.notepadlinux.Notepad.json
+            --repo=build/flatpak-repo --default-branch=stable build/flatpak-build \
+            packaging/flatpak/org.mishkahnote.Mishkah.json
         flatpak build-bundle build/flatpak-repo \
-            "dist/org.notepadlinux.Notepad.flatpak" \
-            org.notepadlinux.Notepad stable
+            "dist/org.mishkahnote.Mishkah.flatpak" \
+            org.mishkahnote.Mishkah stable
     else
         say "flatpak-builder not found — skipping Flatpak"
     fi

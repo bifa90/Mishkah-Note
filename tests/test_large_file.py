@@ -9,9 +9,9 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from mufakkira.core import large_file  # noqa: E402
-from mufakkira.core.encoding import CRLF, LF, TextFormat  # noqa: E402
-from mufakkira.core.large_file import (  # noqa: E402
+from mishkah.core import large_file  # noqa: E402
+from mishkah.core.encoding import CRLF, LF, TextFormat  # noqa: E402
+from mishkah.core.large_file import (  # noqa: E402
     BinaryFileError,
     OperationCancelled,
     human_size,
@@ -133,3 +133,55 @@ def test_human_size():
     assert human_size(512) == "512 B"
     assert human_size(2048) == "2.0 KiB"
     assert human_size(5 * 1024 * 1024) == "5.0 MiB"
+
+
+@pytest.mark.parametrize("codec", ["utf-8-sig", "utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+def test_unicode_bom_round_trip_is_byte_exact(tmp_path, codec):
+    from mishkah.core.encoding import bom_for
+
+    text = "عربي English\nسطر آخر\n"
+    body_codec = "utf-8" if codec == "utf-8-sig" else codec
+    expected = bom_for(codec) + text.encode(body_codec)
+    source = tmp_path / "source.txt"
+    source.write_bytes(expected)
+    loaded = load_file(source)
+    assert loaded.text == text
+    target = tmp_path / "target.txt"
+    write_text_atomic(target, loaded.text, loaded.fmt, chunk_chars=2)
+    assert target.read_bytes() == expected
+
+
+@pytest.mark.parametrize("codec", ["utf-16-le", "utf-16-be", "utf-32-le", "utf-32-be"])
+def test_explicit_wide_encoding_without_bom(tmp_path, codec):
+    text = "نص عربي English\n"
+    path = tmp_path / "unicode.txt"
+    path.write_bytes(text.encode(codec))
+    actual, fmt, _, _ = read_text_chunked(path, encoding=codec, chunk=3)
+    assert actual == text
+    assert not fmt.has_bom
+
+
+@pytest.mark.parametrize("codec", ["utf-16", "utf-32", "iso2022_jp"])
+def test_stateful_encoding_across_chunks(tmp_path, codec):
+    text = "日本語\nabc\n"
+    path = tmp_path / "stateful.txt"
+    write_text_atomic(path, text, TextFormat(codec), chunk_chars=1)
+    assert path.read_bytes().decode(codec) == text
+
+
+def test_cancel_empty_write_preserves_destination(tmp_path):
+    path = tmp_path / "keep.txt"
+    path.write_text("keep")
+    with pytest.raises(OperationCancelled):
+        write_text_atomic(path, "", TextFormat(), cancel=lambda: True)
+    assert path.read_text() == "keep"
+    assert not list(tmp_path.glob(".*.part"))
+
+
+def test_unrepresentable_text_does_not_replace_destination(tmp_path):
+    path = tmp_path / "keep.txt"
+    path.write_text("keep")
+    with pytest.raises(UnicodeEncodeError):
+        write_text_atomic(path, "نص عربي", TextFormat("ascii"))
+    assert path.read_text() == "keep"
+    assert not list(tmp_path.glob(".*.part"))

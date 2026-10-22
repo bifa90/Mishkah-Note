@@ -44,9 +44,7 @@
     <!-- The frozen application: every file under SourceDir is harvested into
          one component group by the Files element (WiX v4 and later). -->
     <StandardDirectory Id="ProgramFiles6432Folder">
-      <Directory Id="INSTALLFOLDER" Name="Mishkah Note">
-        <Files Include="$(var.SourceDir)\**" />
-      </Directory>
+      <Directory Id="INSTALLFOLDER" Name="Mishkah Note" />
     </StandardDirectory>
 
     <StandardDirectory Id="ProgramMenuFolder">
@@ -56,6 +54,7 @@
     <StandardDirectory Id="DesktopFolder" />
 
     <Feature Id="Main" Title="Mishkah Note" Level="1" AllowAbsent="no">
+      <ComponentGroupRef Id="ApplicationFiles" />
       <ComponentRef Id="StartMenuShortcut" />
       <ComponentRef Id="DesktopShortcut" />
       <ComponentRef Id="TextFileAssociation" />
@@ -105,4 +104,9 @@
     <ui:WixUI Id="WixUI_InstallDir" InstallDirectory="INSTALLFOLDER" />
     <WixVariable Id="WixUILicenseRtf" Value="$(var.LicenseRtf)" />
   </Package>
+  <Fragment>
+    <ComponentGroup Id="ApplicationFiles" Directory="INSTALLFOLDER">
+      <Files Include="$(var.SourceDir)\**" />
+    </ComponentGroup>
+  </Fragment>
 </Wix>

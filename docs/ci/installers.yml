@@ -18,19 +18,6 @@ concurrency:
 env:
   PYTHON_VERSION: "3.11"
 jobs:
-  diagnose:
-    name: Read failed installer logs
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Report the recorded installer failures
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p build
-          gh api repos/${{ github.repository }}/actions/jobs/119838192973/logs > build/failed-flatpak.log
-          gh api repos/${{ github.repository }}/actions/jobs/119829601084/logs > build/failed-windows.log
-          python3 tools/report_build_failure.py build/failed-flatpak.log build/failed-windows.log
   flatpak:
     name: Flatpak
     runs-on: ubuntu-latest
@@ -41,7 +28,7 @@ jobs:
       - name: Install flatpak-builder and the KDE runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils
           flatpak remote-add --user --if-not-exists flathub \
             https://flathub.org/repo/flathub.flatpakrepo
       - name: Build the application

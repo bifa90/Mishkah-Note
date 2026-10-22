@@ -164,7 +164,7 @@ python scripts/build_release.py --formats appimage
 ## 9. Flatpak
 
 ```bash
-sudo apt install flatpak flatpak-builder
+sudo apt install flatpak flatpak-builder elfutils
 flatpak remote-add --user --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo
 flatpak install --user flathub org.kde.Platform//6.7 org.kde.Sdk//6.7
 python scripts/build_release.py --formats flatpak

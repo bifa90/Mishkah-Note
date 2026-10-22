@@ -44,6 +44,10 @@ function Write-Step([string]$Text) {
     Write-Host "==> $Text" -ForegroundColor Cyan
 }
 
+function Assert-NativeExit([string]$Stage) {
+    if ($LASTEXITCODE -ne 0) { throw "$Stage failed with exit code $LASTEXITCODE" }
+}
+
 function Get-ProjectVersion {
     $line = Select-String -Path "pyproject.toml" -Pattern '^version = "([^"]+)"' |
         Select-Object -First 1
@@ -64,17 +68,22 @@ if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
 }
 
 python -m pip install --upgrade --quiet pip
+Assert-NativeExit "pip bootstrap"
 python -m pip install --quiet "pyinstaller>=6.6" "PySide6>=6.5" "charset-normalizer>=3.0" build
+Assert-NativeExit "Python dependencies"
 
 if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
     if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
         throw "dotnet was not found; install the .NET SDK to get the WiX CLI"
     }
     dotnet tool install --global wix --version 5.0.2
+    Assert-NativeExit "WiX CLI installation"
     $env:PATH = "$env:PATH;$env:USERPROFILE\.dotnet\tools"
 }
 wix --version
+Assert-NativeExit "WiX CLI"
 wix extension add --global WixToolset.UI.wixext/5.0.2
+Assert-NativeExit "WiX UI extension"
 
 # ---------------------------------------------------------------------------
 # 2. freeze the application
@@ -93,6 +102,7 @@ if ($SkipFreeze -and (Test-Path $SourceDir)) {
         --distpath $PyInstallerDir `
         --workpath (Join-Path $PyInstallerDir "work") `
         "packaging/windows/mishkah.spec"
+    Assert-NativeExit "PyInstaller"
 
     if (-not (Test-Path (Join-Path $SourceDir "Mishkah Note.exe"))) {
         throw "PyInstaller did not produce Mishkah Note.exe"
@@ -128,6 +138,7 @@ wix build "packaging/windows/mishkah.wxs" `
     -arch x64 `
     -ext WixToolset.UI.wixext `
     -o $Msi
+Assert-NativeExit "MSI compilation"
 
 if (-not (Test-Path $Msi)) { throw "wix did not produce an MSI" }
 $size = [math]::Round((Get-Item $Msi).Length / 1MB, 2)

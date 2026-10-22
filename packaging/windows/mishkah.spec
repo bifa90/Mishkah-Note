@@ -9,13 +9,13 @@ modules are excluded.
 
 from pathlib import Path
 
-from PyInstaller.utils.hooks import collect_data_files
-
 ROOT = Path(SPECPATH).parent.parent          # …/packaging/windows -> repo root
 SRC = ROOT / "src"
 LAUNCHER = ROOT / "packaging" / "windows" / "launcher.py"
 
-datas = collect_data_files("mishkah", includes=["resources/*"])
+# The src-layout package need not be installed in the build interpreter.
+# Copy the complete resource tree directly, including fonts and their license.
+datas = [(str(SRC / "mishkah" / "resources"), "mishkah/resources")]
 
 a = Analysis(
     [str(LAUNCHER)],

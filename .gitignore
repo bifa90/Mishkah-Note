@@ -243,3 +243,6 @@ packaging/arch/*.pkg.tar.*
 
 # Local source archive used by makepkg
 packaging/arch/mishkah-note-*.tar.gz
+
+# Flatpak builder state
+.flatpak-builder/

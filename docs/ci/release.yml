@@ -35,7 +35,7 @@ concurrency:
 jobs:
   validate:
     name: Test the release source
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
@@ -86,7 +86,7 @@ jobs:
   python-packages:
     needs: validate
     name: sdist + wheel
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
@@ -110,7 +110,7 @@ jobs:
   deb:
     needs: validate
     name: Debian / Ubuntu (.deb)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
@@ -133,7 +133,7 @@ jobs:
   rpm:
     needs: validate
     name: Fedora / RHEL / openSUSE (.rpm)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container: fedora:latest
     steps:
       - name: Install the RPM toolchain
@@ -163,7 +163,7 @@ jobs:
   arch:
     needs: validate
     name: Arch / Manjaro (.pkg.tar.zst)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     container: archlinux:latest
     steps:
       - name: Install the Arch toolchain
@@ -194,7 +194,7 @@ jobs:
   appimage:
     needs: validate
     name: AppImage
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
@@ -336,7 +336,7 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || (github.ref == 'refs/heads/arena/71ffd864-mishkah-note' && contains(github.event.head_commit.message, '[publish 1.0.01]'))
     name: Attach the files to the release
     needs: [python-packages, deb, rpm, arch, appimage, flatpak, windows-msi]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:

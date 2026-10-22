@@ -28,7 +28,7 @@ jobs:
       - name: Install flatpak-builder and the KDE runtime
         run: |
           sudo apt-get update
-          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder elfutils librsvg2-common
           flatpak remote-add --user --if-not-exists flathub \
             https://flathub.org/repo/flathub.flatpakrepo
       - name: Build the application
@@ -40,7 +40,7 @@ jobs:
               appstreamcli compose --prefix=/ --origin=org.mishkahnote.Mishkah \
                 --components=org.mishkahnote.Mishkah,org.mishkahnote.Mishkah.desktop \
                 --result-root=build/flatpak-build/files \
-                --log-dir=build/appstream-issues build/flatpak-build/files >> build/flatpak.log 2>&1 || true
+                --print-report=full --hints-dir=build/appstream-issues build/flatpak-build/files >> build/flatpak.log 2>&1 || true
               python3 tools/report_build_failure.py build/flatpak.log build/appstream-issues/*
               exit 1
             }

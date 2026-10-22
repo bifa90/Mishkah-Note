@@ -51,4 +51,5 @@ def test_flatpak_native_debug_tools_are_installed():
     for name in ("installers.yml", "release.yml"):
         for folder in (".github/workflows", "docs/ci"):
             text = (ROOT / folder / name).read_text()
-            assert "flatpak flatpak-builder elfutils" in text
+            assert "flatpak flatpak-builder elfutils librsvg2-common" in text
+            assert "--print-report=full --hints-dir=" in text

@@ -56,3 +56,10 @@ gh workflow run release.yml --repo bifa90/Mishkah-Note --ref main -f tag=v1.0.01
 gh run list --repo bifa90/Mishkah-Note --workflow release.yml
 gh release view v1.0.01 --repo bifa90/Mishkah-Note --json name,assets
 ```
+
+## دفعة النشر المعتمدة
+
+بعد تفويض صاحب المشروع، تسمح علامة `[publish 1.0.01]` في رسالة commit
+على فرع الجلسة بالنشر **فقط بعد نجاح الاختبارات وكل وظائف الحزم الثماني**.
+يضبط السير الوسم على مصدر الحزم نفسه ثم يرفع الحزم وchecksums.
+هذه العلامة لا تدمج PR؛ الدمج عملية مستقلة بعد التحقق من صفحة Releases.

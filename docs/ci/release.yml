@@ -239,9 +239,13 @@ jobs:
             https://flathub.org/repo/flathub.flatpakrepo
       - name: Build the application
         run: |
+          mkdir -p build
           flatpak-builder --user --force-clean --install-deps-from=flathub \
             --repo=build/flatpak-repo --default-branch=stable \
-            build/flatpak-build packaging/flatpak/org.mishkahnote.Mishkah.json
+            build/flatpak-build packaging/flatpak/org.mishkahnote.Mishkah.json > build/flatpak.log 2>&1 || {
+              python3 tools/report_build_failure.py build/flatpak.log
+              exit 1
+            }
       - name: Export a single-file bundle
         run: |
           mkdir -p dist
@@ -276,7 +280,14 @@ jobs:
         shell: pwsh
         run: |
           $version = (Select-String -Path pyproject.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
-          ./scripts/build-msi.ps1 -Version $version
+          New-Item -ItemType Directory -Force build | Out-Null
+          try {
+            ./scripts/build-msi.ps1 -Version $version *> build/msi.log
+            if ($LASTEXITCODE -ne 0) { throw "MSI build returned $LASTEXITCODE" }
+          } catch {
+            python tools/report_build_failure.py build/msi.log
+            throw
+          }
       - name: Smoke-test the frozen application
         shell: pwsh
         run: |

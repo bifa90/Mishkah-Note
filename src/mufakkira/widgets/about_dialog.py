@@ -6,7 +6,6 @@ import platform
 from typing import Optional
 
 from PySide6.QtCore import Qt, qVersion
-from PySide6.QtGui import QPixmap
 from PySide6.QtWidgets import (
     QDialog,
     QDialogButtonBox,
@@ -69,11 +68,9 @@ class AboutDialog(QDialog):
 
         icon = QLabel()
         icon.setFixedSize(64, 64)
-        pixmap = QPixmap(":/icons/app.png")
-        if pixmap.isNull():
-            from mufakkira.core.resources import icon_pixmap
+        from mufakkira.core.resources import logo_pixmap
 
-            pixmap = icon_pixmap(64)
+        pixmap = logo_pixmap(128)
         if not pixmap.isNull():
             icon.setPixmap(pixmap.scaled(64, 64,
                                          Qt.AspectRatioMode.KeepAspectRatio,

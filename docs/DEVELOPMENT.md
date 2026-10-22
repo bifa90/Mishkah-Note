@@ -63,6 +63,26 @@ MUFAKKIRA_CLEAN_EXIT=1 QT_QPA_PLATFORM=offscreen pytest
 | `widgets/` | الحوارات | نعم |
 | `controllers/` | الربط بين الطبقات | نعم |
 
+## أدوات الكتابة · Editing aids
+
+| الملف | المسؤولية |
+|-------|-----------|
+| `core/autocomplete.py` | قواعد الإقران والإزاحة وإكمال الكلمات (بلا Qt) |
+| `core/syntax.py` | جداول قواعد 16 لغة (بلا Qt) |
+| `widgets/syntax_highlighter.py` | تحويل الجداول إلى ألوان عبر QSyntaxHighlighter |
+| `core/tab_style.py` | ألوان الملاحظات الستة |
+
+القاعدة: كل سلوك جديد يوضع في `core/` أولًا مع اختبار، ثم يُربط بالودجة.
+التلوين معطّل افتراضيًا عبر `settings.syntax_highlighting`؛ لا تجعله افتراضيًا
+دون طلب صريح من صاحب المشروع.
+
+## إضافة لغة تلوين · Adding a highlighted language
+
+1. أضف `LanguageSpec` في `core/syntax.py` (التعابير النمطية + الامتدادات).
+2. أضف مجموعة ألوان جديدة في `PALETTE` داخل `widgets/syntax_highlighter.py`
+   إن احتجت مجموعة غير الموجودة.
+3. أضف حالة إلى `tests/test_syntax.py` — الاختبار يتحقق من أن كل قاعدة تُترجم.
+
 ## إضافة ترجمة · Adding a translation
 
 1. أضف رمز اللغة إلى `_LANGUAGES` في `core/languages.py` (مع حزمة الخطوط
@@ -83,6 +103,19 @@ mkdir -p .github/workflows
 git mv docs/ci/github-actions.yml .github/workflows/ci.yml
 git commit -m "ci: enable the test and packaging workflow"
 ```
+
+## الشعار والأيقونة · Logo and icon
+
+الشعار المتجهي هو المصدر الوحيد: `src/mufakkira/resources/branding/logo.svg`
+(والنسخة النقطية `logo.webp` للتوثيق فقط). لا تُحرّر ملفات `icons/app-*.png`
+يدويًا — أعد توليدها:
+
+```bash
+QT_QPA_PLATFORM=offscreen python tools/make_icon.py
+```
+
+يستخدم المولّد اقتصاصًا أضيق للأحجام 16–32 بكسل كي يبقى الشكل واضحًا في
+شريط المهام، والشكل الكامل من 48 بكسل فما فوق.
 
 ## الأيقونة · The icon
 

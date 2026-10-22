@@ -16,6 +16,10 @@ UNTITLED = "Untitled"
 # (no wrap, no undo stack, no line-number gutter).
 PERFORMANCE_LINE_THRESHOLD = 2_000_000
 
+# Buffers up to this many characters are UTF-8 encoded for an exact status-bar
+# size; above it the character count is used so typing never stalls.
+LIVE_SIZE_EXACT_LIMIT = 100_000
+
 
 @dataclass
 class DocumentModel:
@@ -29,6 +33,13 @@ class DocumentModel:
     direction_mode: str = AUTO        # auto | rtl | ltr
     warnings: List[str] = field(default_factory=list)
     encoding_override: Optional[str] = None
+    # Tab presentation: a sticky-note colour ("" = none) and whether the tab
+    # is pinned on top of other applications while it is active.
+    color: str = ""
+    pinned: bool = False
+    # Syntax highlighting: "auto" follows the file extension, or a language
+    # code from mufakkira.core.syntax, "plain" disables it for this tab.
+    language: str = "auto"
 
     # ------------------------------------------------------------- titles
     @property
@@ -57,6 +68,21 @@ class DocumentModel:
     @property
     def size_label(self) -> str:
         return human_size(self.size_on_disk or len(self.content.encode("utf-8", "replace")))
+
+    def live_size_label(self, text: str) -> str:
+        """Size of the buffer the user is looking at, not of the file.
+
+        An untouched document reports the real file size; once edited the
+        status bar must follow the editor, otherwise it keeps claiming the
+        size the file had when it was opened.  Very large buffers are
+        estimated from their length instead of being re-encoded on every
+        keystroke.
+        """
+        if not self.is_modified and self.size_on_disk:
+            return human_size(self.size_on_disk)
+        if len(text) <= LIVE_SIZE_EXACT_LIMIT:
+            return human_size(len(text.encode("utf-8", "replace")))
+        return human_size(len(text))
 
     @property
     def encoding(self) -> str:

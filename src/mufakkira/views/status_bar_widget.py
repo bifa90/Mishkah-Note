@@ -72,16 +72,21 @@ class StatusBarWidget(QFrame):
     # ------------------------------------------------------------ updates
     def set_position(self, line: int, column: int, selection: int = 0) -> None:
         self._position.setText(tr("status.position", line=line, col=column))
+        self._position.updateGeometry()
         self._selection.setText(tr("status.selection", chars=selection)
                                 if selection else "")
         self._set_segment_visible(self._selection, bool(selection))
 
     def set_lines(self, count: int) -> None:
         self._lines.setText(tr("status.lines", count=f"{count:,}"))
+        self._lines.updateGeometry()
         self._set_segment_visible(self._lines, count > 0)
 
     def set_size(self, label: str) -> None:
         self._size.setText(label)
+        # The label grows from "0 B" to "1.2 MiB" while typing; without this the
+        # segment keeps its old width and the unit gets clipped.
+        self._size.updateGeometry()
         self._set_segment_visible(self._size, bool(label))
 
     @staticmethod

@@ -1,6 +1,6 @@
 # Maintainer: Notepad-Linux contributors <noreply@github.com>
 pkgname=notepad-linux
-pkgver=2.0.0
+pkgver=1.0.1
 pkgrel=1
 pkgdesc="Windows 11-style text editor with first-class Arabic and RTL support"
 arch=('any')

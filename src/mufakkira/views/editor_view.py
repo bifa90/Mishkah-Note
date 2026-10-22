@@ -37,8 +37,9 @@ from PySide6.QtGui import (
     QTextCursor,
     QTextDocument,
 )
-from PySide6.QtWidgets import QPlainTextEdit
+from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit
 
+from mufakkira.core import autocomplete, syntax
 from mufakkira.core.text_direction import (
     AUTO,
     LTR,
@@ -48,6 +49,7 @@ from mufakkira.core.text_direction import (
 )
 from mufakkira.models.document import DocumentModel
 from mufakkira.widgets.line_number_area import LineNumberArea
+from mufakkira.widgets.syntax_highlighter import SyntaxHighlighter
 
 MIN_FONT_SIZE = 6
 MAX_FONT_SIZE = 72
@@ -111,6 +113,15 @@ class EditorView(QPlainTextEdit):
         # --- direction state -------------------------------------------------
         self._direction_mode = document.direction_mode or AUTO
         self._chord = _ChordState()
+
+        # --- editing conveniences -------------------------------------------
+        self._auto_close = True
+        self._auto_indent = True
+        self._word_completion = True
+        self._indent_unit = autocomplete.DEFAULT_INDENT
+        self._highlighter: Optional[SyntaxHighlighter] = None
+        self._language = "auto"
+        self._completion: Optional[QListWidget] = None
 
         # --- gutter ----------------------------------------------------------
         # Created lazily: Windows 11 Notepad shows no gutter by default, so
@@ -271,9 +282,290 @@ class EditorView(QPlainTextEdit):
     # ==================================================================
     def keyPressEvent(self, event) -> None:  # noqa: N802 (Qt naming)
         self.handle_chord_press(_scan_code(event), event.key())
+
+        if self._completion is not None and self._completion_key(event):
+            return
+        if self._handle_edit_key(event):
+            return
+
         super().keyPressEvent(event)
         if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
             self.apply_direction_to_new_blocks()
+
+    # ==================================================================
+    # editing conveniences (auto-pair, auto-indent, word completion)
+    # ==================================================================
+    def _handle_edit_key(self, event) -> bool:
+        """Run the typing helpers; return True when the event is consumed."""
+        if self.isReadOnly():
+            return False
+        key = event.key()
+        modifiers = event.modifiers()
+        plain = not (modifiers & (Qt.KeyboardModifier.ControlModifier
+                                  | Qt.KeyboardModifier.AltModifier
+                                  | Qt.KeyboardModifier.MetaModifier))
+
+        if key == Qt.Key.Key_Space and modifiers & Qt.KeyboardModifier.ControlModifier:
+            self.show_completions()
+            return True
+
+        if not plain:
+            return False
+
+        if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self._auto_indent:
+            return self._enter_with_indent()
+
+        if key == Qt.Key.Key_Tab:
+            if self.textCursor().hasSelection():
+                self.indent_selection()
+            else:
+                self.textCursor().insertText(self._indent_unit)
+            return True
+        if (key == Qt.Key.Key_Backtab
+                or (key == Qt.Key.Key_Tab and modifiers & Qt.KeyboardModifier.ShiftModifier)):
+            self.indent_selection(outdent=True)
+            return True
+
+        if key == Qt.Key.Key_Backspace:
+            return self._backspace_pair()
+
+        text = event.text()
+        if len(text) == 1 and self._auto_close:
+            return self._apply_pairing(text)
+        return False
+
+    # -- indentation ----------------------------------------------------
+    def _enter_with_indent(self) -> bool:
+        cursor = self.textCursor()
+        line = cursor.block().text()
+        indent = autocomplete.indent_for_newline(line, self._indent_unit)
+        start = cursor.position()
+        cursor.insertText("\n" + indent)
+        # Only claim the event when something was actually added; otherwise
+        # let Qt insert the plain newline and keep undo identical.
+        if start != cursor.position():
+            self.setTextCursor(cursor)
+            self.apply_direction_to_new_blocks()
+            return True
+        return False
+
+    def indent_selection(self, outdent: bool = False) -> None:
+        """Tab / Shift+Tab on a selection (or the current line)."""
+        cursor = self.textCursor()
+        if not cursor.hasSelection():
+            cursor.select(QTextCursor.SelectionType.LineUnderCursor)
+        text = cursor.selectedText().replace("\u2029", "\n")
+        indented, _delta = autocomplete.reindent_block(
+            text, outdent=outdent, unit=self._indent_unit)
+        if indented == text:
+            return
+        start = cursor.selectionStart()
+        cursor.beginEditBlock()
+        cursor.insertText(indented)
+        cursor.endEditBlock()
+        cursor.setPosition(start)
+        cursor.setPosition(start + len(indented),
+                           QTextCursor.MoveMode.KeepAnchor)
+        self.setTextCursor(cursor)
+
+    # -- pairing ---------------------------------------------------------
+    def _apply_pairing(self, char: str) -> bool:
+        cursor = self.textCursor()
+        selected = cursor.hasSelection()
+        if selected:
+            before, after = "", ""
+        else:
+            position = cursor.position()
+            text = self.toPlainText()
+            before = text[max(0, position - 1):position]
+            after = text[position:position + 1]
+
+        if autocomplete.should_skip_closer(char, after):
+            cursor.movePosition(QTextCursor.MoveOperation.Right)
+            self.setTextCursor(cursor)
+            return True
+
+        if not autocomplete.should_pair(char, before, after, has_selection=selected):
+            return False
+
+        closer = autocomplete.closing_for(char)
+        if closer is None:
+            return False
+
+        cursor.beginEditBlock()
+        if selected:
+            chosen = cursor.selectedText()
+            # Nested-newline selections: close the pair on its own line so the
+            # indentation of the body survives.
+            cursor.insertText(f"{char}{chosen}{closer}")
+        else:
+            cursor.insertText(char + closer)
+            cursor.movePosition(QTextCursor.MoveOperation.Left)
+        cursor.endEditBlock()
+        self.setTextCursor(cursor)
+        return True
+
+    def _backspace_pair(self) -> bool:
+        if not self._auto_close or self.textCursor().hasSelection():
+            return False
+        cursor = self.textCursor()
+        position = cursor.position()
+        text = self.toPlainText()
+        before = text[max(0, position - 1):position]
+        after = text[position:position + 1]
+        if autocomplete.deletion_span(before or " ", before, after) != 2:
+            return False
+        cursor.beginEditBlock()
+        cursor.deletePreviousChar()
+        cursor.deleteChar()
+        cursor.endEditBlock()
+        self.setTextCursor(cursor)
+        return True
+
+    # ==================================================================
+    # word completion popup
+    # ==================================================================
+    def show_completions(self) -> None:
+        """Suggest words already typed in this document (Ctrl+Space)."""
+        if not self._word_completion:
+            return
+        prefix = self._word_prefix()
+        if len(prefix) < 2:
+            return
+        words = autocomplete.complete(prefix, self.toPlainText())
+        if not words:
+            return
+        self.close_completions()
+        popup = QListWidget(self)
+        popup.setObjectName("CompletionPopup")
+        popup.setWindowFlag(Qt.WindowType.Popup, True)
+        popup.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        popup.setUniformItemSizes(True)
+        for word in words:
+            item = QListWidgetItem(word, popup)
+            item.setData(Qt.ItemDataRole.UserRole, word)
+        popup.setCurrentRow(0)
+        rect = self.cursorRect()
+        popup.move(self.mapToGlobal(rect.bottomLeft()))
+        popup.setFixedWidth(max(160, rect.width() + 220))
+        popup.show()
+        self._completion = popup
+
+    def _word_prefix(self) -> str:
+        text = self.toPlainText()
+        position = self.textCursor().position()
+        start = position
+        while start > 0 and (text[start - 1].isalnum() or text[start - 1] == "_"):
+            start -= 1
+        return text[start:position]
+
+    def _completion_key(self, event) -> bool:
+        popup = self._completion
+        if popup is None:
+            return False
+        key = event.key()
+        if key in (Qt.Key.Key_Escape,):
+            self.close_completions()
+            return True
+        if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter, Qt.Key.Key_Tab):
+            self.accept_completion()
+            return True
+        if key in (Qt.Key.Key_Up, Qt.Key.Key_Down):
+            row = popup.currentRow() + (-1 if key == Qt.Key.Key_Up else 1)
+            popup.setCurrentRow(max(0, min(row, popup.count() - 1)))
+            return True
+        return False
+
+    def accept_completion(self) -> None:
+        popup = self._completion
+        if popup is None:
+            return
+        item = popup.currentItem()
+        if item is not None:
+            word = item.data(Qt.ItemDataRole.UserRole)
+            prefix = self._word_prefix()
+            cursor = self.textCursor()
+            cursor.insertText(word[len(prefix):])
+            self.setTextCursor(cursor)
+        self.close_completions()
+
+    def close_completions(self) -> None:
+        if self._completion is not None:
+            self._completion.close()
+            self._completion.deleteLater()
+            self._completion = None
+
+    def focusOutEvent(self, event) -> None:  # noqa: N802
+        self.close_completions()
+        self._chord.reset()
+        super().focusOutEvent(event)
+
+    # ==================================================================
+    # configuration seams used by the controller and the tests
+    # ==================================================================
+    def set_auto_close(self, enabled: bool) -> None:
+        self._auto_close = enabled
+
+    def auto_close_enabled(self) -> bool:
+        return self._auto_close
+
+    def set_auto_indent(self, enabled: bool) -> None:
+        self._auto_indent = enabled
+
+    def auto_indent_enabled(self) -> bool:
+        return self._auto_indent
+
+    def set_word_completion(self, enabled: bool) -> None:
+        self._word_completion = enabled
+
+    def word_completion_enabled(self) -> bool:
+        return self._word_completion
+
+    def set_indent_unit(self, unit: str) -> None:
+        self._indent_unit = unit or autocomplete.DEFAULT_INDENT
+
+    def indent_unit(self) -> str:
+        return self._indent_unit
+
+    # ==================================================================
+    # syntax highlighting
+    # ==================================================================
+    def set_syntax_highlighting(self, enabled: bool,
+                                language: Optional[str] = None,
+                                theme: str = "light") -> None:
+        if language:
+            self._language = language
+        if not enabled:
+            if self._highlighter is not None:
+                self._highlighter.setDocument(None)
+                self._highlighter.deleteLater()
+                self._highlighter = None
+            return
+        code = self.language_code()
+        if self._highlighter is None:
+            self._highlighter = SyntaxHighlighter(self.document(), code, theme)
+        else:
+            self._highlighter.set_theme(theme)
+            self._highlighter.set_language(code)
+
+    def syntax_highlighting_enabled(self) -> bool:
+        return self._highlighter is not None
+
+    def set_theme_name(self, theme: str) -> None:
+        if self._highlighter is not None:
+            self._highlighter.set_theme(theme)
+
+    def language_code(self) -> str:
+        """Concrete language: the override, or guessed from the file name."""
+        if self._language and self._language != "auto":
+            return self._language
+        path = self._doc.path if self._doc is not None else None
+        return syntax.language_for_path(path)
+
+    def set_language(self, code: str) -> None:
+        self._language = code
+        if self._highlighter is not None:
+            self._highlighter.set_language(self.language_code())
 
     def keyReleaseEvent(self, event) -> None:  # noqa: N802
         self.handle_chord_release(_scan_code(event), event.key())
@@ -289,10 +581,6 @@ class EditorView(QPlainTextEdit):
             self.apply_direction(mode)
         return mode
 
-    def focusOutEvent(self, event) -> None:  # noqa: N802
-        self._chord.reset()
-        super().focusOutEvent(event)
-
     # ==================================================================
     # zoom / font
     # ==================================================================
@@ -303,7 +591,32 @@ class EditorView(QPlainTextEdit):
             return
         font.setPointSize(size)
         self.setFont(font)
-        self.setTabStopDistance(self.fontMetrics().horizontalAdvance(" ") * self._tab_width)
+        self._refresh_tab_stop()
+        self._update_gutter_width(0)
+        self.zoom_changed.emit(self.zoom_percent())
+
+    def _refresh_tab_stop(self) -> None:
+        self.setTabStopDistance(
+            self.fontMetrics().horizontalAdvance(" ") * self._tab_width)
+
+    def set_tab_width(self, width: int) -> None:
+        """Tab stop in characters (1–16)."""
+        self._tab_width = max(1, min(16, int(width)))
+        self._refresh_tab_stop()
+
+    def tab_width(self) -> int:
+        return self._tab_width
+
+    def set_font(self, font: QFont) -> None:
+        """Switch typeface/size and keep the zoom baseline in sync."""
+        if font.pointSize() > 0:
+            self._base_font_size = font.pointSize()
+            self._base_font_uses_pixels = False
+        elif font.pixelSize() > 0:
+            self._base_font_pixels = font.pixelSize()
+            self._base_font_uses_pixels = True
+        super().setFont(font)
+        self._refresh_tab_stop()
         self._update_gutter_width(0)
         self.zoom_changed.emit(self.zoom_percent())
 

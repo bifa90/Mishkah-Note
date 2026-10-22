@@ -49,6 +49,7 @@ class SettingsDialog(QDialog):
 
         outer.addWidget(self._appearance_group())
         outer.addWidget(self._editor_group())
+        outer.addWidget(self._typing_group())
         outer.addWidget(self._files_group())
 
         buttons = QDialogButtonBox(
@@ -141,6 +142,23 @@ class SettingsDialog(QDialog):
             form.addRow("", widget)
         return self._group(tr("settings.group.editor"), form)
 
+    def _typing_group(self) -> QGroupBox:
+        """Auto-pairing, smart indentation and the opt-in highlighter."""
+        form = QFormLayout()
+        form.setLabelAlignment(Qt.AlignmentFlag.AlignLeading)
+
+        self.chk_auto_close = QCheckBox(tr("action.auto_close"))
+        self.chk_auto_indent = QCheckBox(tr("action.auto_indent"))
+        self.chk_syntax = QCheckBox(tr("action.syntax"))
+        form.addRow(self.chk_auto_close)
+        form.addRow(self.chk_auto_indent)
+        form.addRow(self.chk_syntax)
+
+        note = QLabel(tr("settings.syntax_note"))
+        note.setWordWrap(True)
+        note.setObjectName("settingsNote")
+        return self._group(tr("settings.editing"), form, note)
+
     def _files_group(self) -> QGroupBox:
         form = QFormLayout()
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeading)
@@ -190,6 +208,9 @@ class SettingsDialog(QDialog):
         self.spin_limit_mb.setValue(int(s.hard_limit_mb))
         self.chk_perf.setChecked(s.performance_mode)
         self.chk_restore.setChecked(s.restore_session)
+        self.chk_auto_close.setChecked(s.auto_close_brackets)
+        self.chk_auto_indent.setChecked(s.auto_indent)
+        self.chk_syntax.setChecked(s.syntax_highlighting)
 
     @staticmethod
     def _select(combo: QComboBox, value: Any) -> None:
@@ -219,6 +240,9 @@ class SettingsDialog(QDialog):
             "hard_limit_mb": self.spin_limit_mb.value(),
             "performance_mode": self.chk_perf.isChecked(),
             "restore_session": self.chk_restore.isChecked(),
+            "auto_close_brackets": self.chk_auto_close.isChecked(),
+            "auto_indent": self.chk_auto_indent.isChecked(),
+            "syntax_highlighting": self.chk_syntax.isChecked(),
         }
 
     def apply_to(self, settings: Settings) -> Dict[str, Any]:

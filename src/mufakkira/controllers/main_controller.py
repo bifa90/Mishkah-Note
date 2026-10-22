@@ -11,7 +11,7 @@ from PySide6.QtCore import QObject, Qt
 from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from mufakkira.core import i18n
+from mufakkira.core import i18n, syntax, tab_style
 from mufakkira.core.languages import get_language
 from mufakkira.core.settings import Settings
 from mufakkira.core.text_direction import AUTO, LTR, dominant_direction
@@ -39,6 +39,7 @@ class MainController(QObject):
         self._pending_paths: Dict[int, str] = {}   # tab index -> path being loaded
         self._busy = False
 
+        self.active_theme = self._resolve_theme(settings.theme)
         i18n.set_language(settings.ui_language)
         self._wire()
         self._apply_appearance()
@@ -66,6 +67,16 @@ class MainController(QObject):
         w.about_requested.connect(self.show_about)
         w.settings_requested.connect(self.show_settings)
         w.theme_changed.connect(self.set_theme)
+        w.tab_pin_requested.connect(self.toggle_tab_pin)
+        w.tab_color_requested.connect(self.set_tab_color)
+        w.tab_color_current.connect(self.set_current_tab_color)
+        w.tab_cycle_color_requested.connect(self.cycle_tab_color)
+        w.tab_close_others_requested.connect(self.close_other_tabs)
+        w.syntax_highlighting_toggled.connect(self.set_syntax_highlighting)
+        w.language_override_chosen.connect(self.set_tab_language)
+        w.auto_close_toggled.connect(self.set_auto_close)
+        w.auto_indent_toggled.connect(self.set_auto_indent)
+        w.always_on_top_toggled.connect(self.set_always_on_top)
         w.recent_chosen.connect(self.open_path)
         w.recent_cleared.connect(self._clear_recent)
 
@@ -145,12 +156,54 @@ class MainController(QObject):
         self._docs[editor] = doc
         editor.set_word_wrap(self.settings.word_wrap)
         editor.set_line_numbers_visible(self.settings.line_numbers)
+        self._apply_editing_options(editor)
         editor.cursor_moved.connect(
             lambda line, col, sel: self.window.status.set_position(line, col, sel))
         editor.zoom_changed.connect(self.window.status.set_zoom)
         editor.direction_changed.connect(self._on_editor_direction)
         editor.stats_changed.connect(self._on_stats)
         editor.textChanged.connect(lambda e=editor: self._on_text_changed(e))
+
+    @staticmethod
+    def _resolve_theme(theme: str) -> str:
+        """The concrete theme the highlighter should paint for.
+
+        ``system`` used to be guessed as light, which painted dark-on-dark
+        colours for anyone on a dark desktop.
+        """
+        if theme in ("light", "dark"):
+            return theme
+        app = QApplication.instance()
+        if app is None:
+            return "light"
+        palette = app.palette()
+        return ("dark"
+                if palette.color(palette.ColorRole.Window).lightness() < 128
+                else "light")
+
+    def _apply_editing_options(self, editor: EditorView) -> None:
+        """Push the typing/highlighting preferences onto one editor."""
+        s = self.settings
+        editor.set_auto_close(s.auto_close_brackets)
+        editor.set_auto_indent(s.auto_indent)
+        editor.set_word_completion(s.word_completion)
+        editor.set_tab_width(s.tab_width)
+        editor.set_language("auto")
+        self._apply_highlighting(editor)
+
+    def _apply_highlighting(self, editor: EditorView) -> None:
+        editor.set_syntax_highlighting(
+            self.settings.syntax_highlighting,
+            language=self._language_for(editor),
+            theme=self.active_theme,
+        )
+
+    def _language_for(self, editor: EditorView) -> str:
+        doc = self._docs.get(editor)
+        chosen = doc.language if doc is not None else "auto"
+        if chosen and chosen != "auto":
+            return chosen
+        return syntax.language_for_path(doc.path if doc is not None else None)
 
     def document_for(self, editor: Optional[EditorView]) -> Optional[DocumentModel]:
         if editor is None:
@@ -216,7 +269,7 @@ class MainController(QObject):
             editor.set_word_wrap(False)
             editor.set_line_numbers_visible(False)
 
-        self.window.set_tab_title(editor, doc.title, False)
+        self.window.set_tab_title(editor, self._doc_title(doc), False)
         if doc.truncated:
             self.window.show_banner(i18n.tr(
                 "banner.preview", size=_human(8 * 1024 * 1024),
@@ -318,7 +371,7 @@ class MainController(QObject):
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
         editor = self._editor_for_document(doc)
         if editor is not None:
-            self.window.set_tab_title(editor, doc.title, False)
+            self.window.set_tab_title(editor, self._doc_title(doc), False)
         self.settings.remember_file(str(doc.path))
         self.window.set_recent_files(self.settings.recent_files)
         self.window.setWindowTitle(i18n.tr("app.name"))
@@ -345,7 +398,7 @@ class MainController(QObject):
             return
         doc = self._docs.get(editor)
         if doc and doc.is_modified:
-            answer = self.window.confirm_unsaved(doc.title)
+            answer = self.window.confirm_unsaved(self._doc_title(doc))
             if answer == QMessageBox.StandardButton.Cancel:
                 return
             if answer == QMessageBox.StandardButton.Save:
@@ -353,6 +406,10 @@ class MainController(QObject):
                 if not self.save_current():
                     return
         self._docs.pop(editor, None)
+        # Closing the pinned tab must release the "always on top" hint, or
+        # the window would keep floating above everything with nothing pinned.
+        self.window.set_tab_pinned(editor, False)
+        self.window.set_always_on_top(False)
         self.window.close_editor(editor)
         if self.window.tab_count() == 0:
             self.new_document()
@@ -360,7 +417,12 @@ class MainController(QObject):
             self._sync_ui(self.window.current_editor())
 
     def _on_tab_changed(self, index: int) -> None:
-        self._sync_ui(self.window.editor_at(index))
+        editor = self.window.editor_at(index)
+        doc = self.document_for(editor)
+        # The pinned tab owns "always on top"; switching away from it drops
+        # the hint so the window does not stay above everything silently.
+        self.window.set_always_on_top(bool(doc and doc.pinned))
+        self._sync_ui(editor)
 
     def _sync_ui(self, editor: Optional[EditorView]) -> None:
         doc = self.document_for(editor)
@@ -371,11 +433,18 @@ class MainController(QObject):
         status.set_line_ending(doc.line_ending)
         status.set_size(doc.size_label)
         status.set_lines(doc.line_count)
+        self.window.set_tab_menu_state(doc.pinned, doc.color)
+        self.window.set_typing_menu_state(
+            self.settings.auto_close_brackets,
+            self.settings.auto_indent,
+            self.settings.syntax_highlighting,
+            doc.language,
+        )
         self.window.set_direction_menu(doc.direction_mode)
         self.window.set_encoding_menu(doc.encoding)
         self.window.set_line_ending_menu(doc.line_ending)
         self.window.setWindowTitle(
-            i18n.tr("app.title", title=doc.title, app=i18n.tr("app.name")))
+            i18n.tr("app.title", title=self._doc_title(doc), app=i18n.tr("app.name")))
         if editor is not None:
             status.set_zoom(editor.zoom_percent())
             status.set_direction(doc.direction_mode, editor.resolved_direction())
@@ -386,12 +455,22 @@ class MainController(QObject):
             return
         if not doc.is_modified:
             doc.mark_modified()
-            self.window.set_tab_title(editor, doc.title, True)
+            self.window.set_tab_title(editor, self._doc_title(doc), True)
             self.window.setWindowTitle(i18n.tr(
-                "app.title", title=doc.title, app=i18n.tr("app.name")))
+                "app.title", title=self._doc_title(doc), app=i18n.tr("app.name")))
+
+    @staticmethod
+    def _doc_title(doc: DocumentModel) -> str:
+        """A document's name for menus and message boxes (translated default)."""
+        return i18n.tr("app.untitled") if doc.path is None else doc.title
 
     def _on_stats(self, lines: int, chars: int) -> None:
         self.window.status.set_lines(lines)
+        doc = self.current_document()
+        editor = self.window.current_editor()
+        if doc is None or editor is None or doc.truncated:
+            return
+        self.window.status.set_size(doc.live_size_label(editor.toPlainText()))
 
     # ==================================================================
     # direction
@@ -545,7 +624,7 @@ class MainController(QObject):
         for editor in self.window.editors():
             doc = self._docs.get(editor)
             if doc is not None:
-                self.window.set_tab_title(editor, doc.title, doc.is_modified)
+                self.window.set_tab_title(editor, self._doc_title(doc), doc.is_modified)
             self.window.set_direction_menu(doc.direction_mode if doc else AUTO)
         self._sync_ui(self.window.current_editor())
 
@@ -612,6 +691,87 @@ class MainController(QObject):
         AboutDialog(self.window).exec()
 
     # ==================================================================
+    # tabs: pinned, coloured, closed together
+    # ==================================================================
+    def toggle_tab_pin(self, index: int) -> None:
+        """Pin the tab at *index* on top of other windows while it is active.
+
+        Only one tab can be pinned at a time; pinning a second one unpins the
+        first, which keeps the behaviour predictable.
+        """
+        editor = self.window.editor_at(index)
+        doc = self.document_for(editor)
+        if doc is None:
+            return
+        pinned = not doc.pinned
+        for other_editor, other_doc in self._docs.items():
+            other_doc.pinned = False
+            self.window.set_tab_pinned(other_editor, False)
+        doc.pinned = pinned
+        self.window.set_tab_pinned(editor, pinned)
+        self.window.set_always_on_top(pinned)
+        if pinned:
+            self.window.tabs.setCurrentIndex(index)
+
+    def set_tab_color(self, index: int, code: str) -> None:
+        editor = self.window.editor_at(index)
+        doc = self.document_for(editor)
+        if doc is None or not tab_style.is_valid(code):
+            return
+        doc.color = code
+        self.window.set_tab_color(editor, code)
+
+    def set_current_tab_color(self, code: str) -> None:
+        editor = self.window.current_editor()
+        if editor is None:
+            return
+        self.set_tab_color(self.window.index_of(editor), code)
+
+    def cycle_tab_color(self) -> None:
+        editor = self.window.current_editor()
+        doc = self.current_document()
+        if doc is None or editor is None:
+            return
+        self.set_tab_color(self.window.index_of(editor),
+                           tab_style.next_code(doc.color))
+
+    def close_other_tabs(self, index: int) -> None:
+        keep = self.window.editor_at(index)
+        for editor in list(self.window.editors()):
+            if editor is keep:
+                continue
+            self.close_tab(self.window.index_of(editor))
+
+    # ==================================================================
+    # syntax highlighting and typing assists
+    # ==================================================================
+    def set_syntax_highlighting(self, enabled: bool) -> None:
+        self.settings.syntax_highlighting = enabled
+        for editor in self.window.editors():
+            self._apply_highlighting(editor)
+
+    def set_tab_language(self, code: str) -> None:
+        doc = self.current_document()
+        editor = self.window.current_editor()
+        if doc is None or editor is None:
+            return
+        doc.language = code or "auto"
+        self._apply_highlighting(editor)
+
+    def set_auto_close(self, enabled: bool) -> None:
+        self.settings.auto_close_brackets = enabled
+        for editor in self.window.editors():
+            editor.set_auto_close(enabled)
+
+    def set_auto_indent(self, enabled: bool) -> None:
+        self.settings.auto_indent = enabled
+        for editor in self.window.editors():
+            editor.set_auto_indent(enabled)
+
+    def set_always_on_top(self, enabled: bool) -> None:
+        self.window.set_always_on_top(enabled)
+
+    # ==================================================================
     # settings
     # ==================================================================
     def show_settings(self) -> None:
@@ -624,6 +784,7 @@ class MainController(QObject):
         self.settings.save()
 
         for editor in self.window.editors():
+            self._apply_editing_options(editor)
             editor.set_tab_width(self.settings.tab_width)
             editor.set_font(self.editor_font())
             editor.set_word_wrap(self.settings.word_wrap)
@@ -634,6 +795,14 @@ class MainController(QObject):
         self.window.status.setVisible(self.settings.show_status_bar)
         self.window.set_line_numbers_visible(self.settings.line_numbers)
         self.window.set_word_wrap_enabled(self.settings.word_wrap)
+
+        self.window.set_typing_menu_state(
+            self.settings.auto_close_brackets,
+            self.settings.auto_indent,
+            self.settings.syntax_highlighting,
+            (self.current_document().language
+             if self.current_document() is not None else "auto"),
+        )
 
         if old["ui_language"] != self.settings.ui_language:
             self.set_ui_language(self.settings.ui_language)
@@ -652,7 +821,10 @@ class MainController(QObject):
 
         app = QApplication.instance()
         if app is not None:
-            _apply_theme(app, self.settings.theme)
+            self.active_theme = _apply_theme(app, self.settings.theme)
+            self.window.tab_bar.set_theme_name(self.active_theme)
+            for editor in self.window.editors():
+                editor.set_theme_name(self.active_theme)
 
     def _clear_recent(self) -> None:
         self.settings.clear_recent()
@@ -677,6 +849,8 @@ class MainController(QObject):
         self.settings.open_files = [
             str(doc.path) for doc in self._docs.values() if doc.path
         ]
+        self.settings.word_wrap = self.window.act_word_wrap.isChecked()
+        self.settings.line_numbers = self.window.act_line_numbers.isChecked()
         self.settings.save()
 
     def has_unsaved(self) -> bool:
@@ -689,7 +863,7 @@ class MainController(QObject):
             if not doc or not doc.is_modified:
                 continue
             self.window.tabs.setCurrentIndex(self.window.index_of(editor))
-            answer = self.window.confirm_unsaved(doc.title)
+            answer = self.window.confirm_unsaved(self._doc_title(doc))
             if answer == QMessageBox.StandardButton.Cancel:
                 return False
             if answer == QMessageBox.StandardButton.Save and not self.save_current():

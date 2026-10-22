@@ -6,11 +6,11 @@
 | الصيغة | الأمر | المخرَج | يحتاج |
 |--------|-------|---------|-------|
 | sdist + wheel | `python -m build` | `dist/*.tar.gz`, `dist/*.whl` | `build` |
-| Debian/Ubuntu | `scripts/build-deb.sh` | `dist/notepad-linux_2.0.0_all.deb` | `dpkg-deb` |
+| Debian/Ubuntu | `scripts/build-deb.sh` | `dist/notepad-linux_1.0.1_all.deb` | `dpkg-deb` |
 | Fedora/RHEL/SUSE | `rpmbuild -ba packaging/rpm/notepad-linux.spec` | `~/rpmbuild/RPMS/noarch/*.rpm` | `rpm-build` |
 | Arch/Manjaro | `cd packaging/arch && makepkg -si` | `*.pkg.tar.zst` | `base-devel` |
 | Flatpak | `flatpak-builder --install --user build packaging/flatpak/org.notepadlinux.Notepad.json` | تطبيق معزول | `flatpak-builder`, `org.kde.Sdk` |
-| AppImage | `packaging/appimage/build-appimage.sh` | `dist/Notepad-2.0.0-x86_64.AppImage` | `appimagetool` |
+| AppImage | `packaging/appimage/build-appimage.sh` | `dist/Notepad-1.0.1-x86_64.AppImage` | `appimagetool` |
 | الكل مرة واحدة | `scripts/build-all.sh` | `dist/` | ما توفّر منها |
 
 `scripts/build-all.sh` يتخطّى أي صيغة أداتها غير مثبّتة مع رسالة صريحة،
@@ -31,18 +31,18 @@
 
 ```bash
 # محتوى الحزمة
-dpkg-deb -c dist/notepad-linux_2.0.0_all.deb | less
-dpkg-deb -I dist/notepad-linux_2.0.0_all.deb
-lintian dist/notepad-linux_2.0.0_all.deb      # إن كان مثبتًا
+dpkg-deb -c dist/notepad-linux_1.0.1_all.deb | less
+dpkg-deb -I dist/notepad-linux_1.0.1_all.deb
+lintian dist/notepad-linux_1.0.1_all.deb      # إن كان مثبتًا
 
 # تثبيت تجريبي بلا صلاحيات جذر
-dpkg-deb -x dist/notepad-linux_2.0.0_all.deb /tmp/install-test
+dpkg-deb -x dist/notepad-linux_1.0.1_all.deb /tmp/install-test
 PYTHONPATH=/tmp/install-test/usr/lib/notepad-linux \
     QT_QPA_PLATFORM=offscreen python3 -m mufakkira --version
 
 # الحزمة البرمجية
 python -m venv /tmp/venv-test
-/tmp/venv-test/bin/pip install dist/notepad_linux-2.0.0-py3-none-any.whl
+/tmp/venv-test/bin/pip install dist/notepad_linux-1.0.1-py3-none-any.whl
 /tmp/venv-test/bin/notepad --version
 ```
 

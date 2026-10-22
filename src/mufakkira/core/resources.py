@@ -9,6 +9,10 @@ RESOURCES_DIR = Path(__file__).resolve().parent.parent / "resources"
 FONTS_DIR = RESOURCES_DIR / "fonts"
 STYLES_DIR = RESOURCES_DIR / "styles"
 ICONS_DIR = RESOURCES_DIR / "icons"
+BRANDING_DIR = RESOURCES_DIR / "branding"
+
+LOGO_SVG = BRANDING_DIR / "logo.svg"
+LOGO_RASTER = BRANDING_DIR / "logo.webp"
 
 BUNDLED_FONT = FONTS_DIR / "IBMPlexSansArabic-Light.ttf"
 
@@ -45,6 +49,33 @@ def application_icon():
         if fallback is not None:
             icon = QIcon(str(fallback))
     return icon
+
+
+def logo_pixmap(size: int = 128):
+    """The brand mark as a ``QPixmap`` (vector first, raster fallback)."""
+    from PySide6.QtCore import QRectF
+    from PySide6.QtGui import QColor, QPainter, QPixmap
+
+    if LOGO_SVG.exists():
+        try:
+            from PySide6.QtSvg import QSvgRenderer
+
+            renderer = QSvgRenderer(str(LOGO_SVG))
+            if renderer.isValid():
+                pixmap = QPixmap(size, size)
+                pixmap.fill(QColor("#5FC1EA"))
+                painter = QPainter(pixmap)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+                renderer.render(painter, QRectF(0, 0, size, size))
+                painter.end()
+                return pixmap
+        except ImportError:  # pragma: no cover - PySide6 without QtSvg
+            pass
+    required = ICONS_DIR / f"app-{size}.png"
+    for candidate in (required, icon_file()):
+        if candidate is not None and candidate.exists():
+            return QPixmap(str(candidate))
+    return QPixmap()
 
 
 def icon_pixmap(size: int = 64):

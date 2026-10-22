@@ -35,6 +35,13 @@ class Settings:
     # text direction: "auto" keeps Qt's per-paragraph resolution
     default_direction: str = AUTO
 
+    # editing conveniences
+    auto_close_brackets: bool = True
+    auto_indent: bool = True
+    word_completion: bool = True
+    #: Off by default: a plain notepad should not colour code unprompted.
+    syntax_highlighting: bool = False
+
     # large files
     ask_before_mb: int = 64
     hard_limit_mb: int = 512

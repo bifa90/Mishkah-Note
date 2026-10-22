@@ -1,0 +1,107 @@
+# Continuous integration: lint, tests and the package sanity check.
+#
+# This file lives in docs/ci because the automation token that maintains the
+# repository cannot write to .github/workflows.  To enable it:
+#
+#   mkdir -p .github/workflows
+#   cp docs/ci/ci.yml docs/ci/release.yml .github/workflows/
+#   git add .github/workflows && git commit -m "ci: enable workflows" && git push
+#
+name: CI
+
+on:
+  push:
+    branches: [main, "arena/**"]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Tests (Python ${{ matrix.python-version }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.11", "3.13"]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+
+      - name: Install Qt runtime libraries and fonts
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libegl1 libgl1 libxkbcommon0 libdbus-1-3 \
+            fonts-noto-core fonts-noto-cjk fonts-liberation
+
+      - name: Install the project
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+
+      - name: Lint
+        run: ruff check src tests tools
+
+      - name: Unit and GUI tests (headless)
+        env:
+          QT_QPA_PLATFORM: offscreen
+          MISHKAH_CLEAN_EXIT: "1"
+        run: pytest -q
+
+      - name: The Markdown view never changes a byte
+        env:
+          QT_QPA_PLATFORM: offscreen
+          MISHKAH_CLEAN_EXIT: "1"
+        run: pytest tests/test_markdown.py -q
+
+  packaging-check:
+    name: Packaging sanity
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build tooling
+        run: |
+          python -m pip install --upgrade pip
+          pip install build ruff "setuptools>=68" wheel
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            dpkg-dev desktop-file-utils libegl1 libgl1 libxkbcommon0 libdbus-1-3
+
+      - name: Icons are not stale
+        run: |
+          pip install pillow
+          python tools/make_icon.py
+          if ! git diff --quiet -- src/mishkah/resources/icons; then
+            echo "::error::icons are stale: run python tools/make_icon.py"
+            exit 1
+          fi
+
+      - name: Verify every packaging file that can be verified here
+        env:
+          QT_QPA_PLATFORM: offscreen
+          MISHKAH_CLEAN_EXIT: "1"
+        run: bash scripts/verify-packaging.sh
+
+      - name: Upload the built packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-packages-${{ github.sha }}
+          path: |
+            dist/*.deb
+            dist/*.whl
+            dist/*.tar.gz
+          retention-days: 14

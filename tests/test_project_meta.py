@@ -33,7 +33,7 @@ def test_author_appears_only_in_the_about_box():
         except (UnicodeDecodeError, OSError):
             continue
         for number, line in enumerate(text.splitlines(), start=1):
-            if "github.com" in line or "githubusercontent.com" in line:
+            if "github.com" in line or "githubusercontent.com" in line or "bifa90/Mishkah-Note" in line:
                 # A repository (or raw-content) URL names the project, not the
                 # person; only the About box may carry the developer's name.
                 continue
@@ -92,10 +92,11 @@ def test_version_is_consistent_everywhere():
 
 def test_pyproject_declares_entry_points_and_assets():
     pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
-    assert 'mishkah = "mishkah.app:main"' in pyproject
+    assert 'mishkah = "mishkah.cli:main"' in pyproject
     assert "resources/icons/*.png" in pyproject
     assert "resources/fonts/*.ttf" in pyproject
     assert "resources/styles/*.qss" in pyproject
+    assert "resources/branding/*" in pyproject
 
 
 def test_packaging_files_exist():

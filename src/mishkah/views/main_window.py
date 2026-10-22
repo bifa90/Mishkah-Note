@@ -793,6 +793,15 @@ class MainWindow(QMainWindow):
             1, 1, max(1, maximum))
         return value if ok else None
 
+    def closeEvent(self, event) -> None:
+        controller = self.property("controller")
+        if controller is not None:
+            if not controller.confirm_close():
+                event.ignore()
+                return
+            controller.files.shutdown()
+        super().closeEvent(event)
+
     def choose_encoding_dialog(self, current: str) -> Optional[str]:
         from PySide6.QtWidgets import QInputDialog
 

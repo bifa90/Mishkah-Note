@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import sys
 
-from mishkah.app import main
+from mishkah.cli import main
 
 if __name__ == "__main__":
     sys.exit(main())

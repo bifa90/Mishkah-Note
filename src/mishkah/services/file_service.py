@@ -13,7 +13,7 @@ import time
 from pathlib import Path
 from typing import Optional
 
-from PySide6.QtCore import QObject, QThread, Signal
+from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from mishkah.core import large_file
 from mishkah.core.large_file import (
@@ -121,6 +121,9 @@ class SaveWorker(QThread):
                  parent: Optional[QObject] = None):
         super().__init__(parent)
         self.doc = doc
+        self.content = doc.content
+        self.fmt = doc.fmt
+        self.revision = doc.revision
         self.target = Path(target) if target else (doc.path or Path(""))
         self._cancelled = False
 
@@ -131,18 +134,17 @@ class SaveWorker(QThread):
         try:
             written = large_file.write_text_atomic(
                 self.target,
-                self.doc.content,
-                self.doc.fmt,
+                self.content,
+                self.fmt,
                 progress=_ProgressEmitter(self.progress),
                 cancel=lambda: self._cancelled,
             )
         except OperationCancelled:
             self.failed.emit("cancelled", "")
             return
-        except (PermissionError, OSError) as exc:
+        except (OSError, UnicodeError, LookupError) as exc:
             self.failed.emit(type(exc).__name__, str(exc))
             return
-        self.doc.mark_saved(self.target, written)
         self.saved.emit(self.doc, written)
 
 
@@ -190,21 +192,37 @@ class FileService(QObject):
         worker = SaveWorker(doc, target=target, parent=self)
         self._track(worker)
         worker.progress.connect(self.save_progress)
-        worker.saved.connect(lambda d, n: self.save_finished.emit(d, n))
+        worker.saved.connect(self._complete_save)
         worker.failed.connect(lambda title, detail: self.save_failed.emit(
             str(self_target(doc, target)), title, detail))
         self.save_started.emit(str(target or doc.path or ""))
         worker.start()
 
+    @Slot(object, int)
+    def _complete_save(self, doc: DocumentModel, written: int) -> None:
+        worker = self.sender()
+        if isinstance(worker, SaveWorker):
+            # Model changes belong to the GUI thread, not the writer thread.
+            doc.mark_saved(worker.target, written, revision=worker.revision)
+        self.save_finished.emit(doc, written)
+
     def _track(self, worker: QThread) -> None:
         self._workers.append(worker)
         worker.finished.connect(lambda w=worker: self._workers.remove(w)
                                 if w in self._workers else None)
+        worker.finished.connect(worker.deleteLater)
 
     def cancel_all(self) -> None:
         for worker in list(self._workers):
             if hasattr(worker, "cancel"):
                 worker.cancel()
+
+
+    def shutdown(self) -> None:
+        """Do not destroy live QThreads when the last window exits."""
+        self.cancel_all()
+        for worker in list(self._workers):
+            worker.wait()
 
 
 def self_target(doc: DocumentModel, target: Optional[Path]) -> Path:

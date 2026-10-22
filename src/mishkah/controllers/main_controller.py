@@ -38,6 +38,8 @@ class MainController(QObject):
         self._docs: Dict[EditorView, DocumentModel] = {}
         self._pending_paths: Dict[int, str] = {}   # tab index -> path being loaded
         self._busy = False
+        self._close_after_save: set[EditorView] = set()
+        self._window_close_after_save = False
 
         self.active_theme = self._resolve_theme(settings.theme)
         i18n.set_language(settings.ui_language)
@@ -263,7 +265,11 @@ class MainController(QObject):
         # in settings is honoured, otherwise the content decides.
         if doc.direction_mode == AUTO:
             doc.direction_mode = AUTO
-        editor.set_document(doc)
+        blocked = editor.blockSignals(True)
+        try:
+            editor.set_document(doc)
+        finally:
+            editor.blockSignals(blocked)
         editor.set_font_size(self.settings.font_size)
 
         if doc.uses_performance_mode and self.settings.performance_mode:
@@ -372,13 +378,25 @@ class MainController(QObject):
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
         editor = self._editor_for_document(doc)
         if editor is not None:
-            self.window.set_tab_title(editor, self._doc_title(doc), False)
+            self.window.set_tab_title(editor, self._doc_title(doc), doc.is_modified)
+            if not doc.is_modified:
+                editor.document().setModified(False)
         self.settings.remember_file(str(doc.path))
         self.window.set_recent_files(self.settings.recent_files)
         self.window.setWindowTitle(i18n.tr("app.name"))
         self._sync_ui(editor)
+        if editor in self._close_after_save:
+            self._close_after_save.discard(editor)
+            if not doc.is_modified:
+                self.close_tab(self.window.index_of(editor))
+        if self._window_close_after_save:
+            self._window_close_after_save = False
+            if not doc.is_modified:
+                self.window.close()
 
     def _on_save_failed(self, path: str, title: str, detail: str) -> None:
+        self._close_after_save.clear()
+        self._window_close_after_save = False
         if title == "cancelled":
             return
         self.window.show_error(
@@ -404,8 +422,10 @@ class MainController(QObject):
                 return
             if answer == QMessageBox.StandardButton.Save:
                 self.window.tabs.setCurrentIndex(index)
+                self._close_after_save.add(editor)
                 if not self.save_current():
-                    return
+                    self._close_after_save.discard(editor)
+                return
         self._docs.pop(editor, None)
         # Closing the pinned tab must release the "always on top" hint, or
         # the window would keep floating above everything with nothing pinned.
@@ -455,8 +475,9 @@ class MainController(QObject):
         doc = self._docs.get(editor)
         if doc is None or doc.truncated:
             return
-        if not doc.is_modified:
-            doc.mark_modified()
+        was_modified = doc.is_modified
+        doc.mark_modified()
+        if not was_modified:
             self.window.set_tab_title(editor, self._doc_title(doc), True)
             self.window.setWindowTitle(i18n.tr(
                 "app.title", title=self._doc_title(doc), app=i18n.tr("app.name")))
@@ -885,7 +906,10 @@ class MainController(QObject):
             answer = self.window.confirm_unsaved(self._doc_title(doc))
             if answer == QMessageBox.StandardButton.Cancel:
                 return False
-            if answer == QMessageBox.StandardButton.Save and not self.save_current():
+            if answer == QMessageBox.StandardButton.Save:
+                self._window_close_after_save = True
+                if not self.save_current():
+                    self._window_close_after_save = False
                 return False
         return True
 

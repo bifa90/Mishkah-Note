@@ -240,3 +240,6 @@ packaging/arch/*.pkg.tar.*
 *.rej
 *.bak
 *.old
+
+# Local source archive used by makepkg
+packaging/arch/mishkah-note-*.tar.gz

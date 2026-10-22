@@ -12,6 +12,7 @@ from PySide6.QtGui import QFontDatabase, QPalette
 from PySide6.QtWidgets import QApplication
 
 from mishkah import APP_ID, APP_NAME, APP_VERSION, ORGANIZATION
+from mishkah.cli import USAGE
 from mishkah.controllers.main_controller import MainController
 from mishkah.core import i18n, resources
 from mishkah.core.settings import Settings
@@ -83,19 +84,6 @@ def build_window(app: QApplication, settings: Settings,
     return window
 
 
-USAGE = """mishkah — a Windows 11-style text editor with first-class RTL support
-
-Usage:
-  mishkah [OPTION]... [FILE]...
-
-Options:
-  --safe-mode   ignore the saved configuration and the previous session
-  --version     print the version and exit
-  -h, --help    print this help and exit
-
-Files are opened one per tab.  Text direction can be switched with
-Ctrl+Shift+Right (RTL), Ctrl+Shift+Left (LTR) or Ctrl+Shift+A (automatic).
-"""
 
 
 def main(argv: Optional[List[str]] = None) -> int:

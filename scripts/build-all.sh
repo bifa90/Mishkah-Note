@@ -52,7 +52,7 @@ if [ "${WITH_FLATPAK:-0}" = "1" ]; then
     if command -v flatpak-builder >/dev/null 2>&1; then
         say "flatpak"
         flatpak-builder --user --force-clean --install-deps-from=flathub \
-            --repo=build/flatpak-repo build/flatpak-build \
+            --repo=build/flatpak-repo --default-branch=stable build/flatpak-build \
             packaging/flatpak/org.mishkahnote.Mishkah.json
         flatpak build-bundle build/flatpak-repo \
             "dist/org.mishkahnote.Mishkah.flatpak" \

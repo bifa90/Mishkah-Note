@@ -128,3 +128,89 @@ def test_editor_font_respects_language_and_user_choice(controller, code):
     assert controller.editor_font().families() == editor_font_families(code)
     controller.settings.font_family = "DejaVu Sans Mono"
     assert controller.editor_font().families()[0] == "DejaVu Sans Mono"
+
+
+def test_close_with_save_waits_for_success(controller, tmp_path):
+    from PySide6.QtWidgets import QMessageBox
+
+    editor = controller.new_document()
+    editor.setPlainText("keep me")
+    doc = controller.current_document()
+    doc.path = tmp_path / "note.txt"
+    controller.window.confirm_unsaved = lambda _: QMessageBox.StandardButton.Save
+    controller.files.save = lambda *_: None
+    controller.close_tab(controller.window.index_of(editor))
+    assert editor in controller._docs
+    controller.window.show_error = lambda *_: None
+    controller._on_save_failed(str(doc.path), "OSError", "disk full")
+    assert editor in controller._docs
+    doc.is_modified = False
+
+
+def test_save_worker_captures_text_and_format(controller, tmp_path):
+    from mishkah.services.file_service import SaveWorker
+
+    controller.new_document()
+    doc = controller.current_document()
+    doc.content = "snapshot"
+    worker = SaveWorker(doc, tmp_path / "snapshot.txt")
+    doc.content = "later edit"
+    doc.set_encoding("utf-16-le")
+    assert worker.content == "snapshot"
+    assert worker.fmt.encoding == "utf-8"
+
+
+def test_loaded_document_is_not_marked_modified(controller, tmp_path):
+    from mishkah.models.document import DocumentModel
+
+    path = tmp_path / "loaded.txt"
+    doc = DocumentModel(path=path, content="loaded text")
+    controller._on_loaded(doc)
+    assert not doc.is_modified
+    assert doc.revision == 0
+
+
+def test_close_event_obeys_cancel(qapp):
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
+
+    class CloseGuard:
+        files = FileService()
+
+        @staticmethod
+        def confirm_close():
+            return False
+
+    window = MainWindow()
+    window.setProperty("controller", CloseGuard())
+    window.show()
+    assert window.close() is False
+    window.setProperty("controller", None)
+    window.close()
+
+
+def test_window_save_intent_defers_close(controller, tmp_path):
+    from PySide6.QtWidgets import QMessageBox
+
+    editor = controller.new_document()
+    editor.setPlainText("save before exit")
+    doc = controller.current_document()
+    doc.path = tmp_path / "exit.txt"
+    controller.window.confirm_unsaved = lambda _: QMessageBox.StandardButton.Save
+    controller.files.save = lambda *_: None
+    assert controller.confirm_close() is False
+    assert controller._window_close_after_save
+    controller._window_close_after_save = False
+    doc.is_modified = False
+
+
+def test_save_completion_keeps_new_edits_dirty(controller, tmp_path):
+    editor = controller.new_document()
+    editor.setPlainText("snapshot")
+    doc = controller.current_document()
+    snapshot_revision = doc.revision
+    editor.insertPlainText("later")
+    doc.mark_saved(tmp_path / "saved.txt", 8, revision=snapshot_revision)
+    controller._on_saved(doc, 8)
+    assert doc.is_modified
+    doc.is_modified = False

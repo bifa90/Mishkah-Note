@@ -4,9 +4,6 @@
 QWidget {
     background-color: #202020;
     color: #F2F2F2;
-    font-family: "Segoe UI Variable Text", "Segoe UI", "IBM Plex Sans Arabic",
-                 "Noto Sans", "Cantarell", sans-serif;
-    font-size: 13px;
 }
 
 QMainWindow, QMainWindow > QWidget { background-color: #202020; }

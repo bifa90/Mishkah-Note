@@ -19,7 +19,11 @@ optdepends=(
 provides=('mishkah')
 conflicts=('mishkah')
 options=('!strip' '!emptydirs')
-source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+if [[ -n "${MISHKAH_SOURCE_ARCHIVE:-}" ]]; then
+    source=("${MISHKAH_SOURCE_ARCHIVE##*/}")
+else
+    source=("$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz")
+fi
 sha256sums=('SKIP')
 
 build() {

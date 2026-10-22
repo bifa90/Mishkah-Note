@@ -26,6 +26,17 @@ fi
 OUT="${OUT:-$ROOT/dist}"
 mkdir -p "$OUT"
 
+VERSION="$(python3 - <<'EOF'
+import pathlib, re
+print(re.search(r'^version = "([^"]+)"', pathlib.Path("pyproject.toml").read_text(), re.M).group(1))
+EOF
+)"
+# Use the exact checkout that CI is building, not a potentially different tag.
+ARCHIVE="$ROOT/packaging/arch/mishkah-note-$VERSION.tar.gz"
+mkdir -p "$(dirname "$ARCHIVE")"
+git archive --format=tar.gz --prefix="Mishkah-Note-$VERSION/" -o "$ARCHIVE" HEAD
+export MISHKAH_SOURCE_ARCHIVE="$ARCHIVE"
+
 echo "==> makepkg in packaging/arch"
 ( cd packaging/arch && makepkg -f --noconfirm --nodeps )
 

@@ -4,7 +4,7 @@
 
 .DESCRIPTION
     Freezes the application with PyInstaller (onedir, windowed) and wraps the
-    result with WiX Toolset v4/v5. The MSI installs into Program Files, creates
+    result with WiX Toolset v5. The MSI installs into Program Files, creates
     Start-menu and desktop shortcuts, and registers an "Open with" entry for
     .txt files. Nothing is bundled that requires Python on the target machine.
 
@@ -14,7 +14,7 @@
 
     Prerequisites (installed by the script when missing):
         * Python 3.9+ with pip
-        * .NET 6+ (for `dotnet tool install --global wix`)
+        * .NET 8+ (for `dotnet tool install --global wix`)
 
 .PARAMETER Version
     Product version written into the MSI; defaults to pyproject.toml.
@@ -70,11 +70,11 @@ if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
     if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
         throw "dotnet was not found; install the .NET SDK to get the WiX CLI"
     }
-    dotnet tool install --global wix
+    dotnet tool install --global wix --version 5.0.2
     $env:PATH = "$env:PATH;$env:USERPROFILE\.dotnet\tools"
 }
 wix --version
-wix extension add --global WixToolset.UI.wixext
+wix extension add --global WixToolset.UI.wixext/5.0.2
 
 # ---------------------------------------------------------------------------
 # 2. freeze the application
@@ -89,7 +89,7 @@ if ($SkipFreeze -and (Test-Path $SourceDir)) {
     if (Test-Path $PyInstallerDir) { Remove-Item -Recurse -Force $PyInstallerDir }
 
     python -m PyInstaller `
-        --noconfirm --clean --onedir `
+        --noconfirm --clean `
         --distpath $PyInstallerDir `
         --workpath (Join-Path $PyInstallerDir "work") `
         "packaging/windows/mishkah.spec"

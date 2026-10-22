@@ -26,7 +26,10 @@
         "env": {
           "PIP_DISABLE_PIP_VERSION_CHECK": "1",
           "PIP_NO_CACHE_DIR": "1"
-        }
+        },
+        "build-args": [
+          "--share=network"
+        ]
       },
       "build-commands": [
         "pip3 install --verbose --prefix=${FLATPAK_DEST} \"setuptools>=68\" wheel",

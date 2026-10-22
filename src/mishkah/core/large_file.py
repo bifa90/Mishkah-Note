@@ -21,6 +21,7 @@ The module is intentionally Qt-free.
 
 from __future__ import annotations
 
+import codecs
 import os
 import tempfile
 from dataclasses import dataclass, field
@@ -121,22 +122,26 @@ def read_text_chunked(
 
     with open(path, "rb") as fh:
         head = fh.read(SNIFF_BYTES)
-    if looks_binary(head):
+    bom_encoding, bom_len = sniff_bom(head)
+    try:
+        explicit_codec = codecs.lookup(encoding).name if encoding else ""
+    except LookupError:
+        explicit_codec = ""
+    unicode_wide = explicit_codec.startswith(("utf-16", "utf-32"))
+    if looks_binary(head) and not bom_encoding and not unicode_wide:
         raise BinaryFileError(f"{path.name} looks like a binary file")
 
     fmt = detect_format(head)
     if encoding:
         fmt = fmt.with_encoding(encoding)
 
-    bom_encoding, bom_len = sniff_bom(head)
-    forced = encoding is not None and not bom_encoding
     parts: List[str] = []
     decoder = incremental_decoder(fmt.encoding)
     consumed = 0
     total = size
     start = 0
 
-    if bom_len and not forced:
+    if bom_len:
         start = bom_len
         consumed = bom_len
 
@@ -218,24 +223,26 @@ def write_text_atomic(
     directory.mkdir(parents=True, exist_ok=True)
 
     payload = apply_line_ending(text, fmt.line_ending)
-    encoding = fmt.encoding
-    prefix_bytes = bom_for(encoding) if fmt.has_bom else b""
+    encoding = codecs.lookup(fmt.encoding).name
+    prefix_bytes = bom_for(encoding) if fmt.has_bom or encoding == "utf-8-sig" else b""
 
     total = max(1, len(payload))
-    written = 0
     fd, tmp_name = tempfile.mkstemp(dir=str(directory), prefix=f".{path.name}.",
                                     suffix=".part")
     try:
         with os.fdopen(fd, "wb") as fh:
             if prefix_bytes:
                 fh.write(prefix_bytes)
-                written += len(prefix_bytes)
-            encoder = codecs_lookup_encoder(encoding)
+            # Signature codecs emit their own BOM. The explicit prefix owns it
+            # for UTF-8-SIG, so encode its body as UTF-8 instead.
+            body_encoding = "utf-8" if codecs.lookup(encoding).name == "utf-8-sig" else encoding
+            encoder = codecs.getincrementalencoder(body_encoding)(errors="strict")
+            _report(progress, 0, total, cancel)
             for start in range(0, len(payload), chunk_chars):
                 piece = payload[start:start + chunk_chars]
-                fh.write(encoder(piece))
-                written += len(piece.encode(encoding, "replace")) if False else 0
+                fh.write(encoder.encode(piece))
                 _report(progress, min(total, start + chunk_chars), total, cancel)
+            fh.write(encoder.encode("", final=True))
             fh.flush()
             os.fsync(fh.fileno())
         _copy_permissions(path, tmp_name)
@@ -247,20 +254,6 @@ def write_text_atomic(
             pass
         raise
     return path.stat().st_size
-
-
-def codecs_lookup_encoder(encoding: str) -> Callable[[str], bytes]:
-    import codecs
-
-    try:
-        encode = codecs.getencoder(encoding)
-    except LookupError:
-        encode = codecs.getencoder("utf-8")
-
-    def _encode(chunk: str) -> bytes:
-        return encode(chunk, "replace")[0]
-
-    return _encode
 
 
 def _copy_permissions(src: Path, dst: str) -> None:

@@ -40,10 +40,10 @@ Repository = "https://github.com/bifa90/Mishkah-Note"
 Issues = "https://github.com/bifa90/Mishkah-Note/issues"
 
 [project.scripts]
-mishkah = "mishkah.app:main"
+mishkah = "mishkah.cli:main"
 
 [project.gui-scripts]
-mishkah-gui = "mishkah.app:main"
+mishkah-gui = "mishkah.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -53,6 +53,7 @@ mishkah = [
     "resources/fonts/*.ttf",
     "resources/fonts/*.otf",
     "resources/fonts/*.txt",
+    "resources/branding/*",
     "resources/styles/*.qss",
     "resources/icons/*.png",
     "resources/icons/*.svg",

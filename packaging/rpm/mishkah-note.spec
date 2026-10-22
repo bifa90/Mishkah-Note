@@ -20,7 +20,7 @@ Recommends:     (liberation-fonts or liberation-sans-fonts)
 
 %description
 A fast, minimal text editor for the Linux desktop, styled after the Windows 11
-Mishkah Note.  The writing direction is resolved per document — automatically from
+Notepad.  The writing direction is resolved per document — automatically from
 the content, or explicitly right-to-left / left-to-right — instead of being
 forced globally, so Arabic and English files each render correctly.  It
 auto-closes brackets, indents intelligently, offers optional syntax
@@ -31,9 +31,7 @@ typeface, speaks ten languages, and opens very large files in chunks.
 %setup -q -n Mishkah-Note-%{version}
 
 %build
-# No network during %build: a plain wheel from the checkout.
-%{__python3} -m build --wheel --no-isolation 2>/dev/null || \
-    %{__python3} setup.py bdist_wheel 2>/dev/null || true
+# Python sources are installed directly; no wheel or network is needed.
 
 %install
 rm -rf %{buildroot}

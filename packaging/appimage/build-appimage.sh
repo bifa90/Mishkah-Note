@@ -17,7 +17,7 @@ cd "$ROOT"
 VERSION="$(python3 - <<'EOF'
 import pathlib, re
 print(re.search(r'^version = "([^"]+)"',
-      pathlib.Path("pyproject.toml").read_text(encoding="utf-8")).group(1))
+      pathlib.Path("pyproject.toml").read_text(encoding="utf-8"), re.M).group(1))
 EOF
 )"
 ARCH="${ARCH:-$(uname -m)}"

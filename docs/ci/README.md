@@ -36,3 +36,24 @@ flatpak-builder --user --install-deps-from=flathub build/flatpak-build \
     packaging/flatpak/org.mishkahnote.Mishkah.json
 pwsh scripts/build-msi.ps1 -Version <version>   # على Windows فقط
 ```
+
+## شروط نشر 1.0.01
+
+- يُبنى المصدر الذي يشير إليه `v1.0.01` في جميع وظائف البناء، حتى عند التشغيل اليدوي.
+- يجب أن يشير الوسم إلى commit الهوية الحالية المقصود نشره، لا إلى مصدر مختلف.
+- تمر الاختبارات وفحوص التغليف قبل بدء بناء الحزم.
+- تُرفق ثماني حزم: wheel وsdist وDebian وRPM وArch وAppImage وFlatpak وMSI.
+- يتحقق `tools/check_release_assets.py` من اكتمال الأسماء ووجود ملفات غير فارغة؛
+  هذا فحص اكتمال، وليس بديلًا عن اختبار تشغيل كل حزمة.
+- صور التطبيق الفعلية تُحفظ كأثر Actions باسم `screenshots` للمراجعة البصرية،
+  ولا تدخل ضمن ملفات الحزم المنشورة.
+- لا تُعدّل ملفات التوثيق في `docs/ci/` إعدادات GitHub تلقائيًا؛ يجب نسخها
+  إلى `.github/workflows/` باستخدام صلاحية مناسبة وتفعيل السير.
+
+بعد تفعيل السير وتثبيت الوسم على المصدر المعتمد:
+
+```bash
+gh workflow run release.yml --repo bifa90/Mishkah-Note --ref main -f tag=v1.0.01
+gh run list --repo bifa90/Mishkah-Note --workflow release.yml
+gh release view v1.0.01 --repo bifa90/Mishkah-Note --json name,assets
+```

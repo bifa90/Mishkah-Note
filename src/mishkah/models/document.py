@@ -40,6 +40,7 @@ class DocumentModel:
     # Syntax highlighting: "auto" follows the file extension, or a language
     # code from mishkah.core.syntax, "plain" disables it for this tab.
     language: str = "auto"
+    revision: int = 0
 
     # ------------------------------------------------------------- titles
     @property
@@ -104,24 +105,27 @@ class DocumentModel:
     def mark_modified(self) -> None:
         if not self.read_only:
             self.is_modified = True
+            self.revision += 1
 
-    def mark_saved(self, path: Optional[Path] = None, size: Optional[int] = None) -> None:
+    def mark_saved(self, path: Optional[Path] = None, size: Optional[int] = None,
+                   revision: Optional[int] = None) -> None:
         if path is not None:
             self.path = Path(path)
         if size is not None:
             self.size_on_disk = size
-        self.is_modified = False
+        if revision is None or revision == self.revision:
+            self.is_modified = False
 
     def set_line_ending(self, line_ending: str) -> None:
         if line_ending != self.fmt.line_ending:
             self.fmt = self.fmt.with_line_ending(line_ending)
-            self.is_modified = True
+            self.mark_modified()
 
     def set_encoding(self, encoding: str) -> None:
         if encoding != self.fmt.encoding:
             self.fmt = self.fmt.with_encoding(encoding)
             self.encoding_override = encoding
-            self.is_modified = True
+            self.mark_modified()
 
     def set_direction(self, mode: str) -> bool:
         if mode == self.direction_mode:

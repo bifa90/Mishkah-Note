@@ -12,7 +12,7 @@ from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mishkah.core import i18n, syntax, tab_style
-from mishkah.core.languages import get_language
+from mishkah.core.languages import editor_font_families, get_language
 from mishkah.core.settings import Settings
 from mishkah.core.text_direction import AUTO, LTR, dominant_direction
 from mishkah.models.document import DocumentModel
@@ -136,8 +136,7 @@ class MainController(QObject):
     def editor_font(self) -> QFont:
         s = self.settings
         font = QFont()
-        font.setFamilies([s.font_family] if s.font_family
-                         else list(get_language(s.ui_language).mono_fonts))
+        font.setFamilies(editor_font_families(s.ui_language, s.font_family))
         font.setPointSize(s.font_size)
         font.setHintingPreference(QFont.HintingPreference.PreferFullHinting)
         return font

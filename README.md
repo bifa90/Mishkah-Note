@@ -63,8 +63,10 @@ Mishkah Note is an Arabic-first text editor for Linux, built with Python 3.9+ an
   لوحة المفاتيح في النظام.
 * عشر لغات للواجهة: `en, zh-Hans, hi, es, fr, ar, bn, pt, ru, ur`، وتبديلها
   فوري بلا إعادة تشغيل.
-* خط **IBM Plex Sans Arabic** مضمَّن (SIL OFL 1.1)، وسلسلة خطوط مناسبة لكل
+* خط الكتابة التلقائي للعربية **IBM Plex Sans Arabic Regular** مضمَّن (SIL OFL 1.1)، وسلسلة خطوط مناسبة لكل
   نظام كتابة: Devanagari للهندية، Bengali للبنغالية، وCJK للصينية.
+* اختيار خط مخصص متاح للجميع من **الإعدادات ← الخط**؛ «تلقائي» يتبع لغة
+  الواجهة، والاختيار المخصص محفوظ. [ترشيحات اللغات وتفاصيلها](docs/FONTS.md).
 
 ### الكتابة · Writing
 

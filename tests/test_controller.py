@@ -117,3 +117,14 @@ def test_tab_titles_track_modification(controller):
     editor.setPlainText("changed")
     controller._on_text_changed(editor)
     assert controller.current_document().is_modified is True
+
+
+@pytest.mark.parametrize("code", ["en", "zh-Hans", "hi", "es", "fr", "ar", "bn", "pt", "ru", "ur"])
+def test_editor_font_respects_language_and_user_choice(controller, code):
+    from mishkah.core.languages import editor_font_families
+
+    controller.settings.ui_language = code
+    controller.settings.font_family = ""
+    assert controller.editor_font().families() == editor_font_families(code)
+    controller.settings.font_family = "DejaVu Sans Mono"
+    assert controller.editor_font().families()[0] == "DejaVu Sans Mono"

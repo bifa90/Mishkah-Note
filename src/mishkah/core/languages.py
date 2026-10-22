@@ -13,11 +13,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, List, Tuple
 
-# Monospaced faces used for the text area, best-first.  They are prepended to
-# every language stack so code/logs stay aligned while the script-specific
-# face right behind them handles glyphs the mono face lacks (Arabic, CJK…).
+# Optional monospaced alternatives for users who prefer code-oriented faces.
 MONO_STACK: Tuple[str, ...] = (
-    "Cascadia Mono",       # Windows 11 Mishkah Note default
+    "Cascadia Mono",       # Windows 11 Notepad default
     "Cascadia Code",
     "Consolas",
     "JetBrains Mono",
@@ -26,7 +24,7 @@ MONO_STACK: Tuple[str, ...] = (
 )
 
 # Generic UI faces (menus, tabs, status bar) — Fluent-first so the app matches
-# Windows 11 Mishkah Note when Segoe is present, and falls back cleanly on Linux.
+# Windows 11 Notepad when Segoe is present, and falls back cleanly on Linux.
 UI_STACK: Tuple[str, ...] = (
     "Segoe UI Variable Text",
     "Segoe UI",
@@ -43,8 +41,13 @@ class Language:
     native_name: str
     rtl: bool
     script: str
-    fonts: Tuple[str, ...]         # UI + editor faces, best first
+    fonts: Tuple[str, ...]         # script-specific reading faces, best first
     sample: str                    # string used to preview the language
+
+    @property
+    def editor_fonts(self) -> Tuple[str, ...]:
+        """Reading face first; keep Arabic available in mixed-script text."""
+        return tuple(dict.fromkeys(self.fonts + ("IBM Plex Sans Arabic",) + UI_STACK))
 
     @property
     def mono_fonts(self) -> Tuple[str, ...]:
@@ -63,7 +66,7 @@ _LANGUAGES: Tuple[Language, ...] = (
         native_name="English",
         rtl=False,
         script="Latin",
-        fonts=("Segoe UI", "Roboto", "Liberation Sans", "Noto Sans"),
+        fonts=("Noto Sans", "Segoe UI", "Liberation Sans", "DejaVu Sans"),
         sample="The quick brown fox jumps over the lazy dog.",
     ),
     Language(
@@ -73,8 +76,8 @@ _LANGUAGES: Tuple[Language, ...] = (
         rtl=False,
         script="Han",
         fonts=(
-            "Microsoft YaHei",
             "Noto Sans CJK SC",
+            "Microsoft YaHei",
             "Source Han Sans SC",
             "WenQuanYi Micro Hei",
         ),
@@ -86,7 +89,7 @@ _LANGUAGES: Tuple[Language, ...] = (
         native_name="हिन्दी",
         rtl=False,
         script="Devanagari",
-        fonts=("Nirmala UI", "Noto Sans Devanagari", "Mangal", "Lohit Devanagari"),
+        fonts=("Noto Sans Devanagari", "Nirmala UI", "Mangal", "Lohit Devanagari"),
         sample="तेज़ भूरा लोमड़ी आलसी कुत्ते पर कूदता है।",
     ),
     Language(
@@ -95,7 +98,7 @@ _LANGUAGES: Tuple[Language, ...] = (
         native_name="Español",
         rtl=False,
         script="Latin",
-        fonts=("Segoe UI", "Roboto", "Liberation Sans", "Noto Sans"),
+        fonts=("Noto Sans", "Segoe UI", "Liberation Sans", "DejaVu Sans"),
         sample="El rápido zorro marrón salta sobre el perro perezoso.",
     ),
     Language(
@@ -104,7 +107,7 @@ _LANGUAGES: Tuple[Language, ...] = (
         native_name="Français",
         rtl=False,
         script="Latin",
-        fonts=("Segoe UI", "Marianne", "Roboto", "Noto Sans"),
+        fonts=("Noto Sans", "Segoe UI", "Liberation Sans", "DejaVu Sans"),
         sample="Le rapide renard brun saute par-dessus le chien paresseux.",
     ),
     Language(
@@ -128,7 +131,7 @@ _LANGUAGES: Tuple[Language, ...] = (
         native_name="বাংলা",
         rtl=False,
         script="Bengali",
-        fonts=("Nirmala UI", "Noto Sans Bengali", "Lohit Bengali", "Bangla MN"),
+        fonts=("Noto Sans Bengali", "Nirmala UI", "Lohit Bengali", "Bangla MN"),
         sample="দ্রুত বাদামি শেয়াল অলস কুকুরের উপর লাফ দেয়।",
     ),
     Language(
@@ -137,7 +140,7 @@ _LANGUAGES: Tuple[Language, ...] = (
         native_name="Português",
         rtl=False,
         script="Latin",
-        fonts=("Segoe UI", "Roboto", "Liberation Sans", "Noto Sans"),
+        fonts=("Noto Sans", "Segoe UI", "Liberation Sans", "DejaVu Sans"),
         sample="A rápida raposa marrom salta sobre o cão preguiçoso.",
     ),
     Language(
@@ -146,7 +149,7 @@ _LANGUAGES: Tuple[Language, ...] = (
         native_name="Русский",
         rtl=False,
         script="Cyrillic",
-        fonts=("Segoe UI", "PT Sans", "Noto Sans", "Liberation Sans"),
+        fonts=("Noto Sans", "PT Sans", "Segoe UI", "Liberation Sans"),
         sample="Быстрая коричневая лиса прыгает через ленивую собаку.",
     ),
     Language(
@@ -200,6 +203,19 @@ def language_choices() -> List[Tuple[str, str]]:
     ]
 
 
-def font_families_for(code: str | None, mono: bool = True) -> List[str]:
+def font_families_for(code: str | None, mono: bool = False) -> List[str]:
     lang = get_language(code)
-    return list(lang.mono_fonts if mono else lang.ui_fonts)
+    return list(lang.mono_fonts if mono else lang.editor_fonts)
+
+
+def editor_font_families(code: str | None, custom_family: str = "") -> List[str]:
+    """Automatic language stack, or the user's choice with script fallbacks.
+
+    The active interface language selects the reading face. This is not content
+    detection: mixed-script glyphs are resolved by Qt's font fallback engine.
+    """
+    families = get_language(code).editor_fonts
+    custom_family = custom_family.strip()
+    if custom_family:
+        families = (custom_family,) + families
+    return list(dict.fromkeys(families))

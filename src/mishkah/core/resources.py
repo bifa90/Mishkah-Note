@@ -14,7 +14,7 @@ BRANDING_DIR = RESOURCES_DIR / "branding"
 LOGO_SVG = BRANDING_DIR / "logo.svg"
 LOGO_RASTER = BRANDING_DIR / "logo.webp"
 
-BUNDLED_FONT = FONTS_DIR / "IBMPlexSansArabic-Light.ttf"
+BUNDLED_FONT = FONTS_DIR / "IBMPlexSansArabic-Regular.ttf"
 
 _ICON_CANDIDATES = ("app-512.png", "app-256.png", "app-128.png", "app.png", "app.svg")
 

@@ -52,6 +52,7 @@ where = ["src"]
 mishkah = [
     "resources/fonts/*.ttf",
     "resources/fonts/*.otf",
+    "resources/fonts/*.txt",
     "resources/styles/*.qss",
     "resources/icons/*.png",
     "resources/icons/*.svg",

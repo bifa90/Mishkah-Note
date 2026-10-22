@@ -230,7 +230,7 @@ jobs:
   flatpak:
     needs: validate
     name: Flatpak
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
@@ -247,9 +247,16 @@ jobs:
           flatpak-builder --user --force-clean --install-deps-from=flathub \
             --repo=build/flatpak-repo --default-branch=stable \
             build/flatpak-build packaging/flatpak/org.mishkahnote.Mishkah.json > build/flatpak.log 2>&1 || {
-              python3 tools/report_build_failure.py build/flatpak.log
+              appstreamcli compose --prefix=/ --origin=org.mishkahnote.Mishkah \
+                --components=org.mishkahnote.Mishkah,org.mishkahnote.Mishkah.desktop \
+                --result-root=build/flatpak-build/files \
+                --log-dir=build/appstream-issues build/flatpak-build/files >> build/flatpak.log 2>&1 || true
+              python3 tools/report_build_failure.py build/flatpak.log build/appstream-issues/*
               exit 1
             }
+      - name: Check the packaged application runtime
+        run: |
+          flatpak build --env=QT_QPA_PLATFORM=offscreen build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert mishkah.__version__ == "1.0.01"; os._exit(0)'
       - name: Export a single-file bundle
         run: |
           mkdir -p dist
@@ -299,6 +306,30 @@ jobs:
           if (-not (Test-Path $exe)) { throw "frozen executable missing" }
           $process = Start-Process -FilePath $exe -ArgumentList "--version" -Wait -PassThru
           if ($process.ExitCode -ne 0) { throw "frozen executable failed: $($process.ExitCode)" }
+      - name: Install and uninstall the MSI
+        shell: pwsh
+        run: |
+          $msi = (Get-ChildItem dist/*.msi | Select-Object -First 1).FullName
+          $installed = $false
+          try {
+            $install = Start-Process msiexec.exe -ArgumentList "/i `"$msi`" /qn /norestart /l*v build/msi-install.log" -Wait -PassThru
+            if ($install.ExitCode -notin @(0, 3010)) { throw "MSI install failed: $($install.ExitCode)" }
+            $installed = $true
+            $directory = Join-Path $env:ProgramFiles "Mishkah Note"
+            $exe = Join-Path $directory "Mishkah Note.exe"
+            if (-not (Test-Path $exe)) { throw "installed executable missing" }
+            if (-not (Get-ChildItem $directory -Recurse -Filter IBMPlexSansArabic-Regular.ttf)) { throw "bundled Arabic font missing" }
+            $check = Start-Process $exe -ArgumentList "--version" -Wait -PassThru
+            if ($check.ExitCode -ne 0) { throw "installed executable failed" }
+          } catch {
+            python tools/report_build_failure.py build/msi-install.log
+            throw
+          } finally {
+            if ($installed) {
+              $remove = Start-Process msiexec.exe -ArgumentList "/x `"$msi`" /qn /norestart" -Wait -PassThru
+              if ($remove.ExitCode -notin @(0, 3010)) { throw "MSI uninstall failed: $($remove.ExitCode)" }
+            }
+          }
       - uses: actions/upload-artifact@v4
         with:
           name: packages-msi

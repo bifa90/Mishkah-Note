@@ -1,0 +1,96 @@
+name: Installer checks
+on:
+  push:
+    branches: ["arena/71ffd864-mishkah-note"]
+    paths:
+      - "packaging/flatpak/**"
+      - "packaging/windows/**"
+      - "scripts/build-msi.ps1"
+      - "tools/report_build_failure.py"
+      - ".github/workflows/installers.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: installer-checks-${{ github.ref }}
+  cancel-in-progress: true
+env:
+  PYTHON_VERSION: "3.11"
+jobs:
+  flatpak:
+    name: Flatpak
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - name: Install flatpak-builder and the KDE runtime
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends flatpak flatpak-builder
+          flatpak remote-add --user --if-not-exists flathub \
+            https://flathub.org/repo/flathub.flatpakrepo
+      - name: Build the application
+        run: |
+          mkdir -p build
+          flatpak-builder --user --force-clean --install-deps-from=flathub \
+            --repo=build/flatpak-repo --default-branch=stable \
+            build/flatpak-build packaging/flatpak/org.mishkahnote.Mishkah.json > build/flatpak.log 2>&1 || {
+              python3 tools/report_build_failure.py build/flatpak.log
+              exit 1
+            }
+      - name: Export a single-file bundle
+        run: |
+          mkdir -p dist
+          flatpak build-bundle build/flatpak-repo \
+            dist/org.mishkahnote.Mishkah.flatpak \
+            org.mishkahnote.Mishkah stable
+          ls -lh dist/*.flatpak
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-flatpak
+          path: dist/*.flatpak
+          retention-days: 7
+          if-no-files-found: error
+
+  # ----------------------------------------------------------------- windows
+  windows-msi:
+    name: Windows (.msi)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          architecture: x64
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+      - name: Build the MSI
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path pyproject.toml -Pattern '^version = "([^"]+)"').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Force build | Out-Null
+          try {
+            ./scripts/build-msi.ps1 -Version $version *> build/msi.log
+            if ($LASTEXITCODE -ne 0) { throw "MSI build returned $LASTEXITCODE" }
+          } catch {
+            python tools/report_build_failure.py build/msi.log
+            throw
+          }
+      - name: Smoke-test the frozen application
+        shell: pwsh
+        run: |
+          $exe = "build/pyinstaller/mishkah/Mishkah Note.exe"
+          if (-not (Test-Path $exe)) { throw "frozen executable missing" }
+          $process = Start-Process -FilePath $exe -ArgumentList "--version" -Wait -PassThru
+          if ($process.ExitCode -ne 0) { throw "frozen executable failed: $($process.ExitCode)" }
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages-msi
+          path: dist/*.msi
+          retention-days: 7
+          if-no-files-found: error
+

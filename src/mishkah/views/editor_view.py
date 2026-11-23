@@ -69,6 +69,10 @@ DEFAULT_FONT_SIZE = 13
 AUTO_DETECT_BLOCKS = 200
 #: Breathing room between the text and the viewport edge, in pixels.
 TEXT_MARGIN = 4
+#: A single paragraph can be an entire 300 MB preview (large files open as one
+#: block).  The diagnostic overlay walks only visible blocks, and this cap
+#: stops it from copying one enormous block on every keystroke.
+MAX_INVISIBLE_SCAN = 20000
 
 # Hardware scan codes for the modifier keys.
 #   Linux/X11 and Wayland (evdev + 8)      : LCtrl 37, LShift 50, RShift 62, RCtrl 105
@@ -822,6 +826,8 @@ class EditorView(QPlainTextEdit):
         tint = QColor(255, 176, 32, 120)
         selections = []
         for block in self._visible_blocks():
+            if block.length() - 1 > MAX_INVISIBLE_SCAN:
+                continue                      # a whole-file paragraph: skip
             text = block.text()
             if not text:
                 continue

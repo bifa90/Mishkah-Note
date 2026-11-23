@@ -33,6 +33,7 @@ FROZEN = {
     "docs/CONFLICT_AUDIT_1.0.02.ar.md",
     "docs/DECISIONS_1.0.02.ar.md",
     "docs/PLAN_1.0.02.ar.md",
+    "docs/W0_REPORT_1.0.02.ar.md",
     "docs/decisions-1.0.02.html",
 }
 
@@ -45,6 +46,7 @@ THIRD_PARTY_VERSIONS = {"5.0.2"}
 
 #: ``relative path -> regex with one capture group`` for static packaging files.
 DECLARATIONS = {
+    "src/mishkah/_version.txt": r"^(\S+)$",
     "packaging/arch/PKGBUILD": r"^pkgver=(\S+)",
     "packaging/common/mishkah.1": r'"Mishkah Note ([^"]+)"',
     "packaging/windows/mishkah.wxs": r'define Version="([^"]+)"',

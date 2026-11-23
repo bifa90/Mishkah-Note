@@ -8,8 +8,8 @@ this tool does all of them and then runs the gate.
 
 Usage::
 
-    python3 tools/bump_version.py 1.0.02 --dry-run   # show what would change
-    python3 tools/bump_version.py 1.0.02             # apply, then verify
+    python3 tools/bump_version.py X.Y.Z --dry-run    # show what would change
+    python3 tools/bump_version.py X.Y.Z             # apply, then verify
 
 Two files are treated specially and never blind-replaced:
 
@@ -111,13 +111,13 @@ def add_spec_changelog(new: str, dry_run: bool) -> bool:
 
 def main(argv: List[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Bump every derived version.")
-    parser.add_argument("version", help="new version, e.g. 1.0.02")
+    parser.add_argument("version", help="new version, three numeric parts")
     parser.add_argument("--date", default=dt.date.today().isoformat(), help="release date")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
 
     if not re.fullmatch(r"\d+\.\d+\.\d+", args.version):
-        print("version must look like 1.0.02 (three numeric parts)", file=sys.stderr)
+        print("version must be three numeric parts, for example X.Y.Z", file=sys.stderr)
         return 2
 
     old = check_version.project_version()

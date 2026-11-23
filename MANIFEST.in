@@ -1,5 +1,6 @@
 include LICENSE README.md CHANGELOG.md CONTRIBUTING.md SECURITY.md
 include pyproject.toml
+include src/mishkah/_version.txt
 recursive-include src/mishkah/resources *.ttf *.otf *.txt *.qss *.png *.webp *.svg *.ico
 recursive-include docs *.md *.png *.yml
 recursive-include packaging *.desktop *.1 *.spec *.wxs *.py PKGBUILD *.json *.sh

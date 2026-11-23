@@ -32,7 +32,7 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-dev = ["pytest>=7", "pytest-qt>=4", "build", "ruff"]
+dev = ["pytest>=7", "build", "ruff"]
 
 [project.urls]
 Homepage = "https://github.com/bifa90/Mishkah-Note"
@@ -64,6 +64,11 @@ mishkah = [
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-q"
+# GUI suites need Qt's system libraries (libGL and friends). CI installs them;
+# a headless checkout skips the marked modules and still runs the rest.
+markers = [
+    "gui: needs working Qt GUI system libraries",
+]
 
 [tool.ruff]
 line-length = 96

@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-pytestmark = pytest.mark.usefixtures("qapp")
+pytestmark = [pytest.mark.gui, pytest.mark.usefixtures("qapp")]
 
 Qt = pytest.importorskip("PySide6.QtCore").Qt
 

@@ -39,7 +39,9 @@ def test_commands_preserve_output_and_flatpak_branch(tmp_path):
 
 
 def test_version():
-    assert builder.version() == "1.0.01"
+    from mishkah import __version__
+
+    assert builder.version() == __version__
 
 
 def test_failed_preflight_does_not_start_build(monkeypatch):

@@ -1,18 +1,18 @@
 # Release pipeline: build every Linux format plus the Windows MSI, then attach
 # the files to the GitHub Release of the pushed tag.
 #
-#   git tag -a v1.0.01 -m "Mishkah Note 1.0.01"
-#   git push origin v1.0.01          → this workflow builds and publishes
+#   git tag -a "$RELEASE_TAG" -m "Mishkah Note $RELEASE_VERSION"
+#   git push origin "$RELEASE_TAG"   → this workflow builds and publishes
 #
-# The docs/ci copy is kept identical. An explicitly approved branch push with
-# [publish 1.0.01] publishes only after all package jobs succeed.
+# The single source of the version is pyproject.toml; the env block below is the
+# only other place in CI, and tools/check_version.py keeps the two in sync.
+# The docs/ci copy is kept identical.
 #
 name: Release
 
 on:
   push:
     tags: ["v1.0.01"]
-    branches: ["arena/71ffd864-mishkah-note"]
   workflow_dispatch:
     inputs:
       tag:
@@ -25,6 +25,9 @@ permissions:
 
 env:
   PYTHON_VERSION: "3.11"
+  #: Must equal ``version`` in pyproject.toml (tools/check_version.py enforces it).
+  RELEASE_VERSION: "1.0.01"
+  RELEASE_TAG: "v1.0.01"
 
 concurrency:
   group: release-${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_name }}
@@ -53,7 +56,7 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           MISHKAH_CLEAN_EXIT: "1"
         run: |
-          test "$(python -m mishkah --version)" = "1.0.01"
+          test "$(python -m mishkah --version)" = "$RELEASE_VERSION"
           ruff check src tests tools
           pytest tests/ -q --junitxml=build/pytest.xml
           bash scripts/verify-packaging.sh
@@ -120,7 +123,6 @@ jobs:
           sudo apt-get install -y --no-install-recommends dpkg-dev lintian
           bash scripts/build-deb.sh
       - name: Lint the package
-        continue-on-error: true
         run: lintian --fail-on error dist/*.deb
       - uses: actions/upload-artifact@v4
         with:
@@ -250,7 +252,7 @@ jobs:
             }
       - name: Check the packaged application runtime
         run: |
-          flatpak build --env=QT_QPA_PLATFORM=offscreen build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert mishkah.__version__ == "1.0.01"; os._exit(0)'
+          flatpak build --env=QT_QPA_PLATFORM=offscreen build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert mishkah.__version__ == os.environ["RELEASE_VERSION"]; os._exit(0)'
       - name: Export a single-file bundle
         run: |
           mkdir -p dist
@@ -333,7 +335,7 @@ jobs:
 
   # ----------------------------------------------------------------- release
   publish:
-    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch' || (github.ref == 'refs/heads/arena/71ffd864-mishkah-note' && contains(github.event.head_commit.message, '[publish 1.0.01]'))
+    if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
     name: Attach the files to the release
     needs: [python-packages, deb, rpm, arch, appimage, flatpak, windows-msi]
     runs-on: ubuntu-24.04
@@ -358,26 +360,26 @@ jobs:
 
       - name: Require the canonical release version
         env:
-          REQUESTED_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_type == 'tag' && github.ref_name || 'v1.0.01' }}
-        run: test "$REQUESTED_TAG" = v1.0.01
+          REQUESTED_TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || github.ref_type == 'tag' && github.ref_name || env.RELEASE_TAG }}
+        run: test "$REQUESTED_TAG" = "$RELEASE_TAG"
 
       - name: Point the canonical tag at the validated source
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           source_sha="$(git rev-parse HEAD)"
-          if gh api repos/${{ github.repository }}/git/ref/tags/v1.0.01 >/dev/null 2>&1; then
-            gh api --method PATCH repos/${{ github.repository }}/git/refs/tags/v1.0.01 \
+          if gh api "repos/${{ github.repository }}/git/ref/tags/$RELEASE_TAG" >/dev/null 2>&1; then
+            gh api --method PATCH "repos/${{ github.repository }}/git/refs/tags/$RELEASE_TAG" \
               -f sha="$source_sha" -F force=true
           else
-            gh api --method POST repos/${{ github.repository }}/git/refs \
-              -f ref=refs/tags/v1.0.01 -f sha="$source_sha"
+            gh api --method POST "repos/${{ github.repository }}/git/refs" \
+              -f ref="refs/tags/$RELEASE_TAG" -f sha="$source_sha"
           fi
 
       - name: Create the release if it does not exist yet
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.0.01' }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || env.RELEASE_TAG }}
         run: |
           if ! gh release view "$TAG" >/dev/null 2>&1; then
             gh release create "$TAG" \
@@ -389,20 +391,7 @@ jobs:
       - name: Upload the packages
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || 'v1.0.01' }}
+          TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.tag || env.RELEASE_TAG }}
         run: |
           gh release upload "$TAG" artifacts/* --clobber
           gh release view "$TAG" --json assets --jq '.assets[].name'
-
-      - name: Retain the canonical release only
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          for patch in 0 1; do
-            other_tag="v1.0.$patch"
-            if gh release view "$other_tag" >/dev/null 2>&1; then
-              gh release delete "$other_tag" --cleanup-tag --yes
-            elif gh api repos/${{ github.repository }}/git/ref/tags/"$other_tag" >/dev/null 2>&1; then
-              gh api --method DELETE repos/${{ github.repository }}/git/refs/tags/"$other_tag"
-            fi
-          done

@@ -22,7 +22,7 @@ from mishkah.core import markdown
 from mishkah.models.document import DocumentModel
 from mishkah.views.editor_view import EditorView
 
-pytestmark = pytest.mark.usefixtures("qapp")
+pytestmark = [pytest.mark.gui, pytest.mark.usefixtures("qapp")]
 
 SAMPLE = """# Title
 

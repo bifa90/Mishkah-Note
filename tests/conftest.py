@@ -35,6 +35,7 @@ QT_ONLY_MODULES = (
     "test_controller.py",
     "test_editing_features.py",
     "test_editor_direction.py",
+    "test_invisible_chars.py",
     "test_markdown.py",
     "test_tabs.py",
     "test_widgets.py",

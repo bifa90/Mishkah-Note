@@ -28,16 +28,22 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from PySide6.QtCore import QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QMargins, QRect, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
     QPainter,
     QTextBlockFormat,
+    QTextCharFormat,
     QTextCursor,
     QTextDocument,
 )
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit
+from PySide6.QtWidgets import (
+    QListWidget,
+    QListWidgetItem,
+    QPlainTextEdit,
+    QTextEdit,
+)
 
 from mishkah.core import autocomplete, syntax
 from mishkah.core.text_direction import (
@@ -47,6 +53,7 @@ from mishkah.core.text_direction import (
     SNIFF_CHARS,
     dominant_direction,
     first_strong_is_rtl,
+    invisible_spans,
     resolve_direction,
 )
 from mishkah.models.document import DocumentModel
@@ -141,8 +148,10 @@ class EditorView(QPlainTextEdit):
         # most editors never need the extra child widget at all.
         self._gutter: Optional[LineNumberArea] = None
         self._gutter_visible = False
+        self._show_invisible = False
         self.blockCountChanged.connect(self._update_gutter_width)
         self.updateRequest.connect(self._update_gutter)
+        self.textChanged.connect(self._refresh_invisible_highlights)
 
         self.cursorPositionChanged.connect(self._emit_cursor)
         self.cursorPositionChanged.connect(self._sync_markdown_caret)
@@ -267,6 +276,11 @@ class EditorView(QPlainTextEdit):
         if resolved != getattr(self, "_aligned_direction", None):
             self._apply_alignment(resolved)
             self.setLayoutDirection(_TO_QT_DIRECTION[resolved])
+            # The gutter changes side with the direction, and the viewport
+            # margins have to follow it in the same step: repositioning the
+            # gutter alone leaves the reserved space on the old side, which is
+            # what makes the text jump at the edge when a document flips.
+            self._update_gutter_width(0)
             self._place_gutter()
             self.viewport().update()
 
@@ -757,6 +771,77 @@ class EditorView(QPlainTextEdit):
         self._update_gutter_width(0)
         self._place_gutter()
 
+    # -- diagnostics: show invisible characters (CD-16) -----------------
+    def set_show_invisible_chars(self, enabled: bool) -> None:
+        """Mark LRM/RLM/ALM/ZWNJ and friends with a tinted background.
+
+        The document itself is never modified: these are *extra selections*,
+        the same mechanism find-and-replace uses, so the bytes on disk cannot
+        change and undo history stays untouched.
+        """
+        enabled = bool(enabled)
+        if enabled == self._show_invisible:
+            return
+        self._show_invisible = enabled
+        self._refresh_invisible_highlights()
+
+    def show_invisible_chars(self) -> bool:
+        return self._show_invisible
+
+    def _visible_blocks(self):
+        """Blocks that intersect the viewport, top to bottom.
+
+        A widget that has not been shown yet (tests, the moment before the
+        first paint) reports a zero-height viewport; treat that as "a screen
+        worth of text" rather than as "nothing to mark".
+        """
+        offset = self.contentOffset()
+        bottom_limit = self.viewport().height()
+        if bottom_limit <= 0:
+            bottom_limit = self.fontMetrics().lineSpacing() * 200
+        block = self.firstVisibleBlock()
+        while block.isValid():
+            top = self.blockBoundingGeometry(block).translated(offset).top()
+            if top > bottom_limit:
+                break
+            if block.isVisible():
+                yield block
+            block = block.next()
+
+    def _refresh_invisible_highlights(self) -> None:
+        """Recompute the diagnostic marks for the visible blocks only.
+
+        Visible-only keeps typing O(screen) instead of O(document); the marks
+        are recomputed on scroll-free events (text change, toggle) and follow
+        the text when the view scrolls, because they are positions, not paint.
+        """
+        if not self._show_invisible:
+            if self.extraSelections():
+                self.setExtraSelections([])
+            return
+        tint = QColor(255, 176, 32, 120)
+        selections = []
+        for block in self._visible_blocks():
+            text = block.text()
+            if not text:
+                continue
+            for start, length, _name in invisible_spans(text):
+                cursor = QTextCursor(block)
+                cursor.setPosition(block.position() + start)
+                cursor.setPosition(block.position() + start + length,
+                                   QTextCursor.MoveMode.KeepAnchor)
+                selection = QTextEdit.ExtraSelection()
+                selection.cursor = cursor
+                selection.format = QTextCharFormat()
+                selection.format.setBackground(tint)
+                selections.append(selection)
+        self.setExtraSelections(selections)
+
+    def scrollContentsBy(self, dx: int, dy: int) -> None:  # noqa: N802
+        super().scrollContentsBy(dx, dy)
+        if self._show_invisible:
+            self._refresh_invisible_highlights()
+
     def line_numbers_visible(self) -> bool:
         return self._gutter_visible
 
@@ -780,11 +865,22 @@ class EditorView(QPlainTextEdit):
         return 14 + self.fontMetrics().horizontalAdvance("9") * digits
 
     def _update_gutter_width(self, _=0) -> None:
-        start = self.gutter_width() + TEXT_MARGIN
+        """Reserve the gutter's side plus equal breathing room on both edges.
+
+        Both margins are always ``TEXT_MARGIN`` or larger, so the first
+        character of a line — and the caret sitting on it — is never clipped
+        against the viewport, in either direction, with or without a gutter.
+        """
+        edge = self.gutter_width() + TEXT_MARGIN
         if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
-            self.setViewportMargins(TEXT_MARGIN, 0, start, 0)
+            wanted = QMargins(TEXT_MARGIN, 0, edge, 0)
         else:
-            self.setViewportMargins(start, 0, TEXT_MARGIN, 0)
+            wanted = QMargins(edge, 0, TEXT_MARGIN, 0)
+        # Setting the same margins again re-triggers the viewport update that
+        # asked for them in the first place; bail out while they already match.
+        if self.viewportMargins() == wanted:
+            return
+        self.setViewportMargins(wanted.left(), 0, wanted.right(), 0)
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
         gutter = self._gutter
@@ -824,20 +920,30 @@ class EditorView(QPlainTextEdit):
                  self.layoutDirection() == Qt.LayoutDirection.RightToLeft
                  else Qt.AlignmentFlag.AlignRight)
         gutter_width = self._gutter.width()
+        offset = self.contentOffset()
         block = self.firstVisibleBlock()
-        number = block.blockNumber()
-        top = round(self.blockBoundingGeometry(block)
-                    .translated(self.contentOffset()).top())
-        bottom = top + round(self.blockBoundingRect(block).height())
-        height = self.fontMetrics().height()
-        while block.isValid() and top <= event.rect().bottom():
-            if block.isVisible() and bottom >= event.rect().top():
-                painter.drawText(4, top, gutter_width - 8, height,
-                                 align, str(number + 1))
+        # Each block is measured from its own geometry.  Accumulating rounded
+        # heights drifts by a pixel every few hundred paragraphs (CD-11), and
+        # a wrapped or Markdown-spaced paragraph is taller than the font box.
+        while block.isValid():
+            top = round(self.blockBoundingGeometry(block).translated(offset).top())
+            if top > event.rect().bottom():
+                break
+            height = round(self.blockBoundingRect(block).height())
+            if block.isVisible() and top + height >= event.rect().top():
+                layout = block.layout()
+                if layout is not None and layout.lineCount():
+                    line = layout.lineAt(0)
+                    line_top = top + round(line.y())
+                    line_height = max(1, round(line.height()))
+                else:                      # pragma: no cover - layout not ready
+                    line_top, line_height = top, self.fontMetrics().height()
+                # One number per paragraph, on its first visual line: wrapping
+                # adds lines but never a second number.
+                painter.drawText(QRect(4, line_top, gutter_width - 8, line_height),
+                                 align | Qt.AlignmentFlag.AlignTop,
+                                 str(block.blockNumber() + 1))
             block = block.next()
-            top = bottom
-            bottom = top + round(self.blockBoundingRect(block).height())
-            number += 1
         painter.end()
 
     # ==================================================================
@@ -849,7 +955,7 @@ class EditorView(QPlainTextEdit):
                                cursor.columnNumber() + 1,
                                len(cursor.selectedText()))
         if self._direction_mode == AUTO:
-            self.setLayoutDirection(self._widget_direction())
+            self._sync_auto_alignment()
 
     def _emit_stats(self) -> None:
         doc = self.document()

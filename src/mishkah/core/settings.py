@@ -47,6 +47,8 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
     "word_wrap": (_BOOL, None),
     "line_numbers": (_BOOL, None),
     "show_status_bar": (_BOOL, None),
+    # diagnostics: reveal LRM/RLM/ALM/ZWNJ and friends
+    "show_invisible_chars": (_BOOL, None),
     # direction
     "default_direction": (_ENUM, (AUTO, RTL, LTR)),
     # editing conveniences
@@ -92,6 +94,9 @@ class Settings:
     word_wrap: bool = True
     line_numbers: bool = False       # Windows 11 Mishkah Note has no gutter
     show_status_bar: bool = True
+    #: Diagnostic view, off by default: it marks formatting characters
+    #: that are otherwise completely invisible (CD-16).
+    show_invisible_chars: bool = False
 
     # text direction: "auto" keeps Qt's per-paragraph resolution
     default_direction: str = AUTO

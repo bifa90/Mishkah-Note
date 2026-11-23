@@ -233,6 +233,33 @@ STRINGS: Dict[str, S] = {
         "bn": "লাইন নম্বর", "pt": "Números de linha", "ru": "Номера строк",
         "ur": "سطر نمبر",
     },
+    "action.show_invisible": {
+        "en": "Show invisible characters", "ar": "إظهار المحارف غير المرئية",
+        "zh-Hans": "显示不可见字符", "hi": "अदृश्य वर्ण दिखाएँ",
+        "es": "Mostrar caracteres invisibles", "fr": "Afficher les caractères invisibles",
+        "bn": "অদৃশ্য অক্ষর দেখান", "pt": "Mostrar caracteres invisíveis",
+        "ru": "Показывать невидимые символы", "ur": "غیر مرئی حروف دکھائیں",
+    },
+    "action.show_invisible_hint": {
+        "en": "Marks LRM, RLM, ALM, ZWNJ and other formatting characters "
+              "without changing the text.",
+        "ar": "يُبرز LRM وRLM وALM وZWNJ وغيرها من محارف التنسيق دون تغيير النص.",
+        "zh-Hans": "标出 LRM、RLM、ALM、ZWNJ 等格式字符，不修改文本。",
+        "hi": "LRM, RLM, ALM, ZWNJ और अन्य स्वरूपण वर्णों को चिह्नित करता है, "
+              "पाठ बदले बिना।",
+        "es": "Marca LRM, RLM, ALM, ZWNJ y otros caracteres de formato "
+              "sin cambiar el texto.",
+        "fr": "Signale LRM, RLM, ALM, ZWNJ et d'autres caractères de formatage "
+              "sans modifier le texte.",
+        "bn": "LRM, RLM, ALM, ZWNJ এবং অন্যান্য বিন্যাস অক্ষর চিহ্নিত করে, "
+              "পাঠ না বদলে।",
+        "pt": "Marca LRM, RLM, ALM, ZWNJ e outros caracteres de formatação "
+              "sem alterar o texto.",
+        "ru": "Отмечает LRM, RLM, ALM, ZWNJ и другие символы форматирования, "
+              "не меняя текст.",
+        "ur": "LRM، RLM، ALM، ZWNJ اور دیگر فارمیٹنگ حروف کو نمایاں کرتا ہے، "
+              "متن بدلے بغیر۔",
+    },
     "action.status_bar": {
         "en": "Status bar", "ar": "شريط الحالة", "zh-Hans": "状态栏",
         "hi": "स्थिति पट्टी", "es": "Barra de estado", "fr": "Barre d'état",
@@ -684,12 +711,40 @@ STRINGS: Dict[str, S] = {
         "ru": "Для каждого языка загружается подходящий шрифт.",
         "ur": "ہر زبان اپنے رسم الخط کے مناسب فونٹ کا استعمال کرتی ہے۔",
     },
+    # CD-17: the setting names a *direction* for new paragraphs.  It never
+    # changes how the existing text is aligned: alignment stays document-wide
+    # so every line shares one margin, and calling that "direction" is exactly
+    # the confusion this label removes.
     "settings.default_direction": {
-        "en": "Default text direction", "ar": "اتجاه النص الافتراضي",
-        "zh-Hans": "默认文本方向", "hi": "डिफ़ॉल्ट पाठ दिशा",
-        "es": "Dirección predeterminada", "fr": "Sens par défaut",
-        "bn": "ডিফল্ট লেখার দিক", "pt": "Direção predefinida",
-        "ru": "Направление по умолчанию", "ur": "طے شدہ متن کی سمت",
+        "en": "Direction for new paragraphs", "ar": "اتجاه الفقرات الجديدة",
+        "zh-Hans": "新段落的方向", "hi": "नए अनुच्छेदों की दिशा",
+        "es": "Dirección de los párrafos nuevos", "fr": "Sens des nouveaux paragraphes",
+        "bn": "নতুন অনুচ্ছেদের দিক", "pt": "Direção dos parágrafos novos",
+        "ru": "Направление новых абзацев", "ur": "نئے پیراگراف کی سمت",
+    },
+    "settings.direction_note": {
+        "en": "Each paragraph follows its own first letter. Alignment stays "
+              "the same for the whole document, so lines share one margin.",
+        "ar": "كل فقرة تتبع أول حرف فيها. المحاذاة تبقى واحدة للمستند كله، "
+              "فتتقاسم الأسطر الهامش نفسه.",
+        "zh-Hans": "每个段落跟随自己的首字母。整篇文档使用同一对齐方式，"
+                   "各行共享同一边距。",
+        "hi": "प्रत्येक अनुच्छेद अपने पहले अक्षर का अनुसरण करता है। संरेखण पूरे "
+              "दस्तावेज़ के लिए एक ही रहता है, इसलिए सभी पंक्तियाँ एक ही हाशिया "
+              "साझा करती हैं।",
+        "es": "Cada párrafo sigue su primera letra. La alineación es la misma "
+              "para todo el documento, así que las líneas comparten un margen.",
+        "fr": "Chaque paragraphe suit sa première lettre. L'alignement reste "
+              "le même pour tout le document : les lignes partagent une marge.",
+        "bn": "প্রতিটি অনুচ্ছেদ তার নিজের প্রথম অক্ষর অনুসরণ করে। সারিবিন্যাস "
+              "পুরো নথির জন্য একই থাকে, তাই সব লাইন একই মার্জিন ভাগ করে।",
+        "pt": "Cada parágrafo segue a sua primeira letra. O alinhamento é o "
+              "mesmo para todo o documento, por isso as linhas partilham a margem.",
+        "ru": "Каждый абзац следует за своей первой буквой. Выравнивание "
+              "остаётся общим для всего документа, поэтому все строки делят "
+              "одно поле.",
+        "ur": "ہر پیراگراف اپنے پہلے حرف کی پیروی کرتا ہے۔ سیدھ پوری دستاویز "
+              "کے لیے ایک ہی رہتی ہے، اس لیے تمام سطریں ایک ہی حاشیہ بانٹتی ہیں۔",
     },
     "settings.large_files": {
         "en": "Large files", "ar": "الملفات الكبيرة", "zh-Hans": "大文件",

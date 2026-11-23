@@ -230,6 +230,7 @@ class MainWindow(QMainWindow):
     theme_changed = Signal(str)
     word_wrap_toggled = Signal(bool)
     line_numbers_toggled = Signal(bool)
+    show_invisible_toggled = Signal(bool)
     status_bar_toggled = Signal(bool)
     encoding_chosen = Signal(str)
     line_ending_chosen = Signal(str)
@@ -382,6 +383,11 @@ class MainWindow(QMainWindow):
         self.act_line_numbers = self._action(m_view, tr("action.line_numbers"), None,
                                              checkable=True, checked=False)
         self.act_line_numbers.toggled.connect(self.line_numbers_toggled)
+        self.act_show_invisible = self._action(
+            m_view, tr("action.show_invisible"), None, None,
+            checkable=True, checked=False)
+        self.act_show_invisible.setToolTip(tr("action.show_invisible_hint"))
+        self.act_show_invisible.toggled.connect(self.show_invisible_toggled)
         m_view.addSeparator()
         self.act_syntax = self._action(m_view, tr("action.syntax"),
                                        None, "Ctrl+Shift+H",
@@ -718,6 +724,12 @@ class MainWindow(QMainWindow):
         blocked = self.act_line_numbers.blockSignals(True)
         self.act_line_numbers.setChecked(visible)
         self.act_line_numbers.blockSignals(blocked)
+
+    def set_show_invisible_chars(self, visible: bool) -> None:
+        """Keep View ▸ Show invisible characters in sync with settings."""
+        blocked = self.act_show_invisible.blockSignals(True)
+        self.act_show_invisible.setChecked(visible)
+        self.act_show_invisible.blockSignals(blocked)
 
     def set_ui_font(self, font: QFont) -> None:
         self.menuBar().setFont(font)

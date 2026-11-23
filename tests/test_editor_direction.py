@@ -369,3 +369,31 @@ def test_status_direction_on_a_blank_line_follows_the_document(qapp):
     cursor.movePosition(cursor.MoveOperation.End)
     editor.setTextCursor(cursor)
     assert editor.resolved_direction() == LTR
+
+
+# ---------------------------------------------------------------------
+# CD-11: the gutter changes side with the direction, so the reserved space
+# must move with it — otherwise the text jumps at the edge (and the caret
+# at the start of a line ends up under the numbers)
+# ---------------------------------------------------------------------
+def test_viewport_margins_follow_the_direction(qapp):
+    editor = make_editor(qapp, "مرحبا بالعالم", mode=AUTO)
+    editor.set_line_numbers_visible(True)
+    margins = editor.viewportMargins()
+    assert margins.right() > margins.left(), "RTL: gutter belongs on the right"
+    assert margins.left() >= 4 and margins.right() >= 4, "both edges keep a margin"
+
+    editor.setPlainText("hello world")          # now the document is LTR
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.Start)
+    editor.setTextCursor(cursor)                # a plain caret move
+    margins = editor.viewportMargins()
+    assert margins.left() > margins.right(), "LTR: gutter must have moved left"
+    assert margins.right() >= 4 and margins.left() >= 4
+
+
+def test_margins_are_symmetric_without_a_gutter(qapp):
+    editor = make_editor(qapp, "مرحبا", mode=AUTO)
+    editor.set_line_numbers_visible(False)
+    margins = editor.viewportMargins()
+    assert margins.left() == margins.right() >= 4

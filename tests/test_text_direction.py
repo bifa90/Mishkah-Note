@@ -20,6 +20,7 @@ from mishkah.core.text_direction import (  # noqa: E402
     RTL,
     bidi_class,
     describe_char,
+    document_side,
     dominant_direction,
     first_strong_is_rtl,
     invisible_name,
@@ -183,3 +184,24 @@ def test_describe_char_names_the_code_point():
     assert describe_char("\u200f") == "U+200F RLM"
     assert describe_char("ا").startswith("U+0627")
     assert describe_char("") == ""
+
+
+# ------------------------------------------------------- document side (CD-17)
+
+
+def test_document_side_majority():
+    # Majority of strong characters, not the first line: an English heading
+    # above an Arabic body must not flip the whole document.
+    assert document_side("hello\nمرحبا بالعالم\nمرحبا بالعالم") == RTL
+    assert document_side("مرحبا\nhello world foo") == LTR
+
+
+def test_document_side_tie_falls_back_to_the_first_strong_character():
+    assert document_side("مرحبا\nhello") == RTL
+    assert document_side("hello\nمرحبا") == LTR
+
+
+def test_document_side_ignores_digits_and_punctuation():
+    assert document_side("١٢٣٤٥ 67890 ...") == LTR
+    assert document_side("مرحبا 12345") == RTL
+    assert document_side("") == LTR

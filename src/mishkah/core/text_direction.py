@@ -133,6 +133,32 @@ def dominant_direction(text: str, limit: int = SNIFF_CHARS) -> str:
     return RTL if first_strong_is_rtl(text[:limit]) else LTR
 
 
+def document_side(text: str, limit: int = SNIFF_CHARS * 16) -> str:
+    """Which side a *document* belongs to, decided once and then left alone.
+
+    The first strong character (P2) answers "what is this paragraph?", which
+    is the wrong question for a whole file: a single English heading above an
+    Arabic document would flip every line.  Here the strong characters are
+    counted over a generous sample and the majority wins; a tie falls back to
+    the first strong character, and a document with no strong character at all
+    falls back to LTR.
+
+    Counting ignores digits and punctuation exactly like P2 does, so the
+    answer cannot be dragged around by numbers.
+    """
+    sample = text[:limit]
+    rtl = ltr = 0
+    for ch in sample:
+        klass = bidi_class(ch)
+        if klass in STRONG_RTL:
+            rtl += 1
+        elif klass in STRONG_LTR:
+            ltr += 1
+    if rtl == ltr:
+        return RTL if first_strong_is_rtl(sample) else LTR
+    return RTL if rtl > ltr else LTR
+
+
 def is_rtl_text(text: str) -> bool:
     """True when *text* opens with a strong RTL character."""
     return resolve_direction(text, AUTO) == RTL

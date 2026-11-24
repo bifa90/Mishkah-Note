@@ -45,6 +45,7 @@ from mishkah.core.text_direction import (
     LTR,
     RTL,
     SNIFF_CHARS,
+    document_side,
     dominant_direction,
     first_strong_is_rtl,
     invisible_spans,
@@ -71,7 +72,7 @@ MAX_INVISIBLE_SCAN = 20000
 MARKER_WIDTH = 2
 #: Extra pixels kept free on the right edge so a caret at the start of a
 #: right-aligned line is never clipped away.
-CARET_GUARD = 3
+CARET_GUARD = 8
 
 # Hardware scan codes for the modifier keys.
 #   Linux/X11 and Wayland (evdev + 8)      : LCtrl 37, LShift 50, RShift 62, RCtrl 105
@@ -133,6 +134,7 @@ class EditorView(QPlainTextEdit):
         # --- direction state -------------------------------------------------
         self._direction_mode = document.direction_mode or AUTO
         self._last_resolved = ""
+        self._document_side = None
         self._chord = _ChordState()
 
         # --- editing conveniences -------------------------------------------
@@ -195,6 +197,8 @@ class EditorView(QPlainTextEdit):
 
         self.setPlainText(text)
         self.document().setModified(False)
+        self._document_side = None          # a new buffer gets a new decision
+        self._sync_auto_alignment()
         self._emit_stats()
 
     # ==================================================================
@@ -234,12 +238,13 @@ class EditorView(QPlainTextEdit):
         # scrollbar move to the matching side.  "auto" deliberately leaves the
         # widget alone: see _sync_auto_alignment for why.
         if mode == AUTO:
-            direction = self.resolved_direction()
             self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+            self._document_side = None
+            self._sync_auto_alignment()     # decides from the text, once
         else:
-            direction = mode
+            self._document_side = mode
             self.setLayoutDirection(_TO_QT_DIRECTION[mode])
-        self._apply_alignment(direction)
+            self._apply_alignment(mode)
         self._update_gutter_width(0)
         self._place_gutter()
         self.viewport().update()
@@ -278,32 +283,33 @@ class EditorView(QPlainTextEdit):
         return LTR
 
     def _sync_auto_alignment(self) -> None:
-        """Follow the caret's paragraph in auto mode.
+        """Decide the document's side once, then leave it alone.
 
-        Two Qt facts shape this, and both are quoted in the report because
-        the obvious implementation gets them wrong:
-
-        * ``QPlainTextEdit`` paints **one** alignment for the whole document
-          and ignores ``QTextBlockFormat.setAlignment`` (the block formats it
-          does honour are background and a few character properties), so
-          alignment cannot be decided per paragraph on screen;
-        * the *widget's* layout direction overrides ``LayoutDirectionAuto``
-          for every paragraph, so deriving it from the first line made a
-          mixed document read entirely in that line's direction — the bug
-          reported after 1.0.01's W1 build.
-
-        So in auto mode the widget stays left-to-right (stable chrome: the
-        gutter no longer jumps while the caret moves) and Qt resolves each
-        paragraph's base direction from its own text; the document-wide
-        alignment follows the paragraph the caret is in, which is the closest
-        a plain-text view can get to "every line on its own side".
+        Reported after the second hands-on test: following the caret flipped
+        the whole document every time the caret crossed a paragraph, which is
+        far worse than a minority line sitting on the "wrong" side.  So the
+        side is now chosen from the document (a majority of its strong
+        characters, see ``document_side``), refreshed only when the document
+        itself is replaced or when its first strong character appears in an
+        empty buffer, and never while the caret moves.
         """
         if self._direction_mode != AUTO:
             return
-        resolved = self.resolved_direction()
-        if resolved != getattr(self, "_aligned_direction", None):
-            self._apply_alignment(resolved)
-            self.viewport().update()
+        if self._document_side is None:
+            self._lock_document_side()
+
+    def _lock_document_side(self) -> None:
+        """Choose the side for this document (only called when unlocked)."""
+        text = self._leading_text(limit=SNIFF_CHARS * 16)
+        if first_strong_is_rtl(text) is None:
+            return                          # still neutral: nothing to decide
+        self._document_side = document_side(text)
+        self._apply_alignment(self._document_side)
+        self.viewport().update()
+
+    def document_side(self) -> str:
+        """The side this document is laid out on (``rtl`` or ``ltr``)."""
+        return self._document_side or LTR
 
     def _widget_direction(self) -> Qt.LayoutDirection:
         return _TO_QT_DIRECTION[self.document_direction()]
@@ -337,7 +343,7 @@ class EditorView(QPlainTextEdit):
                     return RTL if verdict else LTR
                 previous = previous.previous()
                 hops += 1
-        return dominant_direction(self._leading_text())
+        return self._document_side or dominant_direction(self._leading_text())
 
     def _leading_text(self, limit: int = SNIFF_CHARS) -> str:
         """The first *limit* characters of the document, block by block."""
@@ -995,11 +1001,9 @@ class EditorView(QPlainTextEdit):
                                cursor.columnNumber() + 1,
                                len(cursor.selectedText()))
         if self._direction_mode == AUTO:
-            # Dragging a selection across paragraphs would otherwise re-align
-            # the whole view on every pixel of the drag; the caret's paragraph
-            # wins again as soon as the selection is released.
-            if not cursor.hasSelection():
-                self._sync_auto_alignment()
+            # The document's side was decided at load time and does not move
+            # while the caret does; only the status chip follows the caret.
+            self._sync_auto_alignment()
             resolved = self.resolved_direction()
             if resolved != self._last_resolved:
                 self._last_resolved = resolved

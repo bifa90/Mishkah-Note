@@ -102,3 +102,34 @@ def test_controller_wires_the_view_menu_to_every_editor(qapp, tmp_path):
         assert editor.show_invisible_chars() is False
     finally:
         window.close()
+
+
+def _orange_pixels(image) -> int:
+    """Count pixels close to the marker colour (255,140,0) blended on light."""
+    count = 0
+    for y in range(image.height()):
+        for x in range(image.width()):
+            colour = image.pixelColor(x, y)
+            if (colour.red() > 200 and 100 < colour.green() < 215
+                    and colour.blue() < 140):
+                count += 1
+    return count
+
+
+def test_marks_reach_the_screen(qapp):
+    """Rendering, not just geometry: the markers must be visible pixels.
+
+    The first implementation tinted the character's background, which paints
+    nothing at all for a zero-width code point — this test exists so that
+    failure mode cannot come back.
+    """
+    editor = make_editor(qapp, "abc\u200fdef\n")
+    editor.resize(360, 120)
+    editor.show()
+    qapp.processEvents()
+
+    before = _orange_pixels(editor.viewport().grab().toImage())
+    editor.set_show_invisible_chars(True)
+    qapp.processEvents()
+    after = _orange_pixels(editor.viewport().grab().toImage())
+    assert after > before, (before, after)

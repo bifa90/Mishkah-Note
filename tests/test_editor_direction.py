@@ -372,8 +372,8 @@ def test_status_direction_on_a_blank_line_follows_the_document(qapp):
 
 
 # ---------------------------------------------------------------------
-# CD-11 / CD-16: auto mode keeps the chrome still and follows the caret's
-# paragraph; an explicit mode owns the widget direction outright.
+# CD-11 / CD-16: the document's side is decided once and never moves with
+# the caret; the status chip still reports the caret's paragraph.
 # ---------------------------------------------------------------------
 def _move_to_block(editor, index):
     cursor = editor.textCursor()
@@ -383,22 +383,38 @@ def _move_to_block(editor, index):
     editor.setTextCursor(cursor)
 
 
-def test_auto_mode_alignment_follows_the_caret_paragraph(qapp):
+def _alignment(editor):
+    return editor.document().defaultTextOption().alignment()
+
+
+def test_mixed_document_keeps_one_side_while_the_caret_moves(qapp):
+    """Following the caret flipped the whole view; a fixed side does not."""
     editor = make_editor(qapp, "مرحبا بالعالم\n123 hello", mode=AUTO)
     _move_to_block(editor, 0)
-    assert (editor.document().defaultTextOption().alignment()
-            & Qt.AlignmentFlag.AlignRight)
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
     _move_to_block(editor, 1)
-    assert (editor.document().defaultTextOption().alignment()
-            & Qt.AlignmentFlag.AlignLeft)
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight, "the side must not move"
+
+
+def test_document_side_comes_from_the_majority_not_the_first_line(qapp):
+    editor = make_editor(qapp, "hello\nمرحبا بالعالم\nمرحبا بالعالم", mode=AUTO)
+    assert editor.document_side() == RTL
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+
+
+def test_new_empty_document_takes_the_side_of_the_first_word(qapp):
+    editor = make_editor(qapp, "", mode=AUTO)
+    assert editor.document_side() == LTR
+    editor.setPlainText("مرحبا")
+    editor._sync_auto_alignment()
+    assert editor.document_side() == RTL
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+    editor.setPlainText("مرحبا\nhello world")     # a minority line changes nothing
+    editor._sync_auto_alignment()
+    assert editor.document_side() == RTL
 
 
 def test_auto_mode_never_flips_the_widget_direction(qapp):
-    """A mixed document must not drag the whole view into one direction.
-
-    Deriving the widget direction from the first line made every paragraph
-    read in that direction — the reported bug after the first W1 build.
-    """
     editor = make_editor(qapp, "مرحبا بالعالم\n123 hello", mode=AUTO)
     editor.set_line_numbers_visible(True)
     before = editor.viewportMargins()
@@ -439,28 +455,27 @@ def test_blank_paragraph_inherits_the_paragraph_above(qapp):
     editor = make_editor(qapp, "hello\n", mode=AUTO)
     _move_to_block(editor, 1)
     assert editor.resolved_direction() == LTR
-    assert (editor.document().defaultTextOption().alignment()
-            & Qt.AlignmentFlag.AlignLeft)
-
     editor.setPlainText("مرحبا\n")
     _move_to_block(editor, 1)
     assert editor.resolved_direction() == RTL
 
 
-def test_dragging_a_selection_does_not_realign_the_view(qapp):
-    editor = make_editor(qapp, "مرحبا\nhello", mode=AUTO)
-    _move_to_block(editor, 0)
-    assert (editor.document().defaultTextOption().alignment()
-            & Qt.AlignmentFlag.AlignRight)
-
+# ---------------------------------------------------------------------
+# CD-11: a caret sitting at the start of a right-aligned line must stay
+# inside the viewport (it used to be clipped away on the right edge)
+# ---------------------------------------------------------------------
+def test_caret_at_the_start_of_an_rtl_line_stays_visible(qapp):
+    editor = make_editor(qapp, "مرحبا بالعالم\n", mode=AUTO)
+    editor.resize(600, 160)
+    editor.show()
+    qapp.processEvents()
     cursor = editor.textCursor()
     cursor.movePosition(cursor.MoveOperation.Start)
-    cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
-    editor.setTextCursor(cursor)              # a drag across both paragraphs
-    assert (editor.document().defaultTextOption().alignment()
-            & Qt.AlignmentFlag.AlignRight), "a selection must not re-align"
+    editor.setTextCursor(cursor)
+    qapp.processEvents()
 
-    cursor.clearSelection()
-    editor.setTextCursor(cursor)              # released at the English line
-    assert (editor.document().defaultTextOption().alignment()
-            & Qt.AlignmentFlag.AlignLeft)
+    rect = editor.cursorRect()
+    width = editor.viewport().width()
+    assert 0 <= rect.left() < width
+    assert rect.right() <= width - 4, (rect, width)
+    assert width - rect.right() >= 4, "no room on the right: the caret is clipped"

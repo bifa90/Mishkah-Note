@@ -506,10 +506,10 @@ def test_zz_diagnose_caret_geometry(qapp):
     after_width = editor.cursorRect().left()
     reported_width = editor.document().textWidth()
 
-    assert False, {
+    raise AssertionError({
         "viewport": viewport,
         "baseline": base,
         "after_document_margin_8": after_margin,
         "after_text_width": after_width,
         "document_text_width": reported_width,
-    }
+    })

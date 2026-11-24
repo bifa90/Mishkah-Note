@@ -172,3 +172,24 @@ def test_the_banner_reports_a_clean_document(qapp, tmp_path):
         assert window.banner.text()
     finally:
         window.close()
+
+
+def test_the_banner_updates_when_the_document_changes(qapp, tmp_path):
+    """Enabling on an empty tab then opening a file must not lie."""
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
+
+    settings = Settings(path=tmp_path / "settings.json", restore_session=False)
+    window = MainWindow()
+    controller = MainController(window, settings, FileService())
+    try:
+        editor = controller.new_document()
+        window.act_show_invisible.trigger()          # empty document: "none"
+        assert window.banner.isVisible()
+
+        editor.setPlainText("abc\u200fdef")          # the text arrives later
+        controller.refresh_invisible_banner()
+        assert "1" in window.banner.text()
+    finally:
+        window.close()

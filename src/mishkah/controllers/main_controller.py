@@ -454,6 +454,7 @@ class MainController(QObject):
         status = self.window.status
         if doc is None:
             return
+        self.refresh_invisible_banner()
         status.set_encoding(doc.encoding)
         status.set_line_ending(doc.line_ending)
         status.set_size(doc.size_label)
@@ -473,7 +474,8 @@ class MainController(QObject):
             i18n.tr("app.title", title=self._doc_title(doc), app=i18n.tr("app.name")))
         if editor is not None:
             status.set_zoom(editor.zoom_percent())
-            status.set_direction(doc.direction_mode, editor.resolved_direction())
+            status.set_direction(doc.direction_mode, editor.resolved_direction(),
+                                 editor.document_side())
 
     def _on_text_changed(self, editor: EditorView) -> None:
         doc = self._docs.get(editor)
@@ -512,7 +514,8 @@ class MainController(QObject):
         else:
             editor.apply_direction(mode)
         self.window.set_direction_menu(mode)
-        self.window.status.set_direction(mode, editor.resolved_direction())
+        self.window.status.set_direction(mode, editor.resolved_direction(),
+                                         editor.document_side())
 
     def _on_editor_direction(self, mode: str) -> None:
         doc = self.current_document()
@@ -526,8 +529,12 @@ class MainController(QObject):
     def _on_resolved_direction(self, resolved: str) -> None:
         """The caret crossed into a paragraph of the other direction."""
         doc = self.current_document()
-        if doc is not None:
-            self.window.status.set_direction(doc.direction_mode, resolved)
+        if doc is None:
+            return
+        editor = self.window.current_editor()
+        self.window.status.set_direction(
+            doc.direction_mode, resolved,
+            editor.document_side() if editor is not None else None)
 
     def auto_detect_direction(self) -> str:
         editor = self.window.current_editor()
@@ -677,6 +684,11 @@ class MainController(QObject):
         for editor in self.window.editors():
             editor.set_show_invisible_chars(enabled)
         self._report_invisible_chars(enabled)
+
+    def refresh_invisible_banner(self) -> None:
+        """Keep the marker count in step with the document on screen."""
+        if self.settings.show_invisible_chars:
+            self._report_invisible_chars(True)
 
     def _report_invisible_chars(self, enabled: bool) -> None:
         """Say *how many* markers exist, so the toggle is never a silent no-op."""

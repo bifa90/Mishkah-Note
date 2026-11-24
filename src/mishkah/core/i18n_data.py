@@ -233,6 +233,13 @@ STRINGS: Dict[str, S] = {
         "bn": "লাইন নম্বর", "pt": "Números de linha", "ru": "Номера строк",
         "ur": "سطر نمبر",
     },
+    "status.document_direction": {
+        "en": "document {direction}", "ar": "المستند {direction}",
+        "zh-Hans": "文档 {direction}", "hi": "दस्तावेज़ {direction}",
+        "es": "documento {direction}", "fr": "document {direction}",
+        "bn": "নথি {direction}", "pt": "documento {direction}",
+        "ru": "документ {direction}", "ur": "دستاویز {direction}",
+    },
     "action.show_invisible": {
         "en": "Show invisible characters", "ar": "إظهار المحارف غير المرئية",
         "zh-Hans": "显示不可见字符", "hi": "अदृश्य वर्ण दिखाएँ",

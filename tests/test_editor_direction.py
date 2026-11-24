@@ -525,20 +525,31 @@ def test_the_previous_rule_commits_on_the_first_character(qapp):
     assert editor.document_side() == LTR
 
 
+def test_replacing_everything_follows_the_rule_in_force(qapp):
+    """Committed text keeps its side; a first line still being written does not."""
+    committed = make_editor(qapp, "", mode=AUTO)          # first_strong default
+    committed.insertPlainText("hello world")
+    committed.selectAll()
+    committed.insertPlainText("مرحبا بالعالم")
+    assert committed.document_side() == LTR
+
+    live = make_editor(qapp, "", mode=AUTO)
+    live.set_document_side_source(FIRST_LINE)
+    live.insertPlainText("hello world")
+    live.selectAll()
+    live.insertPlainText("مرحبا بالعالم")
+    assert live.document_side() == RTL, "the first line is still being written"
+
+
 def test_emptying_the_buffer_makes_it_a_new_document(qapp):
     for source in (FIRST_STRONG, FIRST_LINE):
         editor = make_editor(qapp, "", mode=AUTO)
         editor.set_document_side_source(source)
         editor.insertPlainText("hello world")
         assert editor.document_side() == LTR
-        editor.selectAll()
-        editor.insertPlainText("مرحبا بالعالم")
-        # replacing everything passes through an empty buffer, which is a new
-        # document: the side is decided again instead of being inherited.
-        assert editor.document_side() == RTL
-        editor.setPlainText("hello there")
-        editor._sync_auto_alignment()
-        assert editor.document_side() in (LTR, RTL)     # never raises
+        editor.clear()
+        editor.insertPlainText("مرحبا")
+        assert editor.document_side() == RTL, "an empty buffer is a new document"
 
 
 def test_the_view_menu_switches_the_rule(qapp, tmp_path):

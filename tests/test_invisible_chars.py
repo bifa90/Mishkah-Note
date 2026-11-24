@@ -133,3 +133,42 @@ def test_marks_reach_the_screen(qapp):
     qapp.processEvents()
     after = _orange_pixels(editor.viewport().grab().toImage())
     assert after > before, (before, after)
+
+
+def test_the_banner_says_how_many_markers_exist(qapp, tmp_path):
+    """A toggle that changes nothing visible must at least say why."""
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
+
+    settings = Settings(path=tmp_path / "settings.json", restore_session=False)
+    window = MainWindow()
+    controller = MainController(window, settings, FileService())
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("abc\u200fdef\u200e")
+        window.act_show_invisible.trigger()
+        assert "2" in window.banner.text()
+
+        window.act_show_invisible.trigger()          # off
+        assert not window.banner.isVisible()
+    finally:
+        window.close()
+
+
+def test_the_banner_reports_a_clean_document(qapp, tmp_path):
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
+
+    settings = Settings(path=tmp_path / "settings.json", restore_session=False)
+    window = MainWindow()
+    controller = MainController(window, settings, FileService())
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("no hidden characters here")
+        window.act_show_invisible.trigger()
+        assert "0" not in window.banner.text()      # "none", not "0 markers"
+        assert window.banner.text()
+    finally:
+        window.close()

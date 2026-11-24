@@ -69,7 +69,7 @@ TEXT_MARGIN = 4
 #: stops it from copying one enormous block on every keystroke.
 MAX_INVISIBLE_SCAN = 20000
 #: Width of one invisible-character marker, in pixels.
-MARKER_WIDTH = 2
+MARKER_WIDTH = 3
 #: Extra pixels kept free on the right edge so a caret at the start of a
 #: right-aligned line is never clipped away.
 CARET_GUARD = 8
@@ -306,6 +306,8 @@ class EditorView(QPlainTextEdit):
             return                          # still neutral: nothing to decide
         self._document_side = document_side(text)
         self._apply_alignment(self._document_side)
+        self._update_gutter_width(0)
+        self._place_gutter()
         self.viewport().update()
 
     def document_side(self) -> str:
@@ -859,6 +861,11 @@ class EditorView(QPlainTextEdit):
                 yield block
             block = block.next()
 
+    def count_invisible_chars(self, limit: int = 4_000_000) -> int:
+        """How many invisible characters this document holds (for the banner)."""
+        text = self.toPlainText()[:limit]
+        return len(invisible_spans(text))
+
     def invisible_mark_rects(self) -> list:
         """Viewport rectangles where a marker must be drawn (empty when off)."""
         rects = []
@@ -881,7 +888,7 @@ class EditorView(QPlainTextEdit):
     def _paint_invisible_marks(self, painter: QPainter) -> None:
         painter.save()
         painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(255, 140, 0, 200))
+        painter.setBrush(QColor(255, 102, 0))
         for rect in self.invisible_mark_rects():
             painter.drawRect(rect)
         painter.restore()
@@ -908,6 +915,18 @@ class EditorView(QPlainTextEdit):
         digits = max(2, len(str(max(1, self.blockCount()))))
         return 14 + self.fontMetrics().horizontalAdvance("9") * digits
 
+    def _gutter_on_the_right(self) -> bool:
+        """Which side the gutter belongs to.
+
+        In auto mode the widget itself stays left-to-right (so Qt resolves
+        every paragraph from its own text), but the *document* still has a
+        side — and the numbers must sit on that side, as they would in a
+        right-to-left editor.  An explicit mode decides it outright.
+        """
+        if self._direction_mode == AUTO:
+            return self.document_side() == RTL
+        return self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+
     def _update_gutter_width(self, _=0) -> None:
         """Reserve the gutter's side plus equal breathing room on both edges.
 
@@ -916,7 +935,7 @@ class EditorView(QPlainTextEdit):
         against the viewport, in either direction, with or without a gutter.
         """
         edge = self.gutter_width() + TEXT_MARGIN
-        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
+        if self._gutter_on_the_right():
             wanted = QMargins(TEXT_MARGIN, 0, edge, 0)
         else:
             wanted = QMargins(edge, 0, TEXT_MARGIN, 0)
@@ -948,7 +967,7 @@ class EditorView(QPlainTextEdit):
             return
         cr = self.contentsRect()
         width = self.gutter_width()
-        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
+        if self._gutter_on_the_right():
             x = cr.right() - width + 1
         else:
             x = cr.left()
@@ -960,8 +979,7 @@ class EditorView(QPlainTextEdit):
         painter = QPainter(self._gutter)
         painter.fillRect(event.rect(), QColor(0, 0, 0, 0))
         painter.setPen(QColor("#8a8a8a"))
-        align = (Qt.AlignmentFlag.AlignLeft if
-                 self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        align = (Qt.AlignmentFlag.AlignLeft if self._gutter_on_the_right()
                  else Qt.AlignmentFlag.AlignRight)
         gutter_width = self._gutter.width()
         offset = self.contentOffset()

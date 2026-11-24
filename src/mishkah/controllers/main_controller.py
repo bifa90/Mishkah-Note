@@ -36,6 +36,7 @@ class MainController(QObject):
         self.settings = settings
         self.files = file_service or FileService(self)
         self._docs: Dict[EditorView, DocumentModel] = {}
+        self._invisible_banner = False
         self._pending_paths: Dict[int, str] = {}   # tab index -> path being loaded
         self._busy = False
         self._close_after_save: set[EditorView] = set()
@@ -675,6 +676,24 @@ class MainController(QObject):
         self.settings.show_invisible_chars = enabled
         for editor in self.window.editors():
             editor.set_show_invisible_chars(enabled)
+        self._report_invisible_chars(enabled)
+
+    def _report_invisible_chars(self, enabled: bool) -> None:
+        """Say *how many* markers exist, so the toggle is never a silent no-op."""
+        from mishkah.core.i18n import tr
+
+        if not enabled:
+            if self._invisible_banner:
+                self.window.hide_banner()
+                self._invisible_banner = False
+            return
+        editor = self.window.current_editor()
+        count = editor.count_invisible_chars() if editor is not None else 0
+        if count:
+            self.window.show_banner(tr("banner.invisible_found", n=count))
+        else:
+            self.window.show_banner(tr("banner.invisible_none"))
+        self._invisible_banner = True
 
     def set_line_ending(self, line_ending: str) -> None:
         doc = self.current_document()

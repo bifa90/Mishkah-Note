@@ -414,15 +414,27 @@ def test_new_empty_document_takes_the_side_of_the_first_word(qapp):
     assert editor.document_side() == RTL
 
 
-def test_auto_mode_never_flips_the_widget_direction(qapp):
+def test_auto_mode_keeps_the_widget_ltr_but_moves_the_gutter(qapp):
+    """The document's side decides where the numbers go; the widget stays LTR.
+
+    A left-to-right widget keeps Qt's per-paragraph resolution intact, so the
+    gutter has to follow the document's side by itself instead of following
+    the widget's direction.
+    """
     editor = make_editor(qapp, "مرحبا بالعالم\n123 hello", mode=AUTO)
     editor.set_line_numbers_visible(True)
-    before = editor.viewportMargins()
     assert editor.layoutDirection() == Qt.LayoutDirection.LeftToRight
+    margins = editor.viewportMargins()
+    assert margins.right() > margins.left(), "RTL document: numbers on the right"
     _move_to_block(editor, 1)
-    assert editor.layoutDirection() == Qt.LayoutDirection.LeftToRight
-    assert editor.viewportMargins() == before          # no jump at the edge
-    assert before.left() > before.right()              # gutter stays on the left
+    assert editor.viewportMargins() == margins          # and they never jump
+
+
+def test_gutter_follows_the_document_side_in_auto_mode(qapp):
+    editor = make_editor(qapp, "hello world\nمرحبا", mode=AUTO)   # LTR majority
+    editor.set_line_numbers_visible(True)
+    margins = editor.viewportMargins()
+    assert margins.left() > margins.right(), "LTR document: numbers on the left"
 
 
 def test_explicit_rtl_moves_the_gutter_to_the_right(qapp):

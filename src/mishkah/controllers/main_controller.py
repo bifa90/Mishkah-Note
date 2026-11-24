@@ -501,13 +501,16 @@ class MainController(QObject):
         editor.blockSignals(True)
         try:
             editor.load_content(text)
+            # Formatting signals travel as textChanged too, so the direction
+            # pass belongs inside the quiet window.
+            editor.apply_direction(doc.direction_mode or AUTO, announce=False)
         finally:
             editor.blockSignals(False)
         doc.is_modified = False
         editor.document().setModified(False)
-        editor.apply_direction(doc.direction_mode or AUTO, announce=False)
         self.window.set_tab_title(editor, self._doc_title(doc), False)
         self._sync_ui(editor)
+        doc.is_modified = False        # nothing above is an edit of the user's
         self.window.show_banner(i18n.tr("banner.reloaded", name=doc.path.name))
 
     def _on_saved(self, doc: DocumentModel, written: int) -> None:

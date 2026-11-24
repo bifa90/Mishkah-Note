@@ -480,36 +480,3 @@ def test_caret_at_the_start_of_an_rtl_line_stays_visible(qapp):
     assert rect.right() <= width - 4, (rect, width)
     assert width - rect.right() >= 4, "no room on the right: the caret is clipped"
 
-
-def test_zz_diagnose_caret_geometry(qapp):
-    """Temporary: report which knob moves a right-aligned caret. Fails on purpose."""
-    editor = make_editor(qapp, "مرحبا بالعالم\n", mode=AUTO)
-    editor.resize(600, 160)
-    editor.show()
-    qapp.processEvents()
-    cursor = editor.textCursor()
-    cursor.movePosition(cursor.MoveOperation.Start)
-    editor.setTextCursor(cursor)
-    qapp.processEvents()
-
-    viewport = editor.viewport().width()
-    base = editor.cursorRect().left()
-
-    editor.document().setDocumentMargin(8)
-    qapp.processEvents()
-    after_margin = editor.cursorRect().left()
-    editor.document().setDocumentMargin(0)
-    qapp.processEvents()
-
-    editor.document().setTextWidth(viewport - 12)
-    qapp.processEvents()
-    after_width = editor.cursorRect().left()
-    reported_width = editor.document().textWidth()
-
-    raise AssertionError({
-        "viewport": viewport,
-        "baseline": base,
-        "after_document_margin_8": after_margin,
-        "after_text_width": after_width,
-        "document_text_width": reported_width,
-    })

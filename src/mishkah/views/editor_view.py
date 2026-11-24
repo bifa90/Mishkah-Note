@@ -123,11 +123,11 @@ class EditorView(QPlainTextEdit):
             self.setFont(font)
 
         self.setUndoRedoEnabled(True)
-        # The document margin stays 0: an inset is applied by narrowing the
-        # document's own text width instead (see _apply_document_width), which
-        # is the only knob that moves right-aligned text away from the
-        # viewport edge without pushing an undo step.
-        self.document().setDocumentMargin(0)
+        # Document margin (not viewport margin) is what insets the *text*:
+        # right-aligned text ends on the document's inner edge, so without it
+        # a caret at the start of an RTL line lands exactly on the viewport's
+        # right edge and Qt clips it away.
+        self.document().setDocumentMargin(TEXT_MARGIN + CARET_GUARD)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setTabStopDistance(self.fontMetrics().horizontalAdvance(" ") * self._tab_width)
         self.setMouseTracking(True)
@@ -197,7 +197,6 @@ class EditorView(QPlainTextEdit):
             self.setUndoRedoEnabled(True)
 
         self.setPlainText(text)
-        self._apply_document_width()
         self.document().setModified(False)
         self._document_side = None          # a new buffer gets a new decision
         self._sync_auto_alignment()
@@ -903,19 +902,6 @@ class EditorView(QPlainTextEdit):
     # ==================================================================
     # gutter
     # ==================================================================
-    def _apply_document_width(self) -> None:
-        """Lay the text out slightly narrower than the viewport.
-
-        Right-aligned text ends *exactly* on the viewport's right edge, and a
-        caret sitting there is drawn one pixel outside it — the reported
-        "the caret disappears on an RTL line".  Narrowing the document leaves
-        a real gap inside the viewport, so the caret has somewhere to be.
-        """
-        wanted = max(50, self.viewport().width() - (TEXT_MARGIN + CARET_GUARD))
-        if abs(self.document().textWidth() - wanted) < 0.5:
-            return
-        self.document().setTextWidth(wanted)
-
     def gutter_width(self) -> int:
         if not self._gutter_visible:
             return 0
@@ -939,7 +925,6 @@ class EditorView(QPlainTextEdit):
         if self.viewportMargins() == wanted:
             return
         self.setViewportMargins(wanted.left(), 0, wanted.right(), 0)
-        self._apply_document_width()
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
         gutter = self._gutter
@@ -954,7 +939,6 @@ class EditorView(QPlainTextEdit):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
-        self._apply_document_width()
         self._place_gutter()
 
     def _place_gutter(self) -> None:

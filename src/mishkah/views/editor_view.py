@@ -123,14 +123,11 @@ class EditorView(QPlainTextEdit):
             self.setFont(font)
 
         self.setUndoRedoEnabled(True)
-        # Margins are applied twice on purpose.  Viewport margins keep the
-        # text away from the widget edges and leave room for the gutter; the
-        # document's root frame adds an inset *inside* the viewport, which is
-        # the only thing that stops right-aligned text (and therefore the
-        # caret at the start of an RTL line) from being drawn exactly on the
-        # viewport's right edge, where Qt clips it away.
+        # The document margin stays 0: an inset is applied by narrowing the
+        # document's own text width instead (see _apply_document_width), which
+        # is the only knob that moves right-aligned text away from the
+        # viewport edge without pushing an undo step.
         self.document().setDocumentMargin(0)
-        self._apply_frame_margins()
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setTabStopDistance(self.fontMetrics().horizontalAdvance(" ") * self._tab_width)
         self.setMouseTracking(True)
@@ -200,7 +197,7 @@ class EditorView(QPlainTextEdit):
             self.setUndoRedoEnabled(True)
 
         self.setPlainText(text)
-        self._apply_frame_margins()
+        self._apply_document_width()
         self.document().setModified(False)
         self._document_side = None          # a new buffer gets a new decision
         self._sync_auto_alignment()
@@ -906,15 +903,18 @@ class EditorView(QPlainTextEdit):
     # ==================================================================
     # gutter
     # ==================================================================
-    def _apply_frame_margins(self) -> None:
-        """Inset the text area inside the viewport, both sides."""
-        frame = self.document().rootFrame().frameFormat()
-        inset = TEXT_MARGIN + CARET_GUARD
-        if frame.leftMargin() == inset and frame.rightMargin() == inset:
+    def _apply_document_width(self) -> None:
+        """Lay the text out slightly narrower than the viewport.
+
+        Right-aligned text ends *exactly* on the viewport's right edge, and a
+        caret sitting there is drawn one pixel outside it — the reported
+        "the caret disappears on an RTL line".  Narrowing the document leaves
+        a real gap inside the viewport, so the caret has somewhere to be.
+        """
+        wanted = max(50, self.viewport().width() - (TEXT_MARGIN + CARET_GUARD))
+        if abs(self.document().textWidth() - wanted) < 0.5:
             return
-        frame.setLeftMargin(inset)
-        frame.setRightMargin(inset)
-        self.document().rootFrame().setFrameFormat(frame)
+        self.document().setTextWidth(wanted)
 
     def gutter_width(self) -> int:
         if not self._gutter_visible:
@@ -933,15 +933,13 @@ class EditorView(QPlainTextEdit):
         if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
             wanted = QMargins(TEXT_MARGIN, 0, edge, 0)
         else:
-            # The caret at the start of a right-aligned line is drawn against
-            # this edge; without a couple of spare pixels Qt clips it away and
-            # the caret "disappears" on the first line of an Arabic paragraph.
-            wanted = QMargins(edge, 0, TEXT_MARGIN + CARET_GUARD, 0)
+            wanted = QMargins(edge, 0, TEXT_MARGIN, 0)
         # Setting the same margins again re-triggers the viewport update that
         # asked for them in the first place; bail out while they already match.
         if self.viewportMargins() == wanted:
             return
         self.setViewportMargins(wanted.left(), 0, wanted.right(), 0)
+        self._apply_document_width()
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
         gutter = self._gutter
@@ -956,6 +954,7 @@ class EditorView(QPlainTextEdit):
 
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
+        self._apply_document_width()
         self._place_gutter()
 
     def _place_gutter(self) -> None:

@@ -372,28 +372,63 @@ def test_status_direction_on_a_blank_line_follows_the_document(qapp):
 
 
 # ---------------------------------------------------------------------
-# CD-11: the gutter changes side with the direction, so the reserved space
-# must move with it — otherwise the text jumps at the edge (and the caret
-# at the start of a line ends up under the numbers)
+# CD-11 / CD-16: auto mode keeps the chrome still and follows the caret's
+# paragraph; an explicit mode owns the widget direction outright.
 # ---------------------------------------------------------------------
-def test_viewport_margins_follow_the_direction(qapp):
-    editor = make_editor(qapp, "مرحبا بالعالم", mode=AUTO)
-    editor.set_line_numbers_visible(True)
-    margins = editor.viewportMargins()
-    assert margins.right() > margins.left(), "RTL: gutter belongs on the right"
-    assert margins.left() >= 4 and margins.right() >= 4, "both edges keep a margin"
-
-    editor.setPlainText("hello world")          # now the document is LTR
+def _move_to_block(editor, index):
     cursor = editor.textCursor()
     cursor.movePosition(cursor.MoveOperation.Start)
-    editor.setTextCursor(cursor)                # a plain caret move
+    for _ in range(index):
+        cursor.movePosition(cursor.MoveOperation.Down)
+    editor.setTextCursor(cursor)
+
+
+def test_auto_mode_alignment_follows_the_caret_paragraph(qapp):
+    editor = make_editor(qapp, "مرحبا بالعالم\n123 hello", mode=AUTO)
+    _move_to_block(editor, 0)
+    assert (editor.document().defaultTextOption().alignment()
+            & Qt.AlignmentFlag.AlignRight)
+    _move_to_block(editor, 1)
+    assert (editor.document().defaultTextOption().alignment()
+            & Qt.AlignmentFlag.AlignLeft)
+
+
+def test_auto_mode_never_flips_the_widget_direction(qapp):
+    """A mixed document must not drag the whole view into one direction.
+
+    Deriving the widget direction from the first line made every paragraph
+    read in that direction — the reported bug after the first W1 build.
+    """
+    editor = make_editor(qapp, "مرحبا بالعالم\n123 hello", mode=AUTO)
+    editor.set_line_numbers_visible(True)
+    before = editor.viewportMargins()
+    assert editor.layoutDirection() == Qt.LayoutDirection.LeftToRight
+    _move_to_block(editor, 1)
+    assert editor.layoutDirection() == Qt.LayoutDirection.LeftToRight
+    assert editor.viewportMargins() == before          # no jump at the edge
+    assert before.left() > before.right()              # gutter stays on the left
+
+
+def test_explicit_rtl_moves_the_gutter_to_the_right(qapp):
+    editor = make_editor(qapp, "hello", mode=RTL)
+    editor.apply_direction(RTL, announce=False)
+    editor.set_line_numbers_visible(True)
     margins = editor.viewportMargins()
-    assert margins.left() > margins.right(), "LTR: gutter must have moved left"
-    assert margins.right() >= 4 and margins.left() >= 4
+    assert editor.layoutDirection() == Qt.LayoutDirection.RightToLeft
+    assert margins.right() > margins.left()
 
 
-def test_margins_are_symmetric_without_a_gutter(qapp):
+def test_both_edges_keep_breathing_room(qapp):
     editor = make_editor(qapp, "مرحبا", mode=AUTO)
     editor.set_line_numbers_visible(False)
     margins = editor.viewportMargins()
-    assert margins.left() == margins.right() >= 4
+    assert margins.left() >= 4 and margins.right() > 4   # right keeps a caret guard
+
+
+def test_status_chip_follows_the_caret_across_directions(qapp):
+    editor = make_editor(qapp, "مرحبا\n123 hello", mode=AUTO)
+    seen = []
+    editor.resolved_direction_changed.connect(seen.append)
+    _move_to_block(editor, 0)
+    _move_to_block(editor, 1)
+    assert LTR in seen

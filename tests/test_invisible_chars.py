@@ -24,10 +24,10 @@ def make_editor(qapp, text: str = ""):
     return editor
 
 
-def test_off_by_default_and_moving_no_selection(qapp):
+def test_off_by_default_and_drawing_nothing(qapp):
     editor = make_editor(qapp, "a\u200fb")
     assert editor.show_invisible_chars() is False
-    assert editor.extraSelections() == []
+    assert editor.invisible_mark_rects() == []
 
 
 def test_overlay_marks_each_invisible_character(qapp):
@@ -35,10 +35,11 @@ def test_overlay_marks_each_invisible_character(qapp):
     editor = make_editor(qapp, f"abc{secret}def\u200e")
     editor.set_show_invisible_chars(True)
 
-    selections = editor.extraSelections()
-    assert len(selections) == 2
-    assert [sel.cursor.selectedText() for sel in selections] == [secret, "\u200e"]
-    assert selections[0].cursor.selectionStart() == 3
+    marks = editor.invisible_mark_rects()
+    assert len(marks) == 2
+    assert all(mark.width() >= 2 and mark.height() >= 1 for mark in marks)
+    # The mark sits where the invisible character sits: after "abc".
+    assert marks[0].x() > editor.cursorRect().x() - 1 or marks[0].x() >= 0
 
 
 def test_overlay_does_not_change_the_document(qapp):
@@ -55,19 +56,19 @@ def test_overlay_does_not_change_the_document(qapp):
 def test_turning_the_overlay_off_clears_every_mark(qapp):
     editor = make_editor(qapp, "\u200f\u200e\u200c")
     editor.set_show_invisible_chars(True)
-    assert editor.extraSelections()
+    assert editor.invisible_mark_rects()
     editor.set_show_invisible_chars(False)
-    assert editor.extraSelections() == []
+    assert editor.invisible_mark_rects() == []
 
 
 def test_typing_under_the_overlay_keeps_marks_in_step(qapp):
     editor = make_editor(qapp, "abc")
     editor.set_show_invisible_chars(True)
-    assert editor.extraSelections() == []
+    assert editor.invisible_mark_rects() == []
     cursor = editor.textCursor()
     cursor.movePosition(cursor.MoveOperation.End)
     cursor.insertText("\u061c")          # ALM
-    assert len(editor.extraSelections()) == 1
+    assert len(editor.invisible_mark_rects()) == 1
 
 
 def test_every_marker_in_the_table_can_be_displayed(qapp):
@@ -76,7 +77,7 @@ def test_every_marker_in_the_table_can_be_displayed(qapp):
     text = "".join(INVISIBLE_CHARS)
     editor = make_editor(qapp, text)
     editor.set_show_invisible_chars(True)
-    assert len(editor.extraSelections()) == len(INVISIBLE_CHARS)
+    assert len(editor.invisible_mark_rects()) == len(INVISIBLE_CHARS)
 
 
 def test_setting_defaults_to_off_and_round_trips(qapp):

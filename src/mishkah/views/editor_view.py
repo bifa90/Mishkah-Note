@@ -34,16 +34,10 @@ from PySide6.QtGui import (
     QFont,
     QPainter,
     QTextBlockFormat,
-    QTextCharFormat,
     QTextCursor,
     QTextDocument,
 )
-from PySide6.QtWidgets import (
-    QListWidget,
-    QListWidgetItem,
-    QPlainTextEdit,
-    QTextEdit,
-)
+from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit
 
 from mishkah.core import autocomplete, syntax
 from mishkah.core.text_direction import (
@@ -73,6 +67,11 @@ TEXT_MARGIN = 4
 #: block).  The diagnostic overlay walks only visible blocks, and this cap
 #: stops it from copying one enormous block on every keystroke.
 MAX_INVISIBLE_SCAN = 20000
+#: Width of one invisible-character marker, in pixels.
+MARKER_WIDTH = 2
+#: Extra pixels kept free on the right edge so a caret at the start of a
+#: right-aligned line is never clipped away.
+CARET_GUARD = 3
 
 # Hardware scan codes for the modifier keys.
 #   Linux/X11 and Wayland (evdev + 8)      : LCtrl 37, LShift 50, RShift 62, RCtrl 105
@@ -104,7 +103,8 @@ class EditorView(QPlainTextEdit):
 
     cursor_moved = Signal(int, int, int)     # line, column, selection length
     zoom_changed = Signal(int)               # percent
-    direction_changed = Signal(str)          # auto | rtl | ltr
+    direction_changed = Signal(str)          # auto | rtl | ltr (mode changed)
+    resolved_direction_changed = Signal(str)  # the caret moved to another direction
     stats_changed = Signal(int, int)         # lines, chars
 
     def __init__(self, document: DocumentModel, font: Optional[QFont] = None,
@@ -132,6 +132,7 @@ class EditorView(QPlainTextEdit):
 
         # --- direction state -------------------------------------------------
         self._direction_mode = document.direction_mode or AUTO
+        self._last_resolved = ""
         self._chord = _ChordState()
 
         # --- editing conveniences -------------------------------------------
@@ -155,7 +156,6 @@ class EditorView(QPlainTextEdit):
         self._show_invisible = False
         self.blockCountChanged.connect(self._update_gutter_width)
         self.updateRequest.connect(self._update_gutter)
-        self.textChanged.connect(self._refresh_invisible_highlights)
 
         self.cursorPositionChanged.connect(self._emit_cursor)
         self.cursorPositionChanged.connect(self._sync_markdown_caret)
@@ -230,11 +230,16 @@ class EditorView(QPlainTextEdit):
             cursor.setBlockFormat(block_fmt)
             cursor.endEditBlock()
 
-        # Widget-level direction moves the gutter/scrollbar to the matching
-        # side; for "auto" we follow whatever the caret's paragraph resolved to.
-        direction = self.document_direction()
+        # An explicit mode owns the widget direction, so the gutter and the
+        # scrollbar move to the matching side.  "auto" deliberately leaves the
+        # widget alone: see _sync_auto_alignment for why.
+        if mode == AUTO:
+            direction = self.resolved_direction()
+            self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        else:
+            direction = mode
+            self.setLayoutDirection(_TO_QT_DIRECTION[mode])
         self._apply_alignment(direction)
-        self.setLayoutDirection(_TO_QT_DIRECTION[direction])
         self._update_gutter_width(0)
         self._place_gutter()
         self.viewport().update()
@@ -273,19 +278,31 @@ class EditorView(QPlainTextEdit):
         return LTR
 
     def _sync_auto_alignment(self) -> None:
-        """Follow the document's direction when it changes in auto mode."""
+        """Follow the caret's paragraph in auto mode.
+
+        Two Qt facts shape this, and both are quoted in the report because
+        the obvious implementation gets them wrong:
+
+        * ``QPlainTextEdit`` paints **one** alignment for the whole document
+          and ignores ``QTextBlockFormat.setAlignment`` (the block formats it
+          does honour are background and a few character properties), so
+          alignment cannot be decided per paragraph on screen;
+        * the *widget's* layout direction overrides ``LayoutDirectionAuto``
+          for every paragraph, so deriving it from the first line made a
+          mixed document read entirely in that line's direction — the bug
+          reported after 1.0.01's W1 build.
+
+        So in auto mode the widget stays left-to-right (stable chrome: the
+        gutter no longer jumps while the caret moves) and Qt resolves each
+        paragraph's base direction from its own text; the document-wide
+        alignment follows the paragraph the caret is in, which is the closest
+        a plain-text view can get to "every line on its own side".
+        """
         if self._direction_mode != AUTO:
             return
-        resolved = self.document_direction()
+        resolved = self.resolved_direction()
         if resolved != getattr(self, "_aligned_direction", None):
             self._apply_alignment(resolved)
-            self.setLayoutDirection(_TO_QT_DIRECTION[resolved])
-            # The gutter changes side with the direction, and the viewport
-            # margins have to follow it in the same step: repositioning the
-            # gutter alone leaves the reserved space on the old side, which is
-            # what makes the text jump at the edge when a document flips.
-            self._update_gutter_width(0)
-            self._place_gutter()
             self.viewport().update()
 
     def _widget_direction(self) -> Qt.LayoutDirection:
@@ -621,6 +638,10 @@ class EditorView(QPlainTextEdit):
         super().paintEvent(event)
         decorator = self._markdown
         if decorator is None:
+            if self._show_invisible:
+                painter = QPainter(self.viewport())
+                self._paint_invisible_marks(painter)
+                painter.end()
             return
         painter = QPainter(self.viewport())
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -628,6 +649,8 @@ class EditorView(QPlainTextEdit):
                         self.contentOffset(),
                         QRectF(0, 0, self.viewport().width(),
                                self.viewport().height()))
+        if self._show_invisible:
+            self._paint_invisible_marks(painter)
         painter.end()
 
     # ==================================================================
@@ -777,17 +800,19 @@ class EditorView(QPlainTextEdit):
 
     # -- diagnostics: show invisible characters (CD-16) -----------------
     def set_show_invisible_chars(self, enabled: bool) -> None:
-        """Mark LRM/RLM/ALM/ZWNJ and friends with a tinted background.
+        """Draw a marker where a zero-width character sits.
 
-        The document itself is never modified: these are *extra selections*,
-        the same mechanism find-and-replace uses, so the bytes on disk cannot
-        change and undo history stays untouched.
+        The characters this reveals (RLM, ZWNJ, BOM, …) have **no width**, so
+        tinting their background paints nothing at all — the first version of
+        this feature did exactly that and showed nothing.  The marks are drawn
+        in paintEvent instead, one thin bar per character, and the document is
+        never modified.
         """
         enabled = bool(enabled)
         if enabled == self._show_invisible:
             return
         self._show_invisible = enabled
-        self._refresh_invisible_highlights()
+        self.viewport().update()
 
     def show_invisible_chars(self) -> bool:
         return self._show_invisible
@@ -812,41 +837,32 @@ class EditorView(QPlainTextEdit):
                 yield block
             block = block.next()
 
-    def _refresh_invisible_highlights(self) -> None:
-        """Recompute the diagnostic marks for the visible blocks only.
-
-        Visible-only keeps typing O(screen) instead of O(document); the marks
-        are recomputed on scroll-free events (text change, toggle) and follow
-        the text when the view scrolls, because they are positions, not paint.
-        """
+    def invisible_mark_rects(self) -> list:
+        """Viewport rectangles where a marker must be drawn (empty when off)."""
+        rects = []
         if not self._show_invisible:
-            if self.extraSelections():
-                self.setExtraSelections([])
-            return
-        tint = QColor(255, 176, 32, 120)
-        selections = []
+            return rects
         for block in self._visible_blocks():
             if block.length() - 1 > MAX_INVISIBLE_SCAN:
                 continue                      # a whole-file paragraph: skip
             text = block.text()
             if not text:
                 continue
-            for start, length, _name in invisible_spans(text):
+            for start, _length, _name in invisible_spans(text):
                 cursor = QTextCursor(block)
                 cursor.setPosition(block.position() + start)
-                cursor.setPosition(block.position() + start + length,
-                                   QTextCursor.MoveMode.KeepAnchor)
-                selection = QTextEdit.ExtraSelection()
-                selection.cursor = cursor
-                selection.format = QTextCharFormat()
-                selection.format.setBackground(tint)
-                selections.append(selection)
-        self.setExtraSelections(selections)
+                rect = self.cursorRect(cursor)
+                rects.append(QRect(rect.x(), rect.y(),
+                                   MARKER_WIDTH, max(1, rect.height())))
+        return rects
 
-    def scrollContentsBy(self, dx: int, dy: int) -> None:  # noqa: N802
-        super().scrollContentsBy(dx, dy)
-        if self._show_invisible:
-            self._refresh_invisible_highlights()
+    def _paint_invisible_marks(self, painter: QPainter) -> None:
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(255, 140, 0, 200))
+        for rect in self.invisible_mark_rects():
+            painter.drawRect(rect)
+        painter.restore()
 
     def line_numbers_visible(self) -> bool:
         return self._gutter_visible
@@ -881,7 +897,10 @@ class EditorView(QPlainTextEdit):
         if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
             wanted = QMargins(TEXT_MARGIN, 0, edge, 0)
         else:
-            wanted = QMargins(edge, 0, TEXT_MARGIN, 0)
+            # The caret at the start of a right-aligned line is drawn against
+            # this edge; without a couple of spare pixels Qt clips it away and
+            # the caret "disappears" on the first line of an Arabic paragraph.
+            wanted = QMargins(edge, 0, TEXT_MARGIN + CARET_GUARD, 0)
         # Setting the same margins again re-triggers the viewport update that
         # asked for them in the first place; bail out while they already match.
         if self.viewportMargins() == wanted:
@@ -962,6 +981,12 @@ class EditorView(QPlainTextEdit):
                                len(cursor.selectedText()))
         if self._direction_mode == AUTO:
             self._sync_auto_alignment()
+            resolved = self.resolved_direction()
+            if resolved != self._last_resolved:
+                self._last_resolved = resolved
+                # Visible proof that detection is per paragraph even where Qt
+                # cannot align per paragraph: the status chip follows the caret.
+                self.resolved_direction_changed.emit(resolved)
 
     def _emit_stats(self) -> None:
         doc = self.document()

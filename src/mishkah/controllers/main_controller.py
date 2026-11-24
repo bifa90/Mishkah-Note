@@ -165,6 +165,7 @@ class MainController(QObject):
             lambda line, col, sel: self.window.status.set_position(line, col, sel))
         editor.zoom_changed.connect(self.window.status.set_zoom)
         editor.direction_changed.connect(self._on_editor_direction)
+        editor.resolved_direction_changed.connect(self._on_resolved_direction)
         editor.stats_changed.connect(self._on_stats)
         editor.textChanged.connect(lambda e=editor: self._on_text_changed(e))
 
@@ -520,6 +521,12 @@ class MainController(QObject):
         editor = self.window.current_editor()
         self.window.status.set_direction(mode,
                                          editor.resolved_direction() if editor else LTR)
+
+    def _on_resolved_direction(self, resolved: str) -> None:
+        """The caret crossed into a paragraph of the other direction."""
+        doc = self.current_document()
+        if doc is not None:
+            self.window.status.set_direction(doc.direction_mode, resolved)
 
     def auto_detect_direction(self) -> str:
         editor = self.window.current_editor()

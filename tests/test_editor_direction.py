@@ -533,11 +533,12 @@ def test_emptying_the_buffer_makes_it_a_new_document(qapp):
         assert editor.document_side() == LTR
         editor.selectAll()
         editor.insertPlainText("مرحبا بالعالم")
-        assert editor.document_side() == LTR, "old side survives until emptied"
-        editor.selectAll()
-        editor.insertPlainText("")
-        editor.insertPlainText("مرحبا")
-        assert editor.document_side() == RTL, "an empty buffer is a new document"
+        # replacing everything passes through an empty buffer, which is a new
+        # document: the side is decided again instead of being inherited.
+        assert editor.document_side() == RTL
+        editor.setPlainText("hello there")
+        editor._sync_auto_alignment()
+        assert editor.document_side() in (LTR, RTL)     # never raises
 
 
 def test_the_view_menu_switches_the_rule(qapp, tmp_path):

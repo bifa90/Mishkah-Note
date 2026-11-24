@@ -257,6 +257,21 @@ STRINGS: Dict[str, S] = {
               "each paragraph still follows its own script. Off by default (CD-20).",
         "ar": "السطر الأول يحدد الجهة التي يُحاذى إليها المستند كله، وكل فقرة تبقى "
               "مرتّبة حسب لغتها. معطّل افتراضيًا (CD-20).",
+        "zh-Hans": "第一行决定整个文档的对齐方向；每个段落仍按其自身文字排版。默认关闭（CD-20）。",
+        "hi": "पहली पंक्ति तय करती है कि पूरा दस्तावेज़ किस ओर संरेखित होगा; "
+               "प्रत्येक अनुच्छेद अपनी लिपि के अनुसार ही रहेगा। डिफ़ॉल्ट रूप से बंद (CD-20)।",
+        "es": "La primera línea decide hacia qué lado se alinea todo el documento; "
+              "cada párrafo sigue su propio alfabeto. Desactivado por defecto (CD-20).",
+        "fr": "La première ligne décide du côté d'alignement de tout le document ; "
+              "chaque paragraphe suit toujours sa propre écriture. Désactivé par défaut (CD-20).",
+        "bn": "প্রথম লাইন ঠিক করে পুরো নথি কোন দিকে সারিবদ্ধ হবে; "
+              "প্রতিটি অনুচ্ছেদ নিজের লিপি অনুযায়ীই থাকবে। ডিফল্টে বন্ধ (CD-20)।",
+        "pt": "A primeira linha decide para que lado todo o documento é alinhado; "
+              "cada parágrafo continua a seguir o seu próprio alfabeto. Desativado por padrão (CD-20).",
+        "ru": "Первая строка определяет, к какой стороне выравнивается весь документ; "
+              "каждый абзац по-прежнему следует своей письменности. По умолчанию выключено (CD-20).",
+        "ur": "پہلی سطر طے کرتی ہے کہ پوری دستاویز کس طرف سیدھی ہوگی؛ "
+              "ہر پیراگراف اپنی ہی رسم الخط کے مطابق رہے گا۔ بطور طے شدہ بند (CD-20)۔",
     },
     "action.show_invisible": {
         "en": "Show invisible characters", "ar": "إظهار المحارف غير المرئية",

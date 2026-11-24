@@ -189,16 +189,13 @@ def test_describe_char_names_the_code_point():
 # ------------------------------------------------------- document side (CD-17)
 
 
-def test_document_side_majority():
-    # Majority of strong characters, not the first line: an English heading
-    # above an Arabic body must not flip the whole document.
-    assert document_side("hello\nمرحبا بالعالم\nمرحبا بالعالم") == RTL
-    assert document_side("مرحبا\nhello world foo") == LTR
-
-
-def test_document_side_tie_falls_back_to_the_first_strong_character():
+def test_document_side_follows_the_first_strong_character():
+    """A file is aligned the way it starts, whatever comes after it."""
+    assert document_side("hello\nمرحبا بالعالم\nمرحبا بالعالم") == LTR
+    assert document_side("مرحبا\nhello world foo") == RTL
     assert document_side("مرحبا\nhello") == RTL
     assert document_side("hello\nمرحبا") == LTR
+    assert document_side("\n\n   hello") == LTR
 
 
 def test_document_side_ignores_digits_and_punctuation():

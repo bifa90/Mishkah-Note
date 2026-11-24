@@ -396,10 +396,11 @@ def test_mixed_document_keeps_one_side_while_the_caret_moves(qapp):
     assert _alignment(editor) & Qt.AlignmentFlag.AlignRight, "the side must not move"
 
 
-def test_document_side_comes_from_the_majority_not_the_first_line(qapp):
+def test_document_side_comes_from_the_first_line(qapp):
+    """An English file that turns Arabic half-way is still an English file."""
     editor = make_editor(qapp, "hello\nمرحبا بالعالم\nمرحبا بالعالم", mode=AUTO)
-    assert editor.document_side() == RTL
-    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+    assert editor.document_side() == LTR
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignLeft
 
 
 def test_new_empty_document_takes_the_side_of_the_first_word(qapp):
@@ -431,7 +432,7 @@ def test_auto_mode_keeps_the_widget_ltr_but_moves_the_gutter(qapp):
 
 
 def test_gutter_follows_the_document_side_in_auto_mode(qapp):
-    editor = make_editor(qapp, "hello world\nمرحبا", mode=AUTO)   # LTR majority
+    editor = make_editor(qapp, "hello world\nمرحبا", mode=AUTO)   # opens English
     editor.set_line_numbers_visible(True)
     margins = editor.viewportMargins()
     assert margins.left() > margins.right(), "LTR document: numbers on the left"

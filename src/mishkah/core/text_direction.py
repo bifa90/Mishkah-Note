@@ -136,27 +136,18 @@ def dominant_direction(text: str, limit: int = SNIFF_CHARS) -> str:
 def document_side(text: str, limit: int = SNIFF_CHARS * 16) -> str:
     """Which side a *document* belongs to, decided once and then left alone.
 
-    The first strong character (P2) answers "what is this paragraph?", which
-    is the wrong question for a whole file: a single English heading above an
-    Arabic document would flip every line.  Here the strong characters are
-    counted over a generous sample and the majority wins; a tie falls back to
-    the first strong character, and a document with no strong character at all
-    falls back to LTR.
+    The first strong character answers the question — the same P2 rule the
+    paragraphs follow — applied to the start of the file instead of the start
+    of the line.  A file that opens in English is an English document that
+    happens to contain Arabic, and it is aligned the way it starts; that is
+    what every other editor does and what a reader expects from the first
+    line they see.
 
-    Counting ignores digits and punctuation exactly like P2 does, so the
-    answer cannot be dragged around by numbers.
+    Digits and punctuation carry no direction and are skipped, so ``١٢٣ hello``
+    is a left-to-right document and ``123 مرحبا`` is a right-to-left one.
+    A document with no strong character at all falls back to LTR (P3).
     """
-    sample = text[:limit]
-    rtl = ltr = 0
-    for ch in sample:
-        klass = bidi_class(ch)
-        if klass in STRONG_RTL:
-            rtl += 1
-        elif klass in STRONG_LTR:
-            ltr += 1
-    if rtl == ltr:
-        return RTL if first_strong_is_rtl(sample) else LTR
-    return RTL if rtl > ltr else LTR
+    return RTL if first_strong_is_rtl(text[:limit]) else LTR
 
 
 def is_rtl_text(text: str) -> bool:

@@ -123,10 +123,14 @@ class EditorView(QPlainTextEdit):
             self.setFont(font)
 
         self.setUndoRedoEnabled(True)
-        # The document margin is direction-agnostic in Qt (it is always added
-        # on the left), which leaves RTL text glued to the right edge.  The
-        # margin is therefore applied as a *viewport* margin, mirrored for RTL.
+        # Margins are applied twice on purpose.  Viewport margins keep the
+        # text away from the widget edges and leave room for the gutter; the
+        # document's root frame adds an inset *inside* the viewport, which is
+        # the only thing that stops right-aligned text (and therefore the
+        # caret at the start of an RTL line) from being drawn exactly on the
+        # viewport's right edge, where Qt clips it away.
         self.document().setDocumentMargin(0)
+        self._apply_frame_margins()
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setTabStopDistance(self.fontMetrics().horizontalAdvance(" ") * self._tab_width)
         self.setMouseTracking(True)
@@ -196,6 +200,7 @@ class EditorView(QPlainTextEdit):
             self.setUndoRedoEnabled(True)
 
         self.setPlainText(text)
+        self._apply_frame_margins()
         self.document().setModified(False)
         self._document_side = None          # a new buffer gets a new decision
         self._sync_auto_alignment()
@@ -901,6 +906,16 @@ class EditorView(QPlainTextEdit):
     # ==================================================================
     # gutter
     # ==================================================================
+    def _apply_frame_margins(self) -> None:
+        """Inset the text area inside the viewport, both sides."""
+        frame = self.document().rootFrame().frameFormat()
+        inset = TEXT_MARGIN + CARET_GUARD
+        if frame.leftMargin() == inset and frame.rightMargin() == inset:
+            return
+        frame.setLeftMargin(inset)
+        frame.setRightMargin(inset)
+        self.document().rootFrame().setFrameFormat(frame)
+
     def gutter_width(self) -> int:
         if not self._gutter_visible:
             return 0

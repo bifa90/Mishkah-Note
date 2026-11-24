@@ -45,7 +45,8 @@ class MainController(QObject):
         self._docs: Dict[EditorView, DocumentModel] = {}
         self._invisible_banner = False
         #: CD-18: documents whose file changed on disk, waiting for a decision.
-        self._changed_docs: set = set()
+        #: A list, not a set: DocumentModel is a dataclass and unhashable.
+        self._changed_docs: List[DocumentModel] = []
         self._watcher: Optional[QFileSystemWatcher] = None
         self._pending_paths: Dict[int, str] = {}   # tab index -> path being loaded
         self._busy = False
@@ -414,7 +415,8 @@ class MainController(QObject):
         return True
 
     def _show_file_changed(self, doc: DocumentModel) -> None:
-        self._changed_docs.add(doc)
+        if doc not in self._changed_docs:
+            self._changed_docs.append(doc)
         editor = self._editor_for_document(doc)
         if editor is not None:
             index = self.window.index_of(editor)
@@ -456,13 +458,14 @@ class MainController(QObject):
 
     def on_file_changed_action(self, action: str) -> None:
         """Answer the CD-18 banner: reload, overwrite, or dismiss."""
-        if not self._changed_docs:
+        doc = self._changed_docs[-1] if self._changed_docs else self.current_document()
+        if doc is None:
             self.window.hide_file_changed()
             return
-        doc = next(iter(self._changed_docs))
         editor = self._editor_for_document(doc)
         self.window.hide_file_changed()
-        self._changed_docs.discard(doc)
+        if doc in self._changed_docs:
+            self._changed_docs.remove(doc)
         if action == "dismiss" or editor is None:
             return
         if action == "overwrite":
@@ -502,7 +505,8 @@ class MainController(QObject):
 
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
         self._watch(doc)
-        self._changed_docs.discard(doc)
+        if doc in self._changed_docs:
+            self._changed_docs.remove(doc)
         editor = self._editor_for_document(doc)
         if editor is not None:
             self.window.set_tab_title(editor, self._doc_title(doc), doc.is_modified)
@@ -545,7 +549,8 @@ class MainController(QObject):
         doc = self._docs.get(editor)
         if doc is not None:
             self._unwatch(doc)
-            self._changed_docs.discard(doc)
+            if doc in self._changed_docs:
+                self._changed_docs.remove(doc)
         if doc and doc.is_modified:
             answer = self.window.confirm_unsaved(self._doc_title(doc))
             if answer == QMessageBox.StandardButton.Cancel:

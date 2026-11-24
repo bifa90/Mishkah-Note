@@ -102,6 +102,7 @@ def test_reloading_takes_the_disk_version(qapp, tmp_path):
     try:
         editor, doc = _open_doc(controller, path, "original\n")
         path.write_text("changed outside\n", encoding="utf-8")
+        assert controller.save_current() is False, "the guard fires first"
 
         controller.on_file_changed_action("reload")
         assert editor.toPlainText() == "changed outside\n"

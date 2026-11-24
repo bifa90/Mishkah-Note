@@ -31,10 +31,12 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QFileDialog,
+    QHBoxLayout,
     QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
+    QPushButton,
     QStyle,
     QStyleOptionTab,
     QTabBar,
@@ -231,6 +233,7 @@ class MainWindow(QMainWindow):
     word_wrap_toggled = Signal(bool)
     line_numbers_toggled = Signal(bool)
     show_invisible_toggled = Signal(bool)
+    file_changed_action = Signal(str)       # reload | overwrite | dismiss
     document_side_toggled = Signal(bool)
     status_bar_toggled = Signal(bool)
     encoding_chosen = Signal(str)
@@ -296,6 +299,26 @@ class MainWindow(QMainWindow):
         self.banner.setWordWrap(True)
         self.banner.hide()
         root.insertWidget(0, self.banner)
+
+        # A banner that asks a question: the file changed under our feet and
+        # nothing may be written until the user decides (CD-18).
+        self.action_banner = QWidget(self)
+        self.action_banner.setObjectName("ActionBanner")
+        action_row = QHBoxLayout(self.action_banner)
+        action_row.setContentsMargins(8, 4, 8, 4)
+        self.action_banner_label = QLabel(self.action_banner)
+        self.action_banner_label.setWordWrap(True)
+        action_row.addWidget(self.action_banner_label, 1)
+        self.act_banner_reload = QPushButton(self.action_banner)
+        self.act_banner_overwrite = QPushButton(self.action_banner)
+        self.act_banner_dismiss = QPushButton(self.action_banner)
+        for button, action in ((self.act_banner_reload, "reload"),
+                               (self.act_banner_overwrite, "overwrite"),
+                               (self.act_banner_dismiss, "dismiss")):
+            button.clicked.connect(lambda _=False, a=action: self.file_changed_action.emit(a))
+            action_row.addWidget(button)
+        self.action_banner.hide()
+        root.insertWidget(0, self.action_banner)
 
         self._pinned_index: Optional[int] = None
         self._build_menus()
@@ -719,6 +742,17 @@ class MainWindow(QMainWindow):
 
     def hide_banner(self) -> None:
         self.banner.hide()
+
+    def show_file_changed(self, name: str) -> None:
+        """Ask what to do about a file that changed on disk (CD-18)."""
+        self.action_banner_label.setText(tr("banner.file_changed", name=name))
+        self.act_banner_reload.setText(tr("action.reload_file"))
+        self.act_banner_overwrite.setText(tr("action.overwrite_file"))
+        self.act_banner_dismiss.setText(tr("action.dismiss_banner"))
+        self.action_banner.show()
+
+    def hide_file_changed(self) -> None:
+        self.action_banner.hide()
 
     def set_word_wrap_enabled(self, enabled: bool) -> None:
         """Keep the View ▸ Word wrap check state in sync with settings."""

@@ -7,11 +7,12 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QFileSystemWatcher, QObject, Qt
 from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mishkah.core import i18n, syntax, tab_style
+from mishkah.core.disk_state import changed_on_disk, stat_signature
 from mishkah.core.languages import editor_font_families, get_language
 from mishkah.core.settings import Settings
 from mishkah.core.text_direction import (
@@ -43,6 +44,9 @@ class MainController(QObject):
         self.files = file_service or FileService(self)
         self._docs: Dict[EditorView, DocumentModel] = {}
         self._invisible_banner = False
+        #: CD-18: documents whose file changed on disk, waiting for a decision.
+        self._changed_docs: set = set()
+        self._watcher: Optional[QFileSystemWatcher] = None
         self._pending_paths: Dict[int, str] = {}   # tab index -> path being loaded
         self._busy = False
         self._close_after_save: set[EditorView] = set()
@@ -71,6 +75,7 @@ class MainController(QObject):
         w.word_wrap_toggled.connect(self.set_word_wrap)
         w.line_numbers_toggled.connect(self.set_line_numbers)
         w.show_invisible_toggled.connect(self.set_show_invisible_chars)
+        w.file_changed_action.connect(self.on_file_changed_action)
         w.document_side_toggled.connect(self.set_document_side_first_line)
         w.status_bar_toggled.connect(w.status.setVisible)
         w.encoding_chosen.connect(self.reopen_with_encoding)
@@ -289,6 +294,7 @@ class MainController(QObject):
             editor.set_line_numbers_visible(False)
 
         self.window.set_tab_title(editor, self._doc_title(doc), False)
+        self._watch(doc)
         if doc.truncated:
             self.window.show_banner(i18n.tr(
                 "banner.preview", size=_human(8 * 1024 * 1024),
@@ -370,6 +376,8 @@ class MainController(QObject):
                 total=human_size(doc.size_on_disk)))
             return False
         self._sync_content(editor, doc)
+        if not as_copy and self._file_changed(doc):
+            return False
         target = doc.path
         if as_copy or target is None:
             start = str(target) if target else ""
@@ -385,9 +393,116 @@ class MainController(QObject):
             doc = self._docs.get(editor)
             if doc and doc.is_modified and doc.path and not doc.truncated:
                 self._sync_content(editor, doc)
+                if self._file_changed(doc):
+                    continue
                 self.files.save(doc, doc.path)
 
+    # ==================================================================
+    # CD-18 · the file changed on disk
+    # ==================================================================
+    def _file_changed(self, doc: DocumentModel) -> bool:
+        """True when the file changed since we read or wrote it.
+
+        Called before *every* write: an autosave that fires two seconds after
+        an outside edit must not silently replace it.
+        """
+        if doc is None or doc.path is None or doc.truncated:
+            return False
+        if not changed_on_disk(doc.path, doc.disk_signature):
+            return False
+        self._show_file_changed(doc)
+        return True
+
+    def _show_file_changed(self, doc: DocumentModel) -> None:
+        self._changed_docs.add(doc)
+        editor = self._editor_for_document(doc)
+        if editor is not None:
+            index = self.window.index_of(editor)
+            if index >= 0:
+                self.window.tabs.setCurrentIndex(index)
+        try:
+            name = doc.path.name if doc.path else doc.title
+        except AttributeError:          # pragma: no cover - defensive
+            name = ""
+        self.window.show_file_changed(name)
+
+    def _watch(self, doc: DocumentModel) -> None:
+        """Watch the file so an outside edit is noticed before the next save."""
+        if doc.path is None:
+            return
+        if self._watcher is None:
+            self._watcher = QFileSystemWatcher(self)
+            self._watcher.fileChanged.connect(self._on_watched_file_changed)
+        path = str(doc.path)
+        if path not in self._watcher.files():
+            self._watcher.addPath(path)
+
+    def _unwatch(self, doc: DocumentModel) -> None:
+        if self._watcher is None or doc.path is None:
+            return
+        path = str(doc.path)
+        if path in self._watcher.files():
+            self._watcher.removePath(path)
+
+    def _on_watched_file_changed(self, path: str) -> None:
+        for doc in list(self._docs.values()):
+            if doc.path is not None and str(doc.path) == path:
+                if changed_on_disk(doc.path, doc.disk_signature):
+                    self._show_file_changed(doc)
+                else:
+                    # our own atomic write: the signature already matches
+                    self.window.hide_file_changed()
+                break
+
+    def on_file_changed_action(self, action: str) -> None:
+        """Answer the CD-18 banner: reload, overwrite, or dismiss."""
+        if not self._changed_docs:
+            self.window.hide_file_changed()
+            return
+        doc = next(iter(self._changed_docs))
+        editor = self._editor_for_document(doc)
+        self.window.hide_file_changed()
+        self._changed_docs.discard(doc)
+        if action == "dismiss" or editor is None:
+            return
+        if action == "overwrite":
+            doc.disk_signature = stat_signature(doc.path)
+            self._sync_content(editor, doc)
+            self.files.save(doc, doc.path)
+            return
+        if action == "reload":
+            self._reload_from_disk(doc, editor)
+
+    def _reload_from_disk(self, doc: DocumentModel, editor: EditorView) -> None:
+        """Replace the buffer with what is on disk, dropping undo history."""
+        if doc.path is None:
+            return
+        from mishkah.core import large_file
+
+        try:
+            result = large_file.read_text_chunked(
+                doc.path, encoding=doc.encoding, limit=1 << 62)
+        except Exception as exc:                    # noqa: BLE001 - reported
+            self.window.show_error(i18n.tr("dialog.error.open",
+                                           path=str(doc.path), detail=str(exc)))
+            return
+        text, fmt, truncated, size = result
+        doc.content = text
+        doc.fmt = fmt
+        doc.size_on_disk = size
+        doc.truncated = truncated
+        doc.is_modified = False
+        doc.revision += 1
+        doc.disk_signature = stat_signature(doc.path)
+        editor.load_content(text)
+        editor.apply_direction(doc.direction_mode or AUTO, announce=False)
+        self.window.set_tab_title(editor, self._doc_title(doc), False)
+        self._sync_ui(editor)
+        self.window.show_banner(i18n.tr("banner.reloaded", name=doc.path.name))
+
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
+        self._watch(doc)
+        self._changed_docs.discard(doc)
         editor = self._editor_for_document(doc)
         if editor is not None:
             self.window.set_tab_title(editor, self._doc_title(doc), doc.is_modified)
@@ -428,6 +543,9 @@ class MainController(QObject):
         if editor is None:
             return
         doc = self._docs.get(editor)
+        if doc is not None:
+            self._unwatch(doc)
+            self._changed_docs.discard(doc)
         if doc and doc.is_modified:
             answer = self.window.confirm_unsaved(self._doc_title(doc))
             if answer == QMessageBox.StandardButton.Cancel:

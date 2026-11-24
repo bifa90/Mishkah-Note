@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from mishkah.core.encoding import TextFormat
 from mishkah.core.large_file import human_size
@@ -41,6 +41,10 @@ class DocumentModel:
     # code from mishkah.core.syntax, "plain" disables it for this tab.
     language: str = "auto"
     revision: int = 0
+    #: ``(mtime_ns, size)`` of the file the last time we read or wrote it.
+    #: ``None`` = unknown (a new, never-saved document).  CD-18 compares this
+    #: against the disk before every write.
+    disk_signature: Optional[Tuple[int, int]] = None
 
     # ------------------------------------------------------------- titles
     @property
@@ -108,11 +112,14 @@ class DocumentModel:
             self.revision += 1
 
     def mark_saved(self, path: Optional[Path] = None, size: Optional[int] = None,
-                   revision: Optional[int] = None) -> None:
+                   revision: Optional[int] = None,
+                   signature: Optional[Tuple[int, int]] = None) -> None:
         if path is not None:
             self.path = Path(path)
         if size is not None:
             self.size_on_disk = size
+        if signature is not None:
+            self.disk_signature = signature
         if revision is None or revision == self.revision:
             self.is_modified = False
 

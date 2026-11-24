@@ -151,7 +151,7 @@ def test_the_banner_says_how_many_markers_exist(qapp, tmp_path):
         assert "2" in window.banner.text()
 
         window.act_show_invisible.trigger()          # off
-        assert not window.banner.isVisible()
+        assert window.banner.isHidden(), "the count must disappear with the overlay"
     finally:
         window.close()
 
@@ -186,7 +186,7 @@ def test_the_banner_updates_when_the_document_changes(qapp, tmp_path):
     try:
         editor = controller.new_document()
         window.act_show_invisible.trigger()          # empty document: "none"
-        assert window.banner.isVisible()
+        assert not window.banner.isHidden(), "the count must appear"
 
         editor.setPlainText("abc\u200fdef")          # the text arrives later
         controller.refresh_invisible_banner()

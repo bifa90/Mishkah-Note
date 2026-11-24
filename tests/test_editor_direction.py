@@ -432,3 +432,35 @@ def test_status_chip_follows_the_caret_across_directions(qapp):
     _move_to_block(editor, 0)
     _move_to_block(editor, 1)
     assert LTR in seen
+
+
+def test_blank_paragraph_inherits_the_paragraph_above(qapp):
+    """Pressing Enter at the end of an English line keeps writing English."""
+    editor = make_editor(qapp, "hello\n", mode=AUTO)
+    _move_to_block(editor, 1)
+    assert editor.resolved_direction() == LTR
+    assert (editor.document().defaultTextOption().alignment()
+            & Qt.AlignmentFlag.AlignLeft)
+
+    editor.setPlainText("مرحبا\n")
+    _move_to_block(editor, 1)
+    assert editor.resolved_direction() == RTL
+
+
+def test_dragging_a_selection_does_not_realign_the_view(qapp):
+    editor = make_editor(qapp, "مرحبا\nhello", mode=AUTO)
+    _move_to_block(editor, 0)
+    assert (editor.document().defaultTextOption().alignment()
+            & Qt.AlignmentFlag.AlignRight)
+
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.Start)
+    cursor.movePosition(cursor.MoveOperation.End, cursor.MoveMode.KeepAnchor)
+    editor.setTextCursor(cursor)              # a drag across both paragraphs
+    assert (editor.document().defaultTextOption().alignment()
+            & Qt.AlignmentFlag.AlignRight), "a selection must not re-align"
+
+    cursor.clearSelection()
+    editor.setTextCursor(cursor)              # released at the English line
+    assert (editor.document().defaultTextOption().alignment()
+            & Qt.AlignmentFlag.AlignLeft)

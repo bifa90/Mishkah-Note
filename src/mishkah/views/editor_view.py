@@ -309,19 +309,34 @@ class EditorView(QPlainTextEdit):
         return _TO_QT_DIRECTION[self.document_direction()]
 
     def resolved_direction(self) -> str:
-        """What the status bar shows in ``auto`` mode.
+        """Direction of the paragraph the caret is in (``auto`` mode).
 
-        The caret's own paragraph wins; when that paragraph holds no strong
-        character (an empty line at the end of a file, a line of punctuation)
-        the document's opening text decides, so an Arabic file keeps saying
-        RTL instead of flipping to LTR just because the caret is on a blank
-        line.
+        Three rules, in this order:
+
+        1. the caret's own paragraph, from its first strong character;
+        2. a blank paragraph inherits the direction of the paragraph above it,
+           which is what happens when you press Enter at the end of an English
+           line — the new line keeps writing English instead of snapping back
+           to whatever the file happens to start with;
+        3. a document that is still neutral everywhere falls back to its
+           opening text, so an Arabic file says RTL even on an empty line.
         """
         if self._direction_mode != AUTO:
             return self._direction_mode
-        text = self.textCursor().block().text()
-        if first_strong_is_rtl(text) is not None:
-            return resolve_direction(text, AUTO)
+        block = self.textCursor().block()
+        text = block.text()
+        verdict = first_strong_is_rtl(text)
+        if verdict is not None:
+            return RTL if verdict else LTR
+        if not text.strip():
+            previous = block.previous()
+            hops = 0
+            while previous.isValid() and hops < 50:
+                verdict = first_strong_is_rtl(previous.text())
+                if verdict is not None:
+                    return RTL if verdict else LTR
+                previous = previous.previous()
+                hops += 1
         return dominant_direction(self._leading_text())
 
     def _leading_text(self, limit: int = SNIFF_CHARS) -> str:
@@ -980,7 +995,11 @@ class EditorView(QPlainTextEdit):
                                cursor.columnNumber() + 1,
                                len(cursor.selectedText()))
         if self._direction_mode == AUTO:
-            self._sync_auto_alignment()
+            # Dragging a selection across paragraphs would otherwise re-align
+            # the whole view on every pixel of the drag; the caret's paragraph
+            # wins again as soon as the selection is released.
+            if not cursor.hasSelection():
+                self._sync_auto_alignment()
             resolved = self.resolved_direction()
             if resolved != self._last_resolved:
                 self._last_resolved = resolved

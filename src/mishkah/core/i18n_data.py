@@ -240,6 +240,24 @@ STRINGS: Dict[str, S] = {
         "bn": "নথি {direction}", "pt": "documento {direction}",
         "ru": "документ {direction}", "ur": "دستاویز {direction}",
     },
+    "action.document_side_first_line": {
+        "en": "Align documents by their first line",
+        "ar": "محاذاة المستند حسب سطره الأول",
+        "zh-Hans": "按第一行对齐文档",
+        "hi": "दस्तावेज़ को उसकी पहली पंक्ति से संरेखित करें",
+        "es": "Alinear el documento según su primera línea",
+        "fr": "Aligner le document selon sa première ligne",
+        "bn": "নথিকে তার প্রথম লাইন অনুযায়ী সারিবদ্ধ করুন",
+        "pt": "Alinhar o documento pela primeira linha",
+        "ru": "Выравнивать документ по первой строке",
+        "ur": "دستاویز کو اس کی پہلی سطر کے مطابق سیدھ کریں",
+    },
+    "action.document_side_first_line_hint": {
+        "en": "The first line decides which side the whole document is aligned to; "
+              "each paragraph still follows its own script. Off by default (CD-20).",
+        "ar": "السطر الأول يحدد الجهة التي يُحاذى إليها المستند كله، وكل فقرة تبقى "
+              "مرتّبة حسب لغتها. معطّل افتراضيًا (CD-20).",
+    },
     "action.show_invisible": {
         "en": "Show invisible characters", "ar": "إظهار المحارف غير المرئية",
         "zh-Hans": "显示不可见字符", "hi": "अदृश्य वर्ण दिखाएँ",

@@ -202,3 +202,20 @@ def test_document_side_ignores_digits_and_punctuation():
     assert document_side("١٢٣٤٥ 67890 ...") == LTR
     assert document_side("مرحبا 12345") == RTL
     assert document_side("") == LTR
+
+
+def test_first_line_rule_skips_lines_without_letters():
+    """CD-20: a date or a blank line above the text decides nothing."""
+    assert document_side("2024-01-01\nمرحبا بالعالم", "first_line") == RTL
+    assert document_side("\n\nمرحبا\nhello", "first_line") == RTL
+    assert document_side("١٢٣٤٥\nhello there", "first_line") == LTR
+    assert document_side("111 ... ---\n", "first_line") == LTR
+
+
+def test_first_line_and_first_strong_agree_on_normal_text():
+    for text in ("hello\nمرحبا", "مرحبا\nhello", "abc\nعربي عربي عربي"):
+        assert document_side(text, "first_line") == document_side(text, "first_strong")
+
+
+def test_unknown_source_falls_back_to_the_previous_behaviour():
+    assert document_side("hello\nمرحبا", "nonsense") == document_side("hello\nمرحبا")

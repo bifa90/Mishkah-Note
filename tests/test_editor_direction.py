@@ -30,7 +30,7 @@ def _dispose_widgets(qapp):
         widget.deleteLater()
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
-from mishkah.core.text_direction import AUTO, LTR, RTL  # noqa: E402
+from mishkah.core.text_direction import AUTO, FIRST_LINE, FIRST_STRONG, LTR, RTL  # noqa: E402
 from mishkah.models.document import DocumentModel  # noqa: E402
 from mishkah.views.editor_view import (  # noqa: E402
     EditorView,
@@ -493,3 +493,69 @@ def test_caret_at_the_start_of_an_rtl_line_stays_visible(qapp):
     assert rect.right() <= width - 4, (rect, width)
     assert width - rect.right() >= 4, "no room on the right: the caret is clipped"
 
+
+
+def test_first_line_mode_re_decides_while_the_first_line_is_being_written(qapp):
+    """CD-20: the first line picks the side, until a second line exists."""
+    editor = make_editor(qapp, "", mode=AUTO)
+    editor.set_document_side_source(FIRST_LINE)
+    editor.insertPlainText("hello")
+    assert editor.document_side() == LTR
+    editor.selectAll()
+    editor.insertPlainText("مرحبا")
+    assert editor.document_side() == RTL
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+
+
+def test_first_line_mode_commits_once_the_document_has_two_lines(qapp):
+    editor = make_editor(qapp, "", mode=AUTO)
+    editor.set_document_side_source(FIRST_LINE)
+    editor.insertPlainText("مرحبا\nhello world")
+    assert editor.document_side() == RTL        # second line changes nothing
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+
+
+def test_the_previous_rule_commits_on_the_first_character(qapp):
+    """Default (first_strong): the first character decides for good."""
+    editor = make_editor(qapp, "", mode=AUTO)
+    assert editor.document_side_source() == FIRST_STRONG
+    editor.insertPlainText("hello")
+    editor.selectAll()
+    editor.insertPlainText("مرحبا")
+    assert editor.document_side() == LTR
+
+
+def test_emptying_the_buffer_makes_it_a_new_document(qapp):
+    for source in (FIRST_STRONG, FIRST_LINE):
+        editor = make_editor(qapp, "", mode=AUTO)
+        editor.set_document_side_source(source)
+        editor.insertPlainText("hello world")
+        assert editor.document_side() == LTR
+        editor.selectAll()
+        editor.insertPlainText("مرحبا بالعالم")
+        assert editor.document_side() == LTR, "old side survives until emptied"
+        editor.selectAll()
+        editor.insertPlainText("")
+        editor.insertPlainText("مرحبا")
+        assert editor.document_side() == RTL, "an empty buffer is a new document"
+
+
+def test_the_view_menu_switches_the_rule(qapp, tmp_path):
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.core.settings import Settings
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
+
+    settings = Settings(path=tmp_path / "settings.json", restore_session=False)
+    window = MainWindow()
+    controller = MainController(window, settings, FileService())
+    try:
+        editor = controller.new_document()
+        editor.insertPlainText("hello")
+        window.act_document_side.setChecked(True)
+        assert settings.document_side_source == FIRST_LINE
+        assert editor.document_side_source() == FIRST_LINE
+        window.act_document_side.setChecked(False)
+        assert settings.document_side_source == FIRST_STRONG
+    finally:
+        window.close()

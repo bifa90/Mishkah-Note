@@ -14,7 +14,13 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 from mishkah.core import i18n, syntax, tab_style
 from mishkah.core.languages import editor_font_families, get_language
 from mishkah.core.settings import Settings
-from mishkah.core.text_direction import AUTO, LTR, dominant_direction
+from mishkah.core.text_direction import (
+    AUTO,
+    FIRST_LINE,
+    FIRST_STRONG,
+    LTR,
+    dominant_direction,
+)
 from mishkah.models.document import DocumentModel
 from mishkah.services.file_service import FileService
 from mishkah.views.editor_view import EditorView
@@ -65,6 +71,7 @@ class MainController(QObject):
         w.word_wrap_toggled.connect(self.set_word_wrap)
         w.line_numbers_toggled.connect(self.set_line_numbers)
         w.show_invisible_toggled.connect(self.set_show_invisible_chars)
+        w.document_side_toggled.connect(self.set_document_side_first_line)
         w.status_bar_toggled.connect(w.status.setVisible)
         w.encoding_chosen.connect(self.reopen_with_encoding)
         w.line_ending_chosen.connect(self.set_line_ending)
@@ -161,6 +168,7 @@ class MainController(QObject):
         editor.set_word_wrap(self.settings.word_wrap)
         editor.set_line_numbers_visible(self.settings.line_numbers)
         editor.set_show_invisible_chars(self.settings.show_invisible_chars)
+        editor.set_document_side_source(self.settings.document_side_source)
         self._apply_editing_options(editor)
         editor.cursor_moved.connect(
             lambda line, col, sel: self.window.status.set_position(line, col, sel))
@@ -678,6 +686,13 @@ class MainController(QObject):
         for editor in self.window.editors():
             editor.set_line_numbers_visible(enabled)
 
+    def set_document_side_first_line(self, enabled: bool) -> None:
+        """CD-20: let the first line pick the side a document is aligned to."""
+        source = FIRST_LINE if enabled else FIRST_STRONG
+        self.settings.document_side_source = source
+        for editor in self.window.editors():
+            editor.set_document_side_source(source)
+
     def set_show_invisible_chars(self, enabled: bool) -> None:
         """Diagnostic overlay: mark formatting characters, never edit them."""
         self.settings.show_invisible_chars = enabled
@@ -875,12 +890,15 @@ class MainController(QObject):
             editor.set_word_wrap(self.settings.word_wrap)
             editor.set_line_numbers_visible(self.settings.line_numbers)
             editor.set_show_invisible_chars(self.settings.show_invisible_chars)
+            editor.set_document_side_source(self.settings.document_side_source)
 
         self.window.act_word_wrap.setChecked(self.settings.word_wrap)
         self.window.act_line_numbers.setChecked(self.settings.line_numbers)
         self.window.status.setVisible(self.settings.show_status_bar)
         self.window.set_line_numbers_visible(self.settings.line_numbers)
         self.window.set_show_invisible_chars(self.settings.show_invisible_chars)
+        self.window.set_document_side_first_line(
+            self.settings.document_side_source == FIRST_LINE)
         self.window.set_word_wrap_enabled(self.settings.word_wrap)
 
         self.window.set_typing_menu_state(

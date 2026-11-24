@@ -231,6 +231,7 @@ class MainWindow(QMainWindow):
     word_wrap_toggled = Signal(bool)
     line_numbers_toggled = Signal(bool)
     show_invisible_toggled = Signal(bool)
+    document_side_toggled = Signal(bool)
     status_bar_toggled = Signal(bool)
     encoding_chosen = Signal(str)
     line_ending_chosen = Signal(str)
@@ -388,6 +389,11 @@ class MainWindow(QMainWindow):
             checkable=True, checked=False)
         self.act_show_invisible.setToolTip(tr("action.show_invisible_hint"))
         self.act_show_invisible.toggled.connect(self.show_invisible_toggled)
+        self.act_document_side = self._action(
+            m_view, tr("action.document_side_first_line"), None, None,
+            checkable=True, checked=False)
+        self.act_document_side.setToolTip(tr("action.document_side_first_line_hint"))
+        self.act_document_side.toggled.connect(self.document_side_toggled)
         m_view.addSeparator()
         self.act_syntax = self._action(m_view, tr("action.syntax"),
                                        None, "Ctrl+Shift+H",
@@ -724,6 +730,12 @@ class MainWindow(QMainWindow):
         blocked = self.act_line_numbers.blockSignals(True)
         self.act_line_numbers.setChecked(visible)
         self.act_line_numbers.blockSignals(blocked)
+
+    def set_document_side_first_line(self, enabled: bool) -> None:
+        """Keep View ▸ Align by first line in sync with settings (CD-20)."""
+        blocked = self.act_document_side.blockSignals(True)
+        self.act_document_side.setChecked(enabled)
+        self.act_document_side.blockSignals(blocked)
 
     def set_show_invisible_chars(self, visible: bool) -> None:
         """Keep View ▸ Show invisible characters in sync with settings."""

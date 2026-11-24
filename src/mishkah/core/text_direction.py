@@ -133,21 +133,40 @@ def dominant_direction(text: str, limit: int = SNIFF_CHARS) -> str:
     return RTL if first_strong_is_rtl(text[:limit]) else LTR
 
 
-def document_side(text: str, limit: int = SNIFF_CHARS * 16) -> str:
-    """Which side a *document* belongs to, decided once and then left alone.
+FIRST_STRONG = "first_strong"
+FIRST_LINE = "first_line"
 
-    The first strong character answers the question — the same P2 rule the
-    paragraphs follow — applied to the start of the file instead of the start
-    of the line.  A file that opens in English is an English document that
-    happens to contain Arabic, and it is aligned the way it starts; that is
-    what every other editor does and what a reader expects from the first
-    line they see.
+VALID_SIDE_SOURCES = (FIRST_STRONG, FIRST_LINE)
 
-    Digits and punctuation carry no direction and are skipped, so ``١٢٣ hello``
-    is a left-to-right document and ``123 مرحبا`` is a right-to-left one.
-    A document with no strong character at all falls back to LTR (P3).
+
+def document_side(text: str, source: str = FIRST_STRONG,
+                  limit: int = SNIFF_CHARS * 16) -> str:
+    """Which side a *document* is aligned to, decided once and left alone.
+
+    Two rules, and the difference between them is the whole point of CD-20:
+
+    ``first_strong`` (default, the 1.0.01 behaviour)
+        the first strong character in the file, skipping numbers and
+        punctuation.  Stable from the first keystroke of an empty buffer.
+
+    ``first_line``
+        the direction of the first *line* that reads in some direction.  A
+        leading blank line, a bare date or a line of digits is skipped and the
+        first line carrying letters decides.  In the editor this rule also
+        keeps re-deciding while the buffer is still a single line, so the
+        first line you are writing is the one that sets the side.
+
+    Neither rule may be moved by the caret: a document gets one side, chosen
+    from its beginning (see CD-17).  Paragraph order is always Qt's business.
     """
-    return RTL if first_strong_is_rtl(text[:limit]) else LTR
+    sample = text[:limit]
+    if source != FIRST_LINE:
+        return RTL if first_strong_is_rtl(sample) else LTR
+    for line in sample.splitlines():
+        verdict = first_strong_is_rtl(line)
+        if verdict is not None:
+            return RTL if verdict else LTR
+    return LTR
 
 
 def is_rtl_text(text: str) -> bool:

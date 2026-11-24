@@ -51,6 +51,9 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
     "show_invisible_chars": (_BOOL, None),
     # direction
     "default_direction": (_ENUM, (AUTO, RTL, LTR)),
+    #: How a whole document's alignment is decided (CD-20).  "first_strong"
+    #: is the 1.0.01 behaviour and stays the default; "first_line" is opt-in.
+    "document_side_source": (_ENUM, ("first_strong", "first_line")),
     # editing conveniences
     "auto_close_brackets": (_BOOL, None),
     "auto_indent": (_BOOL, None),
@@ -100,6 +103,12 @@ class Settings:
 
     # text direction: "auto" keeps Qt's per-paragraph resolution
     default_direction: str = AUTO
+    #: Which rule decides the side a whole document is aligned to (CD-20):
+    #: "first_strong" = the first strong character anywhere (the previous
+    #: behaviour, kept as the default), "first_line" = the first line that
+    #: reads in either direction, re-decided while the first line is the only
+    #: line.  Neither touches Qt's per-paragraph ordering.
+    document_side_source: str = "first_strong"
 
     # editing conveniences
     auto_close_brackets: bool = True

@@ -42,6 +42,8 @@ from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit
 from mishkah.core import autocomplete, syntax
 from mishkah.core.text_direction import (
     AUTO,
+    FIRST_LINE,
+    FIRST_STRONG,
     LTR,
     RTL,
     SNIFF_CHARS,
@@ -136,6 +138,9 @@ class EditorView(QPlainTextEdit):
         self._direction_mode = document.direction_mode or AUTO
         self._last_resolved = ""
         self._document_side = None
+        self._side_source = FIRST_STRONG      # CD-20, set from the settings
+        self._side_locked = False             # "first_line" keeps re-deciding
+        self._side_updating = False           # guards against re-entry
         self._chord = _ChordState()
 
         # --- editing conveniences -------------------------------------------
@@ -199,6 +204,7 @@ class EditorView(QPlainTextEdit):
         self.setPlainText(text)
         self.document().setModified(False)
         self._document_side = None          # a new buffer gets a new decision
+        self._side_locked = True            # a loaded file is not "one line"
         self._sync_auto_alignment()
         self._emit_stats()
 
@@ -289,26 +295,58 @@ class EditorView(QPlainTextEdit):
         Reported after the second hands-on test: following the caret flipped
         the whole document every time the caret crossed a paragraph, which is
         far worse than a minority line sitting on the "wrong" side.  So the
-        side is now chosen from the document (a majority of its strong
-        characters, see ``document_side``), refreshed only when the document
-        itself is replaced or when its first strong character appears in an
-        empty buffer, and never while the caret moves.
+        side is chosen from the document's beginning (``document_side``), and
+        never while the caret moves.
+
+        With ``first_line`` (CD-20) the choice stays open *while the buffer is
+        a single line*: the first line you are typing is the one that decides,
+        so starting a paragraph in another script flips the side until a
+        second line exists.  From then on the document is committed.
         """
-        if self._direction_mode != AUTO:
+        if self._direction_mode != AUTO or self._side_updating:
             return
+        if self.document().isEmpty():
+            # An emptied buffer is a new document: nothing is committed yet.
+            self._document_side = None
+            self._side_locked = False
+            return
+        if (self._document_side is not None and not self._side_locked
+                and self._side_source == FIRST_LINE
+                and self.document().blockCount() <= 1):
+            self._document_side = None      # still on the first line: re-decide
         if self._document_side is None:
             self._lock_document_side()
+
+    def set_document_side_source(self, source: str) -> None:
+        """Switch between the two ways of choosing a document's side (CD-20)."""
+        source = source if source in (FIRST_LINE, FIRST_STRONG) else FIRST_STRONG
+        if source == self._side_source:
+            return
+        self._side_source = source
+        self._document_side = None
+        self._side_locked = False
+        self._sync_auto_alignment()
+
+    def document_side_source(self) -> str:
+        return self._side_source
 
     def _lock_document_side(self) -> None:
         """Choose the side for this document (only called when unlocked)."""
         text = self._leading_text(limit=SNIFF_CHARS * 16)
         if first_strong_is_rtl(text) is None:
             return                          # still neutral: nothing to decide
-        self._document_side = document_side(text)
-        self._apply_alignment(self._document_side)
-        self._update_gutter_width(0)
-        self._place_gutter()
-        self.viewport().update()
+        side = document_side(text, self._side_source)
+        self._side_locked = not (self._side_source == FIRST_LINE
+                                 and self.document().blockCount() <= 1)
+        self._side_updating = True
+        try:
+            self._document_side = side
+            self._apply_alignment(side)
+            self._update_gutter_width(0)
+            self._place_gutter()
+            self.viewport().update()
+        finally:
+            self._side_updating = False
 
     def document_side(self) -> str:
         """The side this document is laid out on (``rtl`` or ``ltr``)."""

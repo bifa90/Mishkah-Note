@@ -494,10 +494,17 @@ class MainController(QObject):
         doc.fmt = fmt
         doc.size_on_disk = size
         doc.truncated = truncated
-        doc.is_modified = False
         doc.revision += 1
         doc.disk_signature = stat_signature(doc.path)
-        editor.load_content(text)
+        # Loading the buffer emits textChanged; without this the fresh content
+        # would be marked as an edit of itself.
+        editor.blockSignals(True)
+        try:
+            editor.load_content(text)
+        finally:
+            editor.blockSignals(False)
+        doc.is_modified = False
+        editor.document().setModified(False)
         editor.apply_direction(doc.direction_mode or AUTO, announce=False)
         self.window.set_tab_title(editor, self._doc_title(doc), False)
         self._sync_ui(editor)

@@ -9,7 +9,7 @@ import pytest
 from mishkah.core.settings import Settings
 from mishkah.core.text_direction import AUTO, LTR, RTL
 
-pytestmark = pytest.mark.usefixtures("qapp")
+pytestmark = [pytest.mark.gui, pytest.mark.usefixtures("qapp")]
 
 
 @pytest.fixture()

@@ -1,0 +1,1782 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مِشكاة — قرارات الإصدار 1.0.02 (مغلقة)</title>
+<style>
+*{box-sizing:border-box}
+:root{
+  --bg:#f6f6f3;--card:#ffffff;--ink:#17181a;--mut:#5d6268;--line:#e2e2da;
+  --acc:#0b5fa5;--acc-soft:#e9f1fa;--rec:#0d7a52;--rec-soft:#e6f4ec;--rec-line:#1a8a5e;
+  --p0:#b3261e;--p1:#9a5b00;--p2:#46596b;
+  --shadow:0 1px 2px rgba(0,0,0,.05),0 10px 28px -20px rgba(0,0,0,.28);
+}
+@media (prefers-color-scheme:dark){
+  :root{--bg:#11130f;--card:#191c17;--ink:#eceee7;--mut:#a3a99f;--line:#2b2f29;
+    --acc:#8cbde9;--acc-soft:#16283a;--rec:#68d6a8;--rec-soft:#122c1e;--rec-line:#3fae83;
+    --p0:#ff918a;--p1:#eab168;--p2:#9db0bf;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 30px -22px rgba(0,0,0,.9);}
+}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans Arabic","Noto Naskh Arabic","Segoe UI",Tahoma,-apple-system,system-ui,sans-serif;
+  font-size:16px;line-height:1.8;-webkit-text-size-adjust:100%}
+a{color:var(--acc)}
+.wrap{max-width:1080px;margin:0 auto;padding:0 20px}
+
+/* ---------- header ---------- */
+header.top{position:sticky;top:0;z-index:50;background:var(--bg);background:color-mix(in srgb,var(--bg) 88%,transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.top-in{max-width:1080px;margin:0 auto;padding:12px 20px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.brand{display:flex;flex-direction:column;gap:2px;min-width:210px}
+.brand b{font-size:19px;letter-spacing:-.2px}
+.brand span{font-size:12.5px;color:var(--mut)}
+.grow{flex:1}
+.meter{display:flex;align-items:center;gap:10px;min-width:220px}
+.bar{position:relative;flex:1;height:8px;background:var(--line);border-radius:99px;overflow:hidden}
+.bar i{position:absolute;inset-inline-start:0;top:0;bottom:0;width:0%;background:var(--rec-line);border-radius:99px;transition:width .25s}
+.meter b{font-variant-numeric:tabular-nums;font-size:13px;color:var(--mut);white-space:nowrap}
+.btns{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;font-size:13.5px;padding:7px 13px;border-radius:9px;border:1px solid var(--line);
+  background:var(--card);color:var(--ink);cursor:pointer;transition:.15s}
+button:hover{border-color:var(--acc);color:var(--acc)}
+button.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+button.primary:hover{filter:brightness(1.08);color:#fff}
+button.ghost{background:transparent}
+
+.closedbar{margin:26px 0 0;padding:14px 16px;border:1px solid var(--rec-line);background:var(--rec-soft);border-radius:13px;font-size:14.4px;line-height:1.75}
+.closedbar b{color:var(--rec-line)}
+.closedbar code{background:transparent;border:1px solid var(--rec-line);color:var(--rec-line)}
+
+/* ---------- hero ---------- */
+.hero{padding:34px 0 10px}
+.hero h1{font-size:30px;line-height:1.35;margin:0 0 10px;letter-spacing:-.4px}
+.hero p{margin:0 0 10px;color:var(--mut);max-width:74ch}
+.pills{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.pill{font-size:12.5px;padding:4px 10px;border-radius:99px;background:var(--acc-soft);color:var(--acc);border:1px solid transparent}
+.pill.warn{background:transparent;border-color:var(--line);color:var(--mut)}
+
+/* ---------- toc ---------- */
+nav.toc{margin:22px 0 34px;padding:16px 18px;background:var(--card);border:1px solid var(--line);border-radius:14px;box-shadow:var(--shadow)}
+nav.toc b{display:block;font-size:13px;color:var(--mut);margin-bottom:8px;letter-spacing:.3px}
+nav.toc ol{margin:0;padding-inline-start:20px;columns:2;column-gap:28px;font-size:14.5px}
+@media (max-width:720px){nav.toc ol{columns:1}}
+nav.toc li{margin:3px 0;break-inside:avoid}
+nav.toc a{text-decoration:none}
+nav.toc a:hover{text-decoration:underline}
+
+/* ---------- sections ---------- */
+section{margin:0 0 46px;scroll-margin-top:96px}
+section>h2{font-size:22px;margin:0 0 6px;letter-spacing:-.2px}
+section>h2 .num{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;
+  background:var(--acc);color:#fff;font-size:14px;margin-inline-end:9px;vertical-align:2px}
+.lede{color:var(--mut);margin:0 0 20px;max-width:80ch;font-size:15px}
+
+/* ---------- decision card ---------- */
+.decision{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 20px 18px;
+  margin:0 0 18px;box-shadow:var(--shadow);scroll-margin-top:96px;transition:border-color .2s}
+.decision.answered{border-color:var(--rec-line)}
+.d-head{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.d-id{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;font-weight:700;letter-spacing:.5px;
+  padding:3px 8px;border-radius:7px;background:var(--acc-soft);color:var(--acc)}
+.d-head h3{font-size:18px;margin:0;line-height:1.5;flex:1;min-width:220px}
+.sev{font-size:11.5px;padding:2px 8px;border-radius:99px;border:1px solid currentColor;white-space:nowrap}
+.sev-p0{color:var(--p0)}.sev-p1{color:var(--p1)}.sev-p2{color:var(--p2)}
+.src{font-size:12px;color:var(--mut);margin:0 0 12px}
+.src i{font-style:normal;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:1px 6px;margin-inline-end:5px;display:inline-block;margin-bottom:4px}
+.facts{font-size:14.6px;margin:0 0 16px;padding:12px 14px;background:var(--bg);border-radius:11px;border:1px dashed var(--line);color:var(--ink)}
+.facts b{color:var(--acc)}
+code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.9em;background:var(--acc-soft);color:var(--acc);padding:1px 5px;border-radius:5px;direction:ltr;display:inline-block}
+
+/* ---------- options ---------- */
+.opts{display:flex;flex-direction:column;gap:9px}
+.opt{display:flex;gap:12px;align-items:flex-start;padding:11px 13px;border:1px solid var(--line);border-radius:11px;
+  cursor:pointer;transition:.15s;background:var(--card)}
+.opt:hover{border-color:var(--acc)}
+.opt input{margin:6px 0 0;width:17px;height:17px;accent-color:var(--rec-line);flex:none;cursor:pointer}
+.opt-body{display:flex;flex-direction:column;gap:3px}
+.opt-head{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:15px}
+.opt-desc{font-size:14.4px;color:var(--ink)}
+.opt-conseq{font-size:13.6px;color:var(--mut)}
+.opt-conseq b{color:var(--ink);font-weight:600}
+.opt.rec{border-color:var(--rec-line);background:var(--rec-soft);box-shadow:inset 3px 0 0 var(--rec-line)}
+.rec-badge{font-size:11.5px;font-weight:700;color:#fff;background:var(--rec-line);padding:2px 8px;border-radius:99px;white-space:nowrap}
+.opt:has(input:checked){border-color:var(--rec-line);box-shadow:inset 3px 0 0 var(--rec-line)}
+.opt:has(input:checked).rec{background:var(--rec-soft)}
+.opt:has(input:checked):not(.rec){background:var(--acc-soft)}
+
+/* ---------- custom answer ---------- */
+.custom-row{margin-top:14px;padding-top:13px;border-top:1px dashed var(--line)}
+.custom-label{display:block;font-size:13px;color:var(--mut);margin-bottom:6px}
+textarea{width:100%;font:inherit;font-size:14.2px;line-height:1.7;padding:10px 12px;border-radius:10px;
+  border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:vertical;min-height:66px}
+textarea:focus{outline:2px solid var(--acc);outline-offset:1px;border-color:transparent}
+textarea::placeholder{color:var(--mut);opacity:.75}
+
+/* ---------- tables ---------- */
+.tablewrap{overflow-x:auto;border:1px solid var(--line);border-radius:13px;background:var(--card);box-shadow:var(--shadow)}
+table{width:100%;border-collapse:collapse;font-size:14px;min-width:720px}
+th,td{padding:10px 12px;text-align:start;vertical-align:top;border-bottom:1px solid var(--line)}
+th{background:var(--bg);font-size:12.5px;color:var(--mut);font-weight:600;white-space:nowrap}
+tr:last-child td{border-bottom:0}
+.st{white-space:nowrap;font-weight:700;font-size:13px}
+.st-ok{color:var(--rec-line)}.st-no{color:var(--p0)}.st-part{color:var(--p1)}
+
+/* ---------- closed decisions ---------- */
+details.closed{background:var(--card);border:1px solid var(--line);border-radius:13px;padding:12px 15px;margin-bottom:9px}
+details.closed summary{cursor:pointer;font-size:15px;list-style:none;display:flex;gap:9px;align-items:center;flex-wrap:wrap}
+details.closed summary::-webkit-details-marker{display:none}
+details.closed summary::after{content:"▾";margin-inline-start:auto;color:var(--mut);font-size:12px}
+details.closed[open] summary::after{content:"▴"}
+details.closed .cd-body{font-size:14.2px;color:var(--mut);margin-top:9px;padding-top:9px;border-top:1px dashed var(--line)}
+details.closed .cd-body b{color:var(--ink)}
+
+/* ---------- recommendation summary ---------- */
+.reco{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+.reco ol{margin:8px 0 0;padding-inline-start:20px;font-size:14.4px;columns:2;column-gap:30px}
+@media (max-width:760px){.reco ol{columns:1}}
+.reco li{margin:4px 0;break-inside:avoid}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);margin-top:10px;padding:26px 0 60px;color:var(--mut);font-size:13.5px}
+.toast{position:fixed;inset-inline-start:50%;transform:translateX(-50%) translateY(120%);bottom:24px;background:var(--ink);
+  color:var(--bg);padding:10px 18px;border-radius:11px;font-size:14px;transition:.3s;z-index:99;box-shadow:var(--shadow);max-width:90vw}
+.toast.on{transform:translateX(-50%) translateY(0)}
+.hint{font-size:13px;color:var(--mut);margin:8px 0 0}
+.warnbox{background:var(--card);border:1px solid var(--p1);border-radius:13px;padding:14px 16px;font-size:14.4px;margin:0 0 22px}
+.warnbox b{color:var(--p1)}
+
+/* ---------- print ---------- */
+@media print{
+  header.top,nav.toc,.btns,.toast,.custom-row,footer .noprint{display:none!important}
+  body{background:#fff;color:#000;font-size:12.5px}
+  .decision,.tablewrap,.reco,details.closed{box-shadow:none;break-inside:avoid;border-color:#bbb}
+  .opt.rec{background:#f0f7f2!important;border-color:#1a8a5e!important}
+  section{break-before:auto}
+  a{color:#000;text-decoration:none}
+}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="top-in">
+    <div class="brand">
+      <b>مِشكاة — نموذج قرارات 1.0.02</b>
+      <span>مغلق · 27/27 · 30 قرارًا نهائيًا</span>
+    </div>
+    <div class="meter">
+      <div class="bar"><i id="bar"></i></div>
+      <b id="score">0 / 27</b>
+    </div>
+    <div class="btns">
+      <button class="primary" onclick="exportDecisions()">تصدير قراري (MD)</button>
+      <button onclick="copyDecisions()">نسخ</button>
+      <button class="ghost" onclick="window.print()">طباعة / PDF</button>
+      <button class="ghost" onclick="applyRecommended()">اعتماد كل التوصيات</button>
+      <button class="ghost" onclick="resetAll()">تفريغ</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap">
+
+<div class="closedbar">
+  <b>أُغلق التصويت.</b> حُسمت القرارات الـ27 في 23 نوفمبر 2026 ودُمجت في سجل واحد مغلق: <code>docs/DECISIONS_1.0.02.ar.md</code> (30 قرارًا: 13 أصليًا + 15 جديدًا + حزمة إصلاحات + قائمة مؤجّلة). هذا الملف يبقى سجلًا للتصويت والتوصيات ولا يُعدّ مصدرًا تنفيذيًا. نتيجة تدقيق التعارضات: 9 تعارضات، كلها محلولة — <code>docs/CONFLICT_AUDIT_1.0.02.ar.md</code>.
+</div>
+
+<div class="hero">
+  <h1>كل قرار يُعرض سؤالًا واحدًا، وجميع المقترحات خيارات، والتوصية معلّمة داخل الخيارات</h1>
+  <p>هذا الملف هو <b>ورقة التصويت</b> لمرحلة القرار في الإصدار <code>1.0.02</code>. لم يُعدَّل أي ملف مصدري، ولم يُرفع رقم الإصدار، ولم يُنشر شيء: كل ما هنا قرارات تنتظر اختيارك. الخيار المعلَّم بـ<span class="rec-badge">★ توصية المشروع</span> هو ما أراه متسقًا مع حالتك الحالية، وليس قرارًا نافذًا.</p>
+  <p>بنودك الثلاثة عشر قرارات مغلقة ولا يُعاد فتحها؛ لكن خمسة تقارير خارجية أضافت ادعاءات جديدة. دقّقتُ كل ادعاء على الكود الفعلي: <b>تسعة ادعاءات مؤكدة</b>، و<b>اثنان صحيحان جزئيًا</b>، و<b>أربعة غير صحيحة</b> — والتفصيل في جدول التدقيق أدناه. الادعاءات الصحيحة صارت قرارات جديدة (OD-13 … OD-27)، والادعاءات غير الصحيحة لم تُحوَّل إلى قرارات، كي لا نصلح ما ليس معطوبًا.</p>
+  <div class="pills">
+    <span class="pill">1.0.01 هو الإصدار المنشور الوحيد</span>
+    <span class="pill">27 موضعًا يذكر 1.0.01 · 111 إشارة</span>
+    <span class="pill warn">0 نجوم · 0 تفرعات · 0 Issues مفتوحة</span>
+    <span class="pill warn">لا اختبارات واجهة تعمل هنا (libGL مفقود)</span>
+  </div>
+</div>
+
+<nav class="toc">
+  <b>محتويات الملف</b>
+  <ol>
+    <li><a href="#howto">كيف تستخدم هذا الملف</a></li>
+    <li><a href="#audit">تدقيق ادعاءات المقيّمين الخمسة</a></li>
+    <li><a href="#closed">القرارات المغلقة (CD-01 … CD-13)</a></li>
+    <li><a href="#sec1">القسم 1 — بوابة الإصدار والسياسة</a></li>
+    <li><a href="#sec2">القسم 2 — العربية والاتجاه</a></li>
+    <li><a href="#sec3">القسم 3 — سلامة البيانات</a></li>
+    <li><a href="#sec4">القسم 4 — المحرّر والأداء</a></li>
+    <li><a href="#sec5">القسم 5 — الواجهة والتفاعل</a></li>
+    <li><a href="#sec6">القسم 6 — ميزات قادمة</a></li>
+    <li><a href="#sec7">القسم 7 — التوزيع والتوثيق والجودة</a></li>
+    <li><a href="#reco">خلاصة التوصيات</a></li>
+  </ol>
+</nav>
+
+<!-- ============ HOW TO ============ -->
+<section id="howto">
+  <h2><span class="num">؟</span>كيف تستخدم هذا الملف</h2>
+  <p class="lede">الهدف أن تنتهي الجولة الأولى وأنت قد حسمت 27 قرارًا في أقل من نصف ساعة، دون أن تحتاج إلى فتح الكود.</p>
+  <div class="warnbox">
+    <b>ثلاث خطوات فقط:</b> (1) اقرأ «الخلفية المحقّقة» في كل بطاقة — كلها مأخوذة من الكود لا من رأي. (2) اختر خيارًا واحدًا، أو اكتب قرارك في الصندوق الفارغ أسفل البطاقة (كتابتك تتقدّم على الخيارات عند التصدير). (3) اضغط «تصدير قراري» في الأعلى وسلّمني الملف الناتج؛ سأحوّله إلى خطة تنفيذ بموجات W1–W4.
+  </div>
+  <p class="hint">ما تكتبه أو تختاره يُحفظ تلقائيًا في متصفحك (localStorage) بنفس الجهاز، ويبقى بعد إغلاق الصفحة. الأزرار في الأعلى: تصدير، نسخ، طباعة/PDF، «اعتماد كل التوصيات» (لتعبئة سريعة ثم تعديل ما تشاء)، وتفريغ. القرارات المغلقة (CD) للعرض فقط ولا تُختار.</p>
+</section>
+
+<!-- ============ AUDIT ============ -->
+<section id="audit">
+  <h2><span class="num">1</span>تدقيق ادعاءات المقيّمين الخمسة</h2>
+  <p class="lede">قبل أن يصبح أي ادعاء قرارًا، شغّلتُه على الكود. القاعدة: ما لا يُثبت لا يدخل قائمة العمل. الحالة تعني: هل الادعاء صحيح كما صيغ؟</p>
+  <div class="tablewrap">
+  <table>
+    <thead><tr><th>الادعاء</th><th>المصدر</th><th>الحالة</th><th>ما وجدناه فعلًا</th></tr></thead>
+    <tbody>
+      <tr><td>خوارزمية الاتجاه تعتمد نطاقات أرقام بدل Unicode Bidi، فتخطئ في خلط الأرقام بالعربية</td><td>مقيّم 4</td><td class="st st-ok">مؤكد (P0)</td><td><code>123 مرحبا</code> ← LTR (يجب RTL) · <code>١٢٣ hello</code> ← RTL (يجب LTR) · <code>، hello</code> ← RTL والترقيم يجب ألا يحكم</td></tr>
+      <tr><td><code>Settings.load</code> لا يتحقق من الأنواع وينهار على بنية غير متوقعة</td><td>مقيّم 4</td><td class="st st-ok">مؤكد (P1)</td><td>ملف يحتوي <code>[]</code> ← <code>AttributeError</code>؛ و<code>font_size:"abc"</code> و<code>tab_width:-5</code> و<code>theme:3</code> تُقبل بصمت</td></tr>
+      <tr><td><code>SECURITY.md</code> يعلن دعم <code>2.0.x</code> فقط بينما 1.0.01 هو الإصدار الوحيد</td><td>مقيّم 4</td><td class="st st-ok">مؤكد</td><td>وثيقة الأمان تكذّب الواقع المنشور؛ تُصلَح مع رفع الإصدار لا بعده</td></tr>
+      <tr><td>لا مراقب ملفات، والحفظ يستبدل تعديلات خارجية بلا تحذير</td><td>مقيّم 1 و4</td><td class="st st-ok">مؤكد</td><td>لا <code>QFileSystemWatcher</code> ولا مقارنة <code>st_mtime</code> قبل الكتابة؛ والحفظ التلقائي سيجعل الاستبدال آليًا</td></tr>
+      <tr><td>عيّنة الترميز (64 KiB) تُخطئ في ملف يبدأ ASCII ثم عربي بـ cp1256</td><td>مقيّم 4</td><td class="st st-ok">مؤكد</td><td>الكشف يعطي utf-8، ثم تُفكّ بايتات cp1256 إلى <code>&#xFFFD;&#xFFFD;</code>: نص مشوّه <b>صامت</b> لا خطأ ظاهر</td></tr>
+      <tr><td>الاختبارات لا تختبر السلوك وتثبّت توقعات خاطئة</td><td>مقيّم 4</td><td class="st st-ok">مؤكد</td><td><code>test_widgets.py:31-32</code> توتولوجي؛ و<code>test_text_direction.py:80</code> يثبّت <code>١٢٣٤٥</code> ← RTL وهو خطأ</td></tr>
+      <tr><td><code>Ctrl+T</code> يجب أن يكون تبويبًا جديدًا لكنه «فوق التطبيقات»</td><td>مقيّم 1</td><td class="st st-ok">مؤكد + تعارض إضافي</td><td>وجدنا تعارضًا لم يذكره أحد: <code>Ctrl+P</code> مربوط بـ«تثبيت التبويب» وبـ<code>StandardKey.Print</code> معًا</td></tr>
+      <tr><td>البحث/الاستبدال لا يدعم التعابير النمطية (regex)</td><td>مقيّم 3</td><td class="st st-no">غير صحيح</td><td>مدعوم فعلًا (<code>use_regex</code> + <code>QRegularExpression</code>)؛ العيب الحقيقي أن <b>الاستبدال</b> يتجاهل whole_word/regex (البند B3)</td></tr>
+      <tr><td>المحرّر يستخدم <code>QTextEdit</code> الثقيل بدل <code>QPlainTextEdit</code></td><td>مقيّم 3</td><td class="st st-no">غير صحيح</td><td><code>editor_view</code> يرث <code>QPlainTextEdit</code> أصلًا</td></tr>
+      <tr><td>لا قناة Issues عامة للتواصل</td><td>مقيّم 3</td><td class="st st-no">غير صحيح</td><td><code>has_issues=true</code> ومفتوحة (0 Issues مفتوحة)؛ المشكلة في غياب الجمهور لا في الإعداد</td></tr>
+      <tr><td>لقطات الشاشة مفقودة أو روابطها مكسورة في README</td><td>مقيّم 1</td><td class="st st-no">غير صحيح</td><td>الصور الست موجودة في <code>docs/images/</code> ومسارات README صحيحة</td></tr>
+      <tr><td>أخطاء إملائية في أوامر README (<code>msiexec</code> / <code>venv</code>)</td><td>مقيّم 2</td><td class="st st-no">غير صحيح</td><td>السطران سليمان تمامًا (السطر 152 والسطر 160)</td></tr>
+      <tr><td>«31 commit» ومساهم آلي</td><td>مقيّم 5</td><td class="st st-no">غير صحيح</td><td>تاريخ الريبو في هذه النسخة commit واحد؛ المساهمون: المطوّر + بوت/مرآة</td></tr>
+      <tr><td>Flatpak يطلب <code>--filesystem=home</code>، وAppImage يعتمد على بايثون النظام</td><td>مقيّم 4</td><td class="st st-ok">مؤكد</td><td>كلاهما في ملفات الحزم؛ يظهران كقرارَي OD-24 وOD-23</td></tr>
+      <tr><td>README يوثّق <code>Ctrl+H</code>/<code>Ctrl+Y</code> مخالفًا سلوك KDE</td><td>مقيّم 4</td><td class="st st-part">صحيح جزئيًا</td><td>التوثيق مطابق للكود، والمشكلة أن الافتراضي واحد لكل البيئات؛ الحل في OD-19 وCD-08/CD-10</td></tr>
+    </tbody>
+  </table>
+  </div>
+  <p class="hint">خلاصة التدقيق: <b>من 15 ادعاءً، 9 مؤكدة و2 صحيحة جزئيًا و4 غير صحيحة.</b> لذلك لم تُحوَّل ادعاءات الصور والإملاء وQTextEdit وregex إلى قرارات — لكن عيوبها الحقيقية (مثل B3) باقية في قائمة الإصلاح.</p>
+</section>
+
+<!-- ============ CLOSED ============ -->
+<section id="closed">
+  <h2><span class="num">2</span>القرارات المغلقة — للمرجع فقط</h2>
+  <p class="lede">هذه بنودك الثلاثة عشر. لا تُصوَّت ولا يُعاد فتحها؛ أُدرجت هنا ليعرف أي قرار مفتوح يتقاطع معها. التفاصيل الكاملة ومعايير القبول في <code>docs/DECISIONS_1.0.02.ar.md</code>.</p>
+
+  <details class="closed"><summary><b>CD-01</b> حفظ تلقائي — <span style="color:var(--mut);font-size:13.5px">مُعطَّل افتراضيًا</span></summary>
+    <div class="cd-body">تأخير 2 ثانية بعد آخر تعديل + عند تبديل التبويب/إغلاق النافذة. لا يحفظ الملفات غير المسماة. <b>يتقاطع مع:</b> OD-16 (التعديل الخارجي) — الحفظ التلقائي بلا حارس = فقدان صامت.</div></details>
+
+  <details class="closed"><summary><b>CD-02</b> شريط تمرير في نافذة الإعدادات</summary>
+    <div class="cd-body">النافذة الحالية بلا <code>QScrollArea</code>؛ تُضاف عند نمو الأقسام. لا أثر خارجي.</div></details>
+
+  <details class="closed"><summary><b>CD-03</b> إغلاق تلقائي للأقواس <code>( [ " {</code></summary>
+    <div class="cd-body">المؤشر بين القوسين، ويُتخطّى إذا وُجد قوس مفتوح غير مغلق. <b>يتقاطع مع:</b> OD-06 (حدود المسح) وOD-12 (الترقيم).</div></details>
+
+  <details class="closed"><summary><b>CD-04</b> أيقونة المستند مشتقة من أيقونة التطبيق (ورقة مسطّرة + كوي)</summary>
+    <div class="cd-body">ثلاثة مقاسات 16/32/64 مع نسخة داكنة. تحتاج تحققًا بصريًا على الشاشة.</div></details>
+
+  <details class="closed"><summary><b>CD-05</b> حصر الملفات النصية القابلة للفتح</summary>
+    <div class="cd-body">قائمة امتدادات + فحص محتوى + سلوك رفض واضح. <b>يتقاطع مع:</b> OD-08 (تُعدَّل القائمة) وOD-20 (السحب والإفلات).</div></details>
+
+  <details class="closed"><summary><b>CD-06</b> إغلاق آخر تبويب ← شاشة البداية (الافتراضي)</summary>
+    <div class="cd-body">قابل للتبديل إلى «إنهاء التطبيق». يحتاج تحديد السلوك عند «ملف جديد» غير محفوظ. <b>يتقاطع مع:</b> OD-09.</div></details>
+
+  <details class="closed"><summary><b>CD-07</b> إصلاح التأخير عند الحذف واللصق (~10 KiB)</summary>
+    <div class="cd-body">السبب: إعادة حساب الإحصاءات ومحاذاة الترقيم على كل تغيير. <b>يتقاطع مع:</b> OD-10 وOD-18.</div></details>
+
+  <details class="closed"><summary><b>CD-08</b> Redo = <code>Ctrl+Y</code> افتراضيًا + خيار الرجوع</summary>
+    <div class="cd-body">KDE وGNOME يستخدمان <code>Ctrl+Shift+Z</code>؛ يُترك خيارًا في الإعدادات. <b>يتقاطع مع:</b> OD-19.</div></details>
+
+  <details class="closed"><summary><b>CD-09</b> فتح ملف والتطبيق يعمل ← تبويب جديد</summary>
+    <div class="cd-body">يتطلب نسخة واحدة تعمل (OD-11) وقناة تمرير الوسائط.</div></details>
+
+  <details class="closed"><summary><b>CD-10</b> Replace = <code>Ctrl+H</code> + خيار الافتراضي</summary>
+    <div class="cd-body">KDE يستخدم <code>Ctrl+R</code>؛ يُضاف كخيار لا كافتراضي. <b>يتقاطع مع:</b> OD-19.</div></details>
+
+  <details class="closed"><summary><b>CD-11</b> إصلاح انزياح النص عند الحد، واختفاء المؤشر في أول السطر، وانحراف أرقام الأسطر</summary>
+    <div class="cd-body">ثلاثة أعراض في طبقة العرض؛ تحتاج تحققًا بصريًا على Qt حقيقي (غير متاح هنا). <b>يتقاطع مع:</b> OD-10 وOD-14.</div></details>
+
+  <details class="closed"><summary><b>CD-12</b> لصق Markdown/كود في صفحة فارغة يُكتشف فورًا لا بعد الحفظ</summary>
+    <div class="cd-body">سبب العيب: قرار النوع يُحسب عند التحميل فقط. <b>يتقاطع مع:</b> OD-04.</div></details>
+
+  <details class="closed"><summary><b>CD-13</b> قائمة سياق: «لصق / لصق بدون تنسيق» + <code>Ctrl+Shift+V</code></summary>
+    <div class="cd-body">يحتاج تمييز HTML/RTF من الحافظة؛ النص العادي يبقى كما هو.</div></details>
+</section>
+
+<!-- ============ SEC 1 ============ -->
+<section id="sec1">
+  <h2><span class="num">3</span>القسم 1 — بوابة الإصدار والسياسة</h2>
+  <p class="lede">أربعة قرارات تحدّد شكل الإصدار نفسه قبل أي سطر كود. لو حُسمت هذه وحدها لأمكن البدء.</p>
+
+  <article class="decision" id="OD-01" data-id="OD-01" data-title="نطاق الإصدار 1.0.02">
+    <header class="d-head">
+      <span class="d-id">OD-01</span>
+      <h3>ما نطاق الإصدار 1.0.02: تصحيح فقط، أم تصحيح + معالجة الملفات الضخمة، أم تصحيح + ميزات؟</h3>
+      <span class="sev sev-p0">حرج</span>
+    </header>
+    <p class="src"><i>بنودك الـ13</i><i>تحليلي</i><i>مقيّم 4 (7/10)</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> بنودك الـ13 كلها إصلاحات ومتطلبات سلامة، لا ميزات ترفيهية. وأضاف التدقيق ثلاثة عيوب حرجة لم تكن في قائمتك: اتجاه خاطئ للأرقام والعربية (مؤكد بالتشغيل)، انهيار محتمل من ملف إعدادات تالف، وكتابة تلقائية قد تمحو تعديلًا خارجيًا. «إصدار تصحيح» متماسك يحتاج 13 بندًا + 3 إصلاحات حرجة + 8 إصلاحات منخفضة المخاطر (تُقدَّر بنحو 40–60 ساعة عمل ومراجعة على Qt حقيقي). إضافة أداء الملفات الضخمة تمسّ نواة التحميل والعرض، وميزات الإنتاجية تُدخل مسارًا جديدًا للاختبار.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-01" value="أ" data-label="أ — إصدار تصحيح متماسك" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — «إصدار التصحيح المتماسك»</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">بنودك الـ13 + إصلاح الاتجاه (OD-13) + تحصين الإعدادات والترميز (OD-17) + حارس التعديل الخارجي (OD-16) + ثمانية إصلاحات منخفضة المخاطر من تحليلي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> إصدار يمكن تسميته «1.0.02 — تصحيحات وسلامة بيانات» بصدق؛ كل بند فيه قابل للاختبار؛ لا ميزات جديدة خارج قائمتك؛ مدة أطول من «رقم إصدار سريع»، ويبقى الملف الضخم بلا تحسين موثّق.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-01" value="ب" data-label="ب — تصحيح + أداء الملفات الضخمة">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — أ + أداء الملفات الضخمة والبحث</b></span>
+          <span class="opt-desc">يُضاف إلى (أ) قياس مرجعي للملفات الكبيرة وإتاحة وضع المعاينة وربط سقف الحجم الفعلي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يلتقط ميزة «الملفات الكبيرة» المعلنة في README؛ لكنه يمسّ طبقة التحميل التي تحمل مخاطرة عالية بلا قدرة اختبار واجهة هنا، وقد يؤجّل الإصدار أسابيع.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-01" value="ج" data-label="ج — تصحيح + ميزات إنتاجية">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — أ + ميزات إنتاجية مختارة</b></span>
+          <span class="opt-desc">يُضاف عدد الكلمات، إعادة فتح التبويب المغلق، واستعادة الجلسة (مقترحات المقيّمين).</span>
+          <span class="opt-conseq"><b>العاقبة:</b> واجهة أفضل للمستخدم العربي، لكن الإصدار يفقد رسالته الواحدة؛ وكل ميزة جديدة تحتاج اختبارات لا يمكن تشغيلها في هذه البيئة (لا واجهة) فتُشحن بثقة أقل.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-01" value="د" data-label="د — بنودي فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — بنودك الـ13 فقط، وتأجيل كل إصلاحاتي والمقيّمين</b></span>
+          <span class="opt-desc">تنفيذ ما طلبته حرفيًا وإرجاء الاتجاه والإعدادات والتعديل الخارجي إلى 1.0.03.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أسرع طريق لرقم إصدار، لكن يُصدر 1.0.02 وفيه اتجاه خاطئ للأرقام العربية — وهو الميزة التي يقوم عليها المشروع — وخطر محو تعديل خارجي مع الحفظ التلقائي.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-01">قرارك الخاص (اختياري) — إن كتبته فهو الذي يُعتمد حتى لو اخترت خيارًا</label>
+      <textarea id="note-OD-01" class="custom" name="note-OD-01" rows="2" placeholder="مثال: أ، بشرط أن يُؤجَّل كل ما يمسّ طبقة التحميل…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-02" data-id="OD-02" data-title="سياسة الإصدارات المنشورة">
+    <header class="d-head">
+      <span class="d-id">OD-02</span>
+      <h3>هل نحذف الإصدارات القديمة من صفحة Releases ونهيّئ المستخدم إلى دائمًا «الأحدث»؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>تحليلي</i><i>مقيّم 5 (خطر الصيانة)</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> على GitHub يوجد إصدار واحد منشور: <code>v1.0.01</code> بتسعة ملفات (deb, rpm, pkg.tar.zst, AppImage, whl, sdist, msi, flatpak, SHA256SUMS). فكرة «سياسة الأحدث فقط» تشير إلى المستقبل: مع كل إصدار جديد يبقى القديم ظاهرًا وقد يفتحه مستخدم بلا وعي، خاصة أن حزم deb/rpm لا تحمل تحديثًا تلقائيًا.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-02" value="أ" data-label="أ — الأحدث فقط موثّقًا" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — «الأحدث فقط» موثّقًا في README وReleases</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">سطر واضح في أعلى README: «استخدم أحدث إصدار؛ القديمة لا تُحدَّث ولا تُدعَم». ويُثبَّت في ملاحظات كل إصدار.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> جهد دقائق، يمنع تقارير أخطاء عن نسخ قديمة، ويحافظ على سجل تاريخي شفاف (لا نحذف شيئًا).</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-02" value="ب" data-label="ب — حذف القديمة">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — حذف إصدارات 1.0.x القديمة عند نشر 1.0.02</b></span>
+          <span class="opt-desc">يبقى إصداران فقط: الأخير وما قبله.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفحة نظيفة، لكن روابط خارجية قد تنكسر، ويضيع أثر «ما تغيّر»؛ ويخالف عُرف المشاريع المفتوحة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-02" value="ج" data-label="ج — لا سياسة الآن">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — لا نصّ الآن، يُترك للاجتهاد</b></span>
+          <span class="opt-desc">لا تغيير في التوثيق.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر عمل، لكن يبقى المستخدم الجديد عرضة لتحميل نسخة قديمة وفتح بلاغات مضلّلة.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-02">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-02" class="custom" name="note-OD-02" rows="2" placeholder="اكتب قرارك إن اختلف…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-03" data-id="OD-03" data-title="صيغة رقم الإصدار">
+    <header class="d-head">
+      <span class="d-id">OD-03</span>
+      <h3>هل يبقى الرقم مكتوبًا <code>1.0.02</code> في كل مكان، أم نعتمد <code>1.0.2</code> القياسي؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>طلبك</i><i>مقيّم 4 (P1)</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> اسم النسخة مكتوب <code>1.0.02</code> في 27 ملفًا و111 موضعًا، لكن أدوات بايثون تُطبّع الاسم إلى <code>mishkah_note-1.0.2-*</code> (قاعدة PEP 440) — ولهذا ترى اختلافًا بين اسم الملف داخل الحزمة واسمها المنشور. الأثر الحقيقي: أي فحص آلي يقارن «رقم الملف» بـ«رقم الحزمة» سيرسب، وقد يتكرر خطأ كهذا في بوابة الإصدار.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-03" value="أ" data-label="أ — 1.0.02 كما طلبت" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — يبقى <code>1.0.02</code> في كل مكان</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">مع إصلاح <b>مصدر الحقيقة الواحد</b>: رقم واحد في ملف واحد، تُشتق منه أسماء الحزم وأسماء الملفات، وتُضاف بوابة تتحقق من التطابق قبل النشر.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يحفظ قرارك السابق واستمرارية السلسلة (1.0.01 ← 1.0.02)، ويُلغي مفاجآت التطبيع. التكلفة: تعديل 111 موضعًا مرة واحدة + سكربت تحقق.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-03" value="ب" data-label="ب — 1.0.2 القياسي">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — اعتماد <code>1.0.2</code> (صيغة قياسية واحدة)</b></span>
+          <span class="opt-desc">تغيير الاسم في كل الملفات والوثائق إلى الصيغة المطابقة لـPEP 440، والوسم <code>v1.0.2</code>.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يزيل كل غموض التطبيع نهائيًا، لكنه يخالف الرقم الذي طلبته صراحة، ويكسر توقّع من كتب 1.0.02 في وثائقه.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-03" value="ج" data-label="ج — تركه كما هو">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — لا تغيير، ويُوثَّق الفرق فقط</b></span>
+          <span class="opt-desc">سطر في DEVELOPMENT.md يشرح أن أسماء الحزم الداخلية تُطبّع تلقائيًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أقل تكلفة، لكن يبقى الفخ قائمًا: أي مقارنة آلية بين الرقمين ستفشل، والعيب يتكرر في كل إصدار.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-03">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-03" class="custom" name="note-OD-03" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-25" data-id="OD-25" data-title="سياسة الدعم في SECURITY.md">
+    <header class="d-head">
+      <span class="d-id">OD-25</span>
+      <h3>ماذا نكتب في <code>SECURITY.md</code> عن الإصدارات المدعومة: الواقع (1.0.x) أم المستقبل (2.0.x)؟</h3>
+      <span class="sev sev-p0">حرج</span>
+    </header>
+    <p class="src"><i>مقيّم 4 (P0)</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> <code>SECURITY.md</code> يعلن أن <code>2.0.x</code> مدعوم وأن <code>1.0.x</code> غير مدعوم — بينما الإصدار الوحيد المنشور هو <code>1.0.01</code>. أي مستخدم يفتح السياسة يفهم أن نسخته غير مدعومة أمنيًا. هذا تعارض مباشر يضعف الثقة أكثر من غياب السياسة.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-25" value="أ" data-label="أ — 1.0.x مدعوم" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — «1.0.x هو المدعوم» + إجراء إبلاغ واضح + موعد إصلاح</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">تعديل الجدول ليعكس الإصدار الفعلي، وإضافة: كيف تُبلّغ، وما يُتوقع خلال 7/30 يومًا، وما لا يُعتبر ثغرة (ملفات محلية، إعدادات).</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صحة فورية وثقة أعلى، ويُحدَّث تلقائيًا مع كل رفع إصدار (بند في قائمة الإصدار).</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-25" value="ب" data-label="ب — إبقاء 2.0.x">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — الإبقاء على 2.0.x كما هو</b></span>
+          <span class="opt-desc">لا تغيير، باعتبار أن 2.0.x هو المسار القادم.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر عمل، لكن الإصدار المنشور يبدو غير مدعوم، وأي بلاغ أمني يصبح بلا مرجع.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-25" value="ج" data-label="ج — إعادة كتابة السياسة">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — حذف جدول الإصدارات وإعادة كتابة سياسة مبسّطة</b></span>
+          <span class="opt-desc">سياسة واحدة قصيرة: «نصلح الثغرات في أحدث إصدار فقط».</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يقلل التزامات الصيانة على مشرف واحد، لكنه يقلل أيضًا الطمأنينة لدى مستخدم مؤسسي.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-25">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-25" class="custom" name="note-OD-25" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+</section>
+
+<!-- ============ SEC 2 ============ -->
+<section id="sec2">
+  <h2><span class="num">4</span>القسم 2 — العربية والاتجاه</h2>
+  <p class="lede">هنا هوية المشروع. العيب الأول مؤكد بالتشغيل لا بالاستنتاج، وهو أخطر ما ظهر في التقارير الخمسة.</p>
+
+  <article class="decision" id="OD-13" data-id="OD-13" data-title="خوارزمية اتجاه النص">
+    <header class="d-head">
+      <span class="d-id">OD-13</span>
+      <h3>كيف نصحّح اتجاه النص حتى لا تحكم الأرقام والترقيم على اتجاه السطر؟</h3>
+      <span class="sev sev-p0">حرج</span>
+    </header>
+    <p class="src"><i>مقيّم 4 (P0)</i><i>تحقّق بالتشغيل</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> الدالة <code>first_strong_is_rtl</code> تصنّف المحارف بنطاقات أرقام، فتعطي: <code>123 مرحبا</code> ← LTR (الصحيح RTL)، و<code>١٢٣ hello</code> ← RTL (الصحيح LTR)، و<code>، hello</code> ← RTL (الترقيم المحايد يجب ألا يحكم). الأثر: شريط الحالة وقرار الاتجاه وكاشف Markdown كلهم يقرؤون من هذه الدالة. والأسوأ: <code>tests/test_text_direction.py:80</code> يثبّت السلوك الخاطئ (<code>١٢٣٤٥</code> ← RTL) فتصبح الاختبارات حاجزًا ضد الإصلاح.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-13" value="أ" data-label="أ — unicodedata.bidirectional" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — اعتماد <code>unicodedata.bidirectional</code> وتطبيق قاعدتي P2/P3</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">نأخذ أول محرف قوي من الفئات <code>L</code> أو <code>R</code> أو <code>AL</code> فقط؛ الأرقام (<code>EN</code>/<code>AN</code>) والترقيم (<code>CS</code>) والمحايد (<code>ON</code>) تُتخطّى. تُحدَّث الاختبارات الحالية وتُضاف حالات عربية وفارسية وأرقام وعلامات اتجاه.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صحة Unicode كاملة بتكلفة سطور قليلة؛ تحديث اختبار قائم يثبّت الخطأ (وهذا مكسب لا خسارة)؛ قد يتغيّر اتجاه بعض المستندات القديمة إلى الأصح فيلاحظها المستخدم كتحسّن.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-13" value="ب" data-label="ب — ترقيع النطاقات">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — ترقيع النطاقات يدويًا</b></span>
+          <span class="opt-desc">إضافة استثناءات للأرقام العربية/الفارسية وترقيم العربية داخل الدالة الحالية.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أصغر تعديل ممكن، لكن يبقى التعامل مع <code>AL</code> وعلامات الاتجاه والتشكيل ناقصًا، وسيعود العيب مع أي محرف جديد.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-13" value="ج" data-label="ج — إبقاء الحالي">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — الإبقاء على الحالي مع توثيق القيود</b></span>
+          <span class="opt-desc">لا تغيير في السلوك؛ يُذكر في README أن كشف الاتجاه تقديري.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> لا مخاطرة كود، لكن تُشحن نسخة تحمل عيبًا في جوهر تميّزها، ويصعب تسويقها لمستخدم عربي.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-13" value="د" data-label="د — الاعتماد على Qt فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — حذف الخوارزمية والاعتماد على Qt LayoutDirectionAuto</b></span>
+          <span class="opt-desc">يتولى Qt كل شيء بلا منطق خاص.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أبسط كود، لكن يختفي ما تعرضه الواجهة صراحة (الاتجاه المكتشف، حالة الحفظ) ويصعب بناء أدوات عربية لاحقًا — وهو الاتجاه الاستراتيجي الذي توصي به كل التقارير.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-13">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-13" class="custom" name="note-OD-13" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-14" data-id="OD-14" data-title="محاذاة المستند مقابل الفقرة">
+    <header class="d-head">
+      <span class="d-id">OD-14</span>
+      <h3>هل نجعل المحاذاة لكل فقرة على حدة، أم تبقى محاذاة واحدة للمستند؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>مقيّم 4</i><i>بنية الكود</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> المحرّر مبني على <code>QPlainTextEdit</code>، و<code>QPlainTextEdit</code> لا يرسم محاذاة لكل كتلة داخل النص؛ المحاذاة مضبوطة على مستوى المستند كله، والاتجاه على مستوى كل فقرة عبر تنسيق الكتلة. عمليًا: مستند يخلط العربية والإنجليزية يحصل على محاذاة واحدة (يمين أو يسار)، وهذا سلوك Qt لا خطأ في الكود. أي «محاذاة لكل فقرة» تعني الانتقال إلى <code>QTextEdit</code> أو كتابة تخطيط مخصص — أي خسارة أحد أكبر أسباب أداء المحرّر الحالي.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-14" value="أ" data-label="أ — محاذاة موحّدة موثّقة" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — محاذاة موحّدة للمستند + اتجاه لكل فقرة (كما هو) + توثيق وتسمية صحيحة في الإعدادات</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">نُصلح فقط الالتباس: الإعداد يُسمّى «محاذاة المستند» لا «اتجاه»، ونضيف اختبارًا لمستند مختلط يوضح السلوك المتوقع.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر مخاطرة على الأداء، وشفافية للمستخدم حول ما يحصل عليه؛ ويبقى المستند المختلط اللاتيني محاذيًا لليمين — وهو مقبول لمن جمهوره عربي.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-14" value="ب" data-label="ب — محاذاة لكل فقرة">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — محاذاة لكل فقرة على حدة</b></span>
+          <span class="opt-desc">تحويل العرض إلى <code>QTextEdit</code>/تخطيط مخصص يطبّق المحاذاة من تنسيق الكتلة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> تجربة أفضل للمستندات المختلطة، لكنه يمسّ أساس الأداء (سبب وجود <code>QPlainTextEdit</code>) ويعرّض CD-07 وCD-11 لخطر الانحدار، ولا يمكن التحقق منه بصريًا في هذه البيئة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-14" value="ج" data-label="ج — فصل الاتجاه عن المحاذاة">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — فصل المفهومين: اتجاه لكل فقرة + محاذاة يختارها المستخدم (يمين/يسار/توسيط)</b></span>
+          <span class="opt-desc">يُضاف إعداد محاذاة مستقل عن الاتجاه، مع بقاء التخطيط الحالي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أنظف مفاهيميًا ويحل حالة المستند المختلط جزئيًا؛ لكنه إعداد جديد خارج قائمتك، ويحتاج مراجعة كل نقاط استخدام الاتجاه الحالية.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-14">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-14" class="custom" name="note-OD-14" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-15" data-id="OD-15" data-title="أدوات عربية متقدمة">
+    <header class="d-head">
+      <span class="d-id">OD-15</span>
+      <h3>هل نضيف حزمة الأدوات العربية (مفتّش الاتجاه، إظهار المحارف الخفية، إزالة التشكيل، توحيد الهمزات، تحويل الأرقام)؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>مقيّم 1 و2 و4</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> لا توجد اليوم أي أداة عربية داخل المحرّر سوى كشف الاتجاه والتزيين. المقيّمون الثلاثة اتفقوا على أن هذه هي المساحة التي لا يخدمها أحد جيدًا: تنظيف نص منسوخ من الويب (تشكيل، همزات، أرقام هندية)، وتشخيص سبب انقلاب النص (علامات LRM/RLM غير مرئية). كل أداة منها صغيرة، لكن مجموعها وحدة منتج تحتاج تصميم قوائم واختبارات. الميزة الأرخص والأعلى قيمة تشخيصية هي «إظهار المحارف غير المرئية».</p>
+    <div class="opts">
+      <label class="opt">
+        <input type="radio" name="OD-15" value="أ" data-label="أ — الحزمة كاملة في 1.0.02">
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — الحزمة كاملة الآن</b></span>
+          <span class="opt-desc">خمس أدوات + قائمة «أدوات عربية» + اختصارات + اختبارات لكل تحويل.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> تميّز فوري عن أي محرّر آخر، لكنه يضيف أسبوعًا إلى إصدار عنوانه «تصحيحات»، ومعه سطح اختبار جديد لا يمكن تشغيل واجهته هنا.</span>
+        </span>
+      </label>
+      <label class="opt rec">
+        <input type="radio" name="OD-15" value="ب" data-label="ب — حزمة كاملة في 1.1" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — تُؤجَّل كاملة إلى 1.1</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">تُسجَّل في خارطة الطريق؛ ويُنفّذ الآن فقط «إظهار المحارف غير المرئية» لأنه أداة تشخيص لأعطال الاتجاه (OD-13) ويساعد في اختباراته.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يحفظ تركيز 1.0.02 على الصحة، ويترك هوية الإصدار التالي واضحة وقابلة للتسويق؛ يحتاج قرارًا منفصلًا لتصميم الأدوات لاحقًا.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-15" value="ج" data-label="ج — نسخة مصغّرة الآن">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — نسختان فقط الآن: الأرقام والتشكيل</b></span>
+          <span class="opt-desc">تحويل ١٢٣↔123 وإزالة التشكيل من قائمة السياق.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> فائدة ملموسة بتكلفة ساعات، لكنه يفتح باب «أدوات عربية» نصف مكتملة في قائمة قد يتوقع المستخدم منها المزيد.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-15" value="د" data-label="د — رفض دائم">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا أدوات عربية إضافية إطلاقًا</b></span>
+          <span class="opt-desc">يبقى المشروع «محرّرًا» لا «معالج نصوص».</span>
+          <span class="opt-conseq"><b>العاقبة:</b> نطاق مقيّد وواضح، لكنه يتخلى عن الميزة التي رشّحها كل المقيّمين لتمييز المنتج.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-15">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-15" class="custom" name="note-OD-15" rows="2" placeholder="مثال: ب، لكن أضف إظهار المحارف الخفية فقط…"></textarea>
+    </div>
+  </article>
+</section>
+
+<!-- ============ SEC 3 ============ -->
+<section id="sec3">
+  <h2><span class="num">5</span>القسم 3 — سلامة البيانات</h2>
+  <p class="lede">ثلاثة قرارات تحمي ما يكتبه المستخدم. الأول يصبح وجوديًا لحظة تفعيل الحفظ التلقائي (CD-01).</p>
+
+  <article class="decision" id="OD-16" data-id="OD-16" data-title="التعديل الخارجي للملف">
+    <header class="d-head">
+      <span class="d-id">OD-16</span>
+      <h3>ماذا نفعل إذا عُدِّل الملف خارج التطبيق ونحن نحتفظ بنسخة قديمة في الذاكرة؟</h3>
+      <span class="sev sev-p0">حرج</span>
+    </header>
+    <p class="src"><i>مقيّم 1 و4</i><i>تحقّق في الكود</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> لا يوجد <code>QFileSystemWatcher</code> ولا أي مقارنة لوقت التعديل أو الحجم قبل الكتابة. دالة الحفظ تكتب فوق الملف مباشرة. اليوم يحدث هذا عند ضغط Ctrl+S؛ وبعد CD-01 سيحدث تلقائيًا كل ثانيتين — أي أن تعديلًا من محرّر آخر أو من مزامنة سحابية سيُمحى بلا أثر. هذا أخطر قرار في الملف لأنه يقرر ما إذا كان الحفظ التلقائي أمانًا أم خطرًا.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-16" value="أ" data-label="أ — مراقبة + حارس قبل الحفظ" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — مراقب ملفات + فحص قبل كل حفظ + شريط «تغيّر الملف على القرص»</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">يُسجَّل <code>st_mtime</code>+<code>st_size</code> عند التحميل وبعد كل حفظ ناجح؛ إن اختلف قبل الحفظ يُوقف الحفظ التلقائي ويظهر شريط: «إعادة التحميل» أو «الكتابة فوق». تُهمَل أحداث المراقب الناتجة عن كتابتنا نحن.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يمنع الفقد الصامت، وهو شرط لتفعيل الحفظ التلقائي بثقة؛ التكلفة: حالة إضافية لكل تبويب، واحتمال ضجيج أحداث من محرّرات أخرى، ولا يزال يحتاج تحققًا على واجهة حقيقية.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-16" value="ب" data-label="ب — فحص قبل الحفظ فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — فحص وقت/حجم قبل الحفظ فقط، بلا مراقب</b></span>
+          <span class="opt-desc">لا إشعار مبكر؛ يُسأل المستخدم لحظة الحفظ فقط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> 80% من الأمان بـ20% من التعقيد، ولا ضجيج أحداث؛ لكن المستخدم لا يعرف أن الملف تغيّر إلا عند محاولة الحفظ، ويبقى عرضه قديمًا.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-16" value="ج" data-label="ج — المراقبة فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — مراقبة وإشعار فقط بلا منع</b></span>
+          <span class="opt-desc">يظهر شريط تحذير، ويبقى الحفظ ممكنًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> إشعار أفضل، لكن النتيجة النهائية قد تبقى محو تعديل إذا لم ينتبه المستخدم أو كان الحفظ تلقائيًا.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-16" value="د" data-label="د — لا شيء">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا حماية؛ ويُشترط أن يبقى الحفظ التلقائي معطّلًا افتراضيًا</b></span>
+          <span class="opt-desc">حماية بالسلوك لا بالكود.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> لا عمل الآن، لكن من يفعّل الحفظ التلقائي (وهو هدف CD-01) يفتح نفسه على فقدان بيانات، وستكون هذه أول شكوى.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-16">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-16" class="custom" name="note-OD-16" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-17" data-id="OD-17" data-title="تحصين الإعدادات والترميز">
+    <header class="d-head">
+      <span class="d-id">OD-17</span>
+      <h3>هل نُحصّن تحميل الإعدادات وترميز الملفات معًا في هذا الإصدار؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>مقيّم 4</i><i>تحقّق بالتشغيل</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> ملف إعدادات فيه <code>[]</code> يُسقط التطبيق بـ<code>AttributeError</code> عند الإقلاع (لا رسالة، لا إصلاح ذاتي)؛ وقيم مثل <code>font_size:"abc"</code> و<code>theme:3</code> و<code>tab_width:-5</code> تُقبل ثم تنفجر لاحقًا في مكان آخر. أما الترميز: الكشف يقرأ أول 64 كيلوبايت، فملف يبدأ بسطور ASCII ثم عربية بترميز <code>cp1256</code> يُصنَّف utf-8، وتُفكّ بايتاته إلى <code>&#xFFFD;&#xFFFD;</code> — نص مشوّه <b>بصمت</b>، وقد يُحفظ فوق الأصل فيضيع النص.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-17" value="أ" data-label="أ — الاثنان معًا" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — تحصين الإعدادات + فتح بترميز بديل عند الفشل</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">الإعدادات: مخطط أنواع + قائمة مفاتيح مسموحة + قيم افتراضية + نسخة احتياطية من الملف التالف وإشعار. الترميز: عند وجود محارف بديلة أو فشل فك، يُعرض مربّع «افتح بترميز…» (utf-8, cp1256, utf-16) ولا يُحفظ الملف قبل قرار المستخدم.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يمنع فشل إقلاع وفقدان نص عربي منسوخ من أنظمة قديمة؛ التكلفة: مسار جديد لواجهة الترميز + اختبارات ملفات حقيقية، ومخاطرة منخفضة لأنه لا يمسّ العرض.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-17" value="ب" data-label="ب — الإعدادات فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — تحصين الإعدادات فقط</b></span>
+          <span class="opt-desc">يؤجَّل الترميز إلى إصدار لاحق.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يزيل خطر «التطبيق لا يفتح»، لكنه يترك النص المشوّه الصامت — وهو أسوأ من خطأ ظاهر لأنه قد يُحفظ فوق الأصل.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-17" value="ج" data-label="ج — الترميز فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — معالجة الترميز فقط</b></span>
+          <span class="opt-desc">يُؤجَّل مخطط الإعدادات.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يبقى انهيار الإقلاع على ملف تالف قائمًا، وهو أسوأ عطل ممكن لأن المستخدم لا يستطيع الوصول إلى شاشة الإعدادات لإصلاحه.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-17" value="د" data-label="د — لاحقًا">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — تأجيل الاثنين</b></span>
+          <span class="opt-desc">يُسجَّلان في 1.0.03.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> إصدار أصغر، لكنه يشحن عطل إقلاع معروفًا ووعدًا بصحة ترميز غير محقق.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-17">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-17" class="custom" name="note-OD-17" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-05" data-id="OD-05" data-title="تفاصيل الحفظ التلقائي">
+    <header class="d-head">
+      <span class="d-id">OD-05</span>
+      <h3>متى يعمل الحفظ التلقائي بالتحديد، وماذا يفعل بالملفات غير المسماة وبالتبويبات الخلفية؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>طلبك (CD-01)</i><i>تفاعل مع OD-16</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> CD-01 يحدد «معطّل افتراضيًا» و«تأخير 2 ثانية» و«لا يحفظ غير المسمّى». الأسئلة المتبقية هي التي تُنتج سلوكًا مربكًا إن تُركت: هل يعمل في التبويبات غير المرئية (فيمسح تعديلًا خارجيًا على ملف لا تنظر إليه)؟ وهل يحفظ بعد كل حذف بنيوي (فيصير التراجع مستحيلًا فوق القرص)؟ وهل يظهر مؤشر «حُفظ»؟</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-05" value="أ" data-label="أ — الحالي + التبويب النشط فقط" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — تأخير 2 ثانية، للتبويب النشط فقط، مع مؤشر حالة، وتاجيل عند وجود تعديل خارجي</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">يُحفظ الملف عند توقف الكتابة 2 ثانية أو عند مغادرة التبويب/النافذة إن كان هو النشط؛ وتُلغى الدورة إذا كشف OD-16 تعديلًا خارجيًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> سلوك متوقع وقابل للتنبؤ، وأقل احتمالًا لمحو تعديل خارجي؛ لكن المستخدم الذي يفتح عدة تبويبات قد يتفاجأ بأن غير المرئي لم يُحفظ عند إغلاق التطبيق — يُعالَج بحفظ عند الإغلاق فقط.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-05" value="ب" data-label="ب — كل التبويبات المعدّلة">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — كل التبويبات المعدّلة، بلا استثناء</b></span>
+          <span class="opt-desc">تُحفظ خلفية التبويبات أيضًا بعد 2 ثانية.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> لا فقدان عند إغلاق مفاجئ، لكن يزيد بشدة احتمال الكتابة فوق ملفات عدّلها برنامج آخر، ويستهلك قرصًا في التبويبات المنسية.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-05" value="ج" data-label="ج — عند التبديل فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — «حفظ ذكي»: عند تبديل التبويب أو إغلاق النافذة فقط</b></span>
+          <span class="opt-desc">لا مؤقت خلفي إطلاقًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أقل كتابة على القرص وأقل مفاجآت، لكن انهيار التطبيق يعني فقدان آخر دقائق — وهو بالضبط ما يشتكي منه المستخدم من الحفظ اليدوي.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-05">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-05" class="custom" name="note-OD-05" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+</section>
+
+<!-- ============ SEC 4 ============ -->
+<section id="sec4">
+  <h2><span class="num">6</span>القسم 4 — المحرّر والأداء</h2>
+  <p class="lede">أربعة قرارات عن الأداء والسلوك الداخلي. القاعدة: لا نُعيد كتابة نواة العرض في إصدار تصحيحات.</p>
+
+  <article class="decision" id="OD-06" data-id="OD-06" data-title="حدود فحص الأقواس">
+    <header class="d-head">
+      <span class="d-id">OD-06</span>
+      <h3>كيف نتحقق من «وجود قوس مفتوح غير مغلق» دون إبطاء الكتابة؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>طلبك (CD-03)</i><i>تحليلي</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> القرار يقتضي فحصًا قبل إدخال القوس. فحص المستند كله عند كل ضغطة على مفتاح قوس يعني قراءة ملايين المحارف في ملف كبير. في الوقت نفسه، الفحص المحدود قد يُخفق في مستند طويل فيه قوس مفتوح في فقرة بعيدة، فيُنتج قوسًا إضافيًا — وهو خطأ مزعج لكنه قابل للتراجع.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-06" value="أ" data-label="أ — فحص الفقرة الحالية بحد 4096" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — فحص الفقرة الحالية فقط، بسقف 4096 محرفًا</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">عبر <code>QTextBlock</code> للفقرة الحالية؛ إن تجاوزت السقف يُلغى الإغلاق التلقائي بدل الفحص الكامل.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> كلفة ثابتة لا تتأثر بحجم الملف؛ يخطئ في الحالات النادرة (قوس مفتوح في فقرة أخرى) لكن السلوك مفهوم؛ ويحتاج اختبارات للأسطر الطويلة واللصق.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-06" value="ب" data-label="ب — فحص المستند كله">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — فحص المستند كله بدقة تامة</b></span>
+          <span class="opt-desc">عدّ الأقواس من بداية المستند مع تخطي النصوص داخل السلاسل.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> دقة أعلى، لكن كلفة تتناسب مع حجم النص وقد تظهر لاحقًا كتأخير في الكتابة السريعة — وهو بالضبط نوع العيب الذي كُتب CD-07 لإصلاحه.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-06" value="ج" data-label="ج — فحص الفقرة بلا سقف">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — فقرة كاملة بلا سقف، وتخطي الإغلاق فوق 10 آلاف محرف</b></span>
+          <span class="opt-desc">عتبة أعلى لكن غير ثابتة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يغطي أسطرًا أطول من المتوسط؛ يبقى هناك احتمال بطء في الفقرات الضخمة (نص ملصوق بلا أسطر).</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-06" value="د" data-label="د — إلغاء الشرط">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — إغلاق تلقائي دائم بلا فحص</b></span>
+          <span class="opt-desc">يبسّط الكود ويعارض نصّ CD-03.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أسرع تنفيذ، لكنه يخالف قرارك المغلقة ويُنتج أقواسًا مزدوجة مزعجة عند التعديل داخل الأقواس.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-06">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-06" class="custom" name="note-OD-06" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-10" data-id="OD-10" data-title="علاج تأخير الحذف واللصق">
+    <header class="d-head">
+      <span class="d-id">OD-10</span>
+      <h3>ما الذي نُغيّره تحديدًا لإزالة التأخير عند حذف أو لصق نحو 10 كيلوبايت؟</h3>
+      <span class="sev sev-p0">حرج</span>
+    </header>
+    <p class="src"><i>طلبك (CD-07)</i><i>تحليلي</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> ثلاثة مصادر تلتقي عند كل تعديل: (1) إحصاءات المستند تُحسب على النص كاملًا في كل تغيير، (2) محاذاة أرقام الأسطر تُعاد على كل تغيير، (3) فحص الأقواس/الاقتراحات يقرأ نصًا حول المؤشر. النتيجة: كل ضغطة في مستند 10 كيلوبايت تكلّف عملًا يتناسب مع حجم المستند لا مع حجم التغيير. الحل الصحيح هو تقليل العمل، لا إضافة مؤقتات.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-10" value="أ" data-label="أ — تقليل العمل + تأجيل 150ms" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — إحصاءات بزمن ثابت + إقران بلا نسخ + تأجيل محاذاة 150ms + إسقاط نافذة 400 سطر</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">تُحدَّث الإحصاءات من تغييرات الفرق لا من النص كله؛ يُقرأ نص المؤشر دون نسخ؛ تُؤجَّل محاذاة الأسطر بـ<code>QTimer</code> واحد؛ وتُلغى نافذة الـ400 سطر التي تخدم ملفات ضخمة على حساب الاستجابة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> استجابة ثابتة تقريبًا مع حجم الملف؛ المخاطرة: سلوك الترقيم في الملفات الضخمة يتغيّر (يُختبر)، وتأجيل المحاذاة قد يُظهر انزياحًا لحظيًا لأسطر معدودة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-10" value="ب" data-label="ب — مؤقتات فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — تأجيل كل شيء بـ200ms بلا تغيير المنطق</b></span>
+          <span class="opt-desc">يُجمَّع العمل ضمن مؤقت واحد.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أسهل تنفيذًا ويخفف الأعراض، لكن الكلفة لكل تحديث تبقى متناسبة مع الملف، فتعود المشكلة عند 100 كيلوبايت.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-10" value="ج" data-label="ج — تعطيل الإحصاءات">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — إيقاف الإحصاءات ومحاذاة الأسطر أثناء الكتابة</b></span>
+          <span class="opt-desc">تُحدَّث عند التوقف فقط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أسرع تنفيذ، لكنه يشوّه تجربة الترقيم ويجعل الشريط السفلي متأخرًا دائمًا — عيب مرئي مقابل أداء.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-10">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-10" class="custom" name="note-OD-10" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-12" data-id="OD-12" data-title="شكل أرقام الأسطر">
+    <header class="d-head">
+      <span class="d-id">OD-12</span>
+      <h3>ما القاعدة الصحيحة لترقيم الأسطر في مستند فيه فقرات ملتفّة؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>تحليلي (CD-11)</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> <code>QPlainTextEdit</code> يلفّ الأسطر الطويلة بصريًا، فيصبح لفقرة واحدة أكثر من سطر معروض. العيب المذكور في CD-11 («انحراف أرقام الأسطر») ينشأ عندما يُفترض أن كل سطر معروض = فقرة، أو يتضارب حساب ارتفاع الأسطر مع شريط الترقيم. الاختيار هنا يحدد ما يفهمه المستخدم من الرقم، والاثنان مقبولان لكن يجب أن يكون أحدهما صريحًا.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-12" value="أ" data-label="أ — رقم لكل فقرة" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — رقم واحد لكل فقرة (لا لكل سطر ملتفّ)</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">يُحسب موضع الرقم من كتلة النص لا من ارتفاع السطر؛ يبقى الفراغ المقابل للأسطر الملتفّة بلا رقم.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يطابق سلوك محرّرات الأكواد ومعنى «السطر» في الملف؛ يحتاج ضبط ارتفاع الكتلة في <code>line_number_area</code> واختبارًا بصريًا على مستند عربي طويل.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-12" value="ب" data-label="ب — رقم لكل سطر معروض">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — رقم لكل سطر معروض (بما فيه الملتفّ)</b></span>
+          <span class="opt-desc">ترقيم بصري متصل.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يبدو أنظف في المستندات الروائية، لكن رقم «السطر» يتغيّر بتغيّر عرض النافذة، ويصعب على المستخدم الإشارة إلى سطر بعينه.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-12" value="ج" data-label="ج — إخفاء الترقيم">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — إخفاء شريط الأرقام في المستندات النصية</b></span>
+          <span class="opt-desc">يظهر للملفات البرمجية فقط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> ينزع العيب من جذره بتقليل التعرض، لكنه يخسر فائدة تنقلية يعتمد عليها من يكتب نصوصًا طويلة.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-12">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-12" class="custom" name="note-OD-12" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-18" data-id="OD-18" data-title="الملفات الضخمة والذاكرة">
+    <header class="d-head">
+      <span class="d-id">OD-18</span>
+      <h3>كيف نتعامل مع «دعم الملفات الضخمة» المعلن، وهل نعيد بناء العرض الآن؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>مقيّم 1 و2 و4</i><i>تحقّق في الكود</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> مسار «الملفات الكبيرة» موجود لكنه غير قابل للوصول عمليًا: حد المعاينة غير مضبوط والسقف الفعلي هائل، فلا يُفعَّل الوضع أبدًا. وفي المسار العادي: قراءة الملف تُبني قائمة أجزاء ثم تُدمج (ذاكرة مضاعفة للملف كاملًا)، ثم يُمرَّر النص إلى <code>setPlainText</code> على خيط الواجهة (تجميد أثناء التحميل)، ثم تُنسخ النسخة كاملة عند الحفظ لتطبيع نهايات الأسطر. البحث متزامن على خيط الواجهة. أي إعادة كتابة (mmap أو عرض افتراضي) مشروع فرعي كبير بمخاطرة عالية، ولا يمكن التحقق منه بصريًا هنا.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-18" value="أ" data-label="أ — قياس + سقف + معاينة + بحث متدرّج" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — قياس مرجعي + سقف معلن + تفعيل المعاينة + بحث متدرّج فوق 5 م.ب</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">قياسات 10/50/100/250/500 م.ب تُسجَّل في DEVELOPMENT.md؛ يُربط السقف بالذاكرة المتاحة؛ تُتاح المعاينة؛ ويصير البحث تدريجيًا بعد حدّ محدد؛ وتُوثَّق الحدود بصدق في README.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يصبح الادعاء قابلاً للتحقق، ويُغلق مصدر إحباط للمستخدم؛ يبقى التحميل متجمدًا لحظات في الملفات الكبيرة (يُوثَّق)، ولا mmap.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-18" value="ب" data-label="ب — أ + بحث خلفي كامل">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — أ + نقل البحث إلى خيط خلفي مع إلغاء</b></span>
+          <span class="opt-desc">نتائج تُجمع ثم تُطبَّق على المحرّر.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> واجهة لا تتجمد في أي حجم، لكن تزامن المؤشر والحافظة مع خيط آخر معروف بأنه مصدر أخطاء صعبة، ويحتاج اختبارات واجهة غير متاحة هنا.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-18" value="ج" data-label="ج — إعادة بناء بعرض افتراضي">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — وضع ملفات ضخمة حقيقي (mmap/عرض افتراضي)</b></span>
+          <span class="opt-desc">تحميل جزئي وعرض نافذي بتحرير آمن.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> تتفوق على Notepad في ملفات 500 م.ب، لكنها تعني إعادة كتابة المحرّر والحفظ والبحث والترقيم — أي إصدار كامل لا بندًا في 1.0.02.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-18" value="د" data-label="د — قياس وتوثيق فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — قياس وتوثيق بلا أي تغيير سلوكي</b></span>
+          <span class="opt-desc">أرقام صادقة في الوثائق فقط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أقل عمل، لكن يبقى وعد «الملفات الكبيرة» غير قابل للاستخدام، ويبقى البحث متجمدًا في الملفات الكبيرة.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-18">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-18" class="custom" name="note-OD-18" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+</section>
+
+<!-- ============ SEC 5 ============ -->
+<section id="sec5">
+  <h2><span class="num">7</span>القسم 5 — الواجهة والتفاعل</h2>
+  <p class="lede">سبعة قرارات تُغيّر ما يراه المستخدم ويلمسه: كشف النوع، الأيقونات، الملفات المسموحة، صفحة البداية، النسخة الواحدة، الاختصارات، والسحب.</p>
+
+  <article class="decision" id="OD-04" data-id="OD-04" data-title="كشف Markdown عند اللصق">
+    <header class="d-head">
+      <span class="d-id">OD-04</span>
+      <h3>كيف يُكتشف Markdown/الكود في صفحة فارغة فورًا، دون أن يتغيّر الملف بصمت؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>طلبك (CD-12)</i><i>تحليلي</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> نوع المستند يُحدَّد عند التحميل من المسار؛ جدول فارغ بلا اسم لا يمر بأي كشف، فيبقى «نص عادي» حتى يُحفظ ويُعاد فتحه. الكشف بعد اللصق سهل تقنيًا، والخطر ليس تقنيًا بل تجربةً: أن يتحول الملف إلى Markdown ويبدأ التزيين أو تغيير العرض بلا أن يطلب المستخدم ذلك. ولاحظ: المشروع يملك 50 امتدادًا معروفًا في <code>syntax.py</code>، والمشكلة أنه لا يستعملها إلا عند التحميل.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-04" value="أ" data-label="أ — كشف + شريط اقتراح" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — كشف فوري + شريط «يبدو Markdown — تفعيل التمييز؟» بزرّين</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">عند اللصق في تبويب غير مسمّى يُفحص النص (بايتات قليلة)، ويظهر شريط غير معطِّل: «تفعيل» / «إبقاء كنص عادي». القرار لا يُنفَّذ تلقائيًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يحل CD-12 ويحترم توقع المستخدم في الوقت نفسه؛ تكلفة: عنصر واجهة جديد، وقاعدة كشف يجب أن تكون محافظة (وسوم Markdown واضحة لا مجرد رموز مثل <code>-</code>).</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-04" value="ب" data-label="ب — كشف تلقائي صامت">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — كشف وتفعيل تلقائي بلا سؤال</b></span>
+          <span class="opt-desc">يصبح الملف Markdown مباشرة بعد اللصق.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أقل خطوات، لكن قد يتغيّر شكل النص (تزيين، خطوط) بعد لصق عادي، ويصعب التراجع لأن التغيير لا يظهر كإجراء.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-04" value="ج" data-label="ج — اكتشاف عند الحفظ فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — كشف عند الحفظ مع إشعار «حُفظ كـ Markdown»</b></span>
+          <span class="opt-desc">يبقى المحرّر كما هو حتى الحفظ.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر تغيير بصري أثناء اللصق، لكنه لا يحل شكواك الأساسية: أن تعرف فورًا ما هو نوع ما لصقته.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-04" value="د" data-label="د — زر يدوي">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا كشف آلي؛ زرّ «تعيين النوع» في القائمة</b></span>
+          <span class="opt-desc">قرار كامل بيد المستخدم.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> بسيط ومحافظ، لكنه يترك المستخدم يبحث عن زر في كل مرة، ويعيد المشكلة إلى نقطة البداية عمليًا.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-04">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-04" class="custom" name="note-OD-04" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-07" data-id="OD-07" data-title="أيقونة المستند والدبوس">
+    <header class="d-head">
+      <span class="d-id">OD-07</span>
+      <h3>كيف نميّز المستند الجديد عن المحفوظ، وأين يظهر التمييز؟</h3>
+      <span class="sev sev-p2">منخفض</span>
+    </header>
+    <p class="src"><i>طلبك (CD-04)</i><i>تحليلي</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> الأيقونة الجديدة (ورقة مسطّرة + كوي) مشتقة من هوية التطبيق، وتحتاج ثلاثة مقاسات ونسخة داكنة. السؤال المتبقي: هل تكفي الأيقونة للدلالة على «غير محفوظ»، أم يلزم عنصر ثانٍ (نقطة ملوّنة أو نجمة) — خاصة أن PNG لا يمكن تلوينه حسب الحالة، بينما SVG يمكن أن يحمل نسختين.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-07" value="أ" data-label="أ — أيقونة + نقطة لونية" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — أيقونة المستند للتبويب + نقطة لون صغيرة لحالة «غير محفوظ»</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">الأيقونة تحمل الهوية، والنقطة تحمل الحالة (رمادية = محفوظ، برتقالية = معدّل). يُشتق من الأيقونة الأصلية بنسختين.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> وضوح فوري بلا نص، ويبقى التمييز واضحًا في وضع داكن؛ تكلفة: ملفان إضافيان ومنطق تبديل بسيط.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-07" value="ب" data-label="ب — أيقونة فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — الأيقونة وحدها، بلا نقطة</b></span>
+          <span class="opt-desc">حالة الحفظ تظهر في شريط العنوان أو شريط الحالة فقط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أنظف بصريًا وأقل ملفات، لكن حالة «غير محفوظ» تصبح أقل ظهورًا — وهي الحالة التي تحتاج تنبيهًا أكبر.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-07" value="ج" data-label="ج — لاحقًا">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — إبقاء أيقونة النظام العامة الآن</b></span>
+          <span class="opt-desc">تُترك CD-04 لإصدار لاحق.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> لا عمل، لكنه يخالف قرارك المغلقة ويُبقي التطبيق بلا هوية بصرية في شريط المهام.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-07">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-07" class="custom" name="note-OD-07" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-08" data-id="OD-08" data-title="الملفات النصية المسموحة">
+    <header class="d-head">
+      <span class="d-id">OD-08</span>
+      <h3>ماذا يعني «حصر الملفات النصية» عمليًا: امتدادات، أم فحص محتوى، أم الاثنان؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>طلبك (CD-05)</i><i>تحليلي</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> اليوم مربّع الحوار يعرض «كل الملفات» (<code>All files (*)</code>)، والبرنامج يقبل ما يُعطى له. القائمة ليست في مكان واحد: <code>syntax.py</code> فيه 50 امتدادًا للتمييز، لكن قائمة «ما يُفتح» قرار آخر. الحصر بالامتداد وحده يرفض ملفات نصية بلا امتداد أو بامتداد غريب (شائع في السجلات والترجمات)، والحصر بالفحص وحده يعني إمكانية فتح ملف ثنائي بامتداد بريء. كما أن الحصر يمسّ السحب والإفلات (OD-20) وقناة «افتح بـ» ووسائط سطر الأوامر.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-08" value="أ" data-label="أ — امتدادات + فحص محتوى + سماح صريح" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — قائمة امتدادات + فحص بايتات أولى + «فتح رغم التحذير»</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">ملف بامتداد غير مدرج أو محتواه يبدو ثنائيًا (محارف تحكم، بايت صفري) يُرفض برسالة واضحة، مع خيار «افتحه على أي حال» في الرسالة نفسها. الملفات بلا امتداد تُفحص بالمحتوى.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يمنع فتح ملفات ثنائية تُشوّه الواجهة، ولا يحبس المستخدم أمام ملفه؛ يحتاج توحيد مصدر القائمة مع <code>syntax.py</code> وتوثيقها في README.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-08" value="ب" data-label="ب — امتدادات فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — قائمة امتدادات صارمة بلا استثناء</b></span>
+          <span class="opt-desc">لا «افتح على أي حال».</span>
+          <span class="opt-conseq"><b>العاقبة:</b> بسيط وقابل للشرح، لكنه يرفض ملفات مشروعة (سجلات، ترجمات، نصوص بلا امتداد) ويولّد شكاوى لا مبرر لها.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-08" value="ج" data-label="ج — فحص محتوى فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — فحص المحتوى فقط، بلا قائمة</b></span>
+          <span class="opt-desc">يُفتح أي ملف يبدو نصيًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> مرونة عالية، لكن مربّع الحوار يبقى مزدحمًا بكل الملفات، ويكون الفحص هو خط الدفاع الوحيد — وهو قابل للخطأ في الملفات الصغيرة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-08" value="د" data-label="د — تأجيل">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — الإبقاء على «كل الملفات»</b></span>
+          <span class="opt-desc">قرارك المغلقة تُؤجَّل.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر عمل، لكن يبقى المستخدم قادرًا على فتح ملف ثنائي وإتلاف محتواه بالحفظ، ويخالف CD-05 صراحة.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-08">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-08" class="custom" name="note-OD-08" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-09" data-id="OD-09" data-title="سلوك صفحة البداية">
+    <header class="d-head">
+      <span class="d-id">OD-09</span>
+      <h3>عند إغلاق آخر تبويب: ما الذي يظهر بالضبط، وما الذي يعنيه زر الإغلاق؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>طلبك (CD-06)</i><i>تحليلي</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> CD-06 يحدد «صفحة بداية فيها الملفات الأخيرة + فتح/جديد»، والبديل «إنهاء التطبيق» كخيار. الأسئلة الفرعية التي تُنتج سلوكًا غامضًا: هل صفحة البداية عنصر داخل التبويبات أم نافذة مستقلة؟ وماذا يحدث لزر الإغلاق (X) على التبويب الأخير: يُظهر الصفحة أم يُنهي البرنامج؟ وهل تبقى نافذة فارغة بلا تبويبات؟</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-09" value="أ" data-label="أ — صفحة داخل التبويب" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — صفحة البداية تبويبًا خاصًا غير قابل للحفظ + X يُغلق التبويب ويُظهرها + إغلاق النافذة يُنهي التطبيق</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">تبويب «البداية» يحتوي الأخيرة + فتح + جديد، ويُعاد إنشاؤه عند الحاجة؛ لا تبقى نافذة بلا أي تبويب أبدًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> سلوك مطابق لمحرّرات المتصفح فيُفهم فورًا؛ يحتاج تمييز هذا التبويب في منطق الحفظ/الإغلاق/الترميم، وهو أكثر تعقيدًا بقليل من نافذة مستقلة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-09" value="ب" data-label="ب — صفحة كمحتوى لتبويب واحد">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — الصفحة تُعرض داخل التبويب الأخير نفسه (لا تبويب إضافي)</b></span>
+          <span class="opt-desc">عند إغلاق آخر ملف يتحول التبويب إلى صفحة البداية.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> لا يزيد عدد التبويبات ولا يظهر عنصر غريب؛ لكن التبويب يتغيّر دوره، فيصعب على المستخدم فهم «أين ذهب ملفي».</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-09" value="ج" data-label="ج — نافذة مستقلة">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — صفحة البداية نافذة مستقلة تظهر عند عدم وجود تبويبات</b></span>
+          <span class="opt-desc">تبويبات الملفات في نافذة رئيسية، والصفحة نافذة أخرى.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يعزل المنطق ويسهّل الصيانة، لكنه غير مألوف ويضاعف إدارة النوافذ (والنسخة الواحدة OD-11) بلا فائدة للمستخدم.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-09" value="د" data-label="د — الإنهاء مباشرة">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا صفحة بداية: إغلاق آخر تبويب يُنهي التطبيق</b></span>
+          <span class="opt-desc">سلوك Notepad القديم.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أبسط تنفيذ، لكنه يخالف قرارك المغلقة ويجعل الانتقال بين ملفات متعددة غير سلس.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-09">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-09" class="custom" name="note-OD-09" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-11" data-id="OD-11" data-title="النسخة الواحدة">
+    <header class="d-head">
+      <span class="d-id">OD-11</span>
+      <h3>كيف نفرض نسخة واحدة تعمل، ونمرّر الملف المفتوح من الخارج إلى تبويب جديد؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>طلبك (CD-09)</i><i>تحليلي</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> «فتح ملف أثناء التشغيل يفتح تبويبًا» يحتاج قناة بين العمليتين. الخيار القياسي في Qt هو <code>QLocalServer</code>/<code>QLocalSocket</code>: العملية الثانية ترسل المسار وتخرج، والأولى تفتح تبويبًا وترفع نافذتها. البديل <code>QSharedMemory</code> أبسط لكنه لا يحمل بيانات بسهولة، والبديل «لا شيء» يعني نوافذ متعددة وملفات مفتوحة مرتين.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-11" value="أ" data-label="أ — QLocalServer + مقبس" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — قناة محلية <code>QLocalServer</code> مع بروتوكول مسار واحد لكل رسالة</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">اسم القناة مبني على معرّف المستخدم لتفادي التعارض بين الجلسات؛ عند فشل الاتصال تُفتح نسخة عادية بدل أن يرفض التطبيق العمل.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يحل CD-09 ويمنع تكرار النسخ؛ التكلفة: ملف قناة قد يبقى بعد انهيار (يُعالج بمحاولة الاتصال ثم الإنشاء)، ويحتاج اختبارًا يدويًا لأنه لا يعمل هنا.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-11" value="ب" data-label="ب — QSharedMemory فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — منع التكرار بذاكرة مشتركة بلا تمرير مسار</b></span>
+          <span class="opt-desc">العملية الثانية تخرج بصمت، والمستخدم يفتح الملف يدويًا.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أبسط بلا خادم، لكنه يخالف CD-09 (لا تبويب جديد تلقائيًا) ويبدو كأن التطبيق «لم يستجب».</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-11" value="ج" data-label="ج — ملف قفل">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — ملف قفل مع مسار الانتظار</b></span>
+          <span class="opt-desc">العملية الثانية تكتب الملف وتنتظر.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يعمل على أنظمة الملفات المشتركة، لكنه هشّ عند الانهيار (قفل يتيم) وأكثر كودًا من اللازم لمحرّر نصوص.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-11">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-11" class="custom" name="note-OD-11" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-19" data-id="OD-19" data-title="تعارض الاختصارات">
+    <header class="d-head">
+      <span class="d-id">OD-19</span>
+      <h3>كيف نرتّب لوحة المفاتيح: <code>Ctrl+T</code> و<code>Ctrl+P</code> و<code>Ctrl+N</code>؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>مقيّم 1</i><i>تحقّق في الكود</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> اليوم <code>Ctrl+T</code> = «فوق التطبيقات»، و<code>Ctrl+N</code> = ملف جديد، و<code>Ctrl+P</code> مربوط مرتين: «تثبيت التبويب» و<code>StandardKey.Print</code>. هذا تعارض حقيقي لا مجرد ذوق: في كثير من البيئات يفوز أحد الربطين بلا ضمان، وقد تُفتح نافذة طباعة عند محاولة تثبيت تبويب. كما أن <code>Ctrl+T</code> في كل محرّر حديث يعني «تبويب جديد»، ومراجعة المقيّم الأول محقّة في ذلك.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-19" value="أ" data-label="أ — Ctrl+T تبويب جديد" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — <code>Ctrl+T</code> تبويب جديد · <code>Ctrl+N</code> جديد · «فوق التطبيقات» إلى <code>Alt+T</code> · التثبيت إلى <code>Ctrl+Shift+P</code> · الطباعة <code>Ctrl+P</code></b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">ترتيب يطابق توقعات مستخدمي المتصفحات والمحرّرات، ويُلغي الربط المزدوج نهائيًا؛ تُحدَّث الوثائق والاختبارات وقائمة «الاختصارات» في الإعدادات.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يزيل عطلًا فعليًا ويسهل التعلّم؛ يكسر عادة <code>Ctrl+T</code> القديمة (تُذكر في ملاحظات الإصدار)، ويجب أن يعمل الاختصار داخل مربّع البحث أيضًا.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-19" value="ب" data-label="ب — إبقاء الحالي">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — الإبقاء على الحالي وتوثيق الاختصارات فقط</b></span>
+          <span class="opt-desc">لا تغيير في الربط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر مخاطرة على عاداتك، لكن تعارض <code>Ctrl+P</code> يبقى قائمًا، ويستمر المستخدم الجديد في الضغط على <code>Ctrl+T</code> بلا نتيجة متوقعة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-19" value="ج" data-label="ج — حل تعارض Ctrl+P فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — حل تعارض <code>Ctrl+P</code> فقط (التثبيت إلى <code>Ctrl+Shift+P</code>) وإبقاء الباقي</b></span>
+          <span class="opt-desc">أصغر إصلاح ممكن.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يزيل العطل الحقيقي بأقل تغيير، لكنه يترك <code>Ctrl+T</code> مخالفًا للعادة الشائعة — نصف حل.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-19" value="د" data-label="د — جعلها قابلة للتخصيص">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لوحة اختصارات قابلة للتعديل من الإعدادات</b></span>
+          <span class="opt-desc">المستخدم يعيد الربط بنفسه، مع قيم افتراضية جديدة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> مرونة كاملة، لكنها ميزة كبيرة (تصادم، حفظ، إعادة تعيين، عروض أسماء) لا تنتمي لإصدار تصحيحات، وتحتاج اختبارات واجهة غير متاحة.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-19">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-19" class="custom" name="note-OD-19" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-20" data-id="OD-20" data-title="السحب والإفلات">
+    <header class="d-head">
+      <span class="d-id">OD-20</span>
+      <h3>هل نقبل إفلات الملفات على النافذة لفتحها، وإلى أي حد؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>مقيّم 1</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> لا يوجد اليوم أي دعم للإفلات. إضافة «إفلات ملفات = فتحها» بسيطة (تُعيد استخدام مسار «افتح» نفسه)، لكنها تتقاطع مع CD-05 (ملف غير مسموح يجب أن يُرفض برسالة)، ومع CD-09 (النسخة الواحدة). أما سحب تبويب خارج النافذة لفصله إلى نافذة جديدة فهو ميزة أخرى تمامًا تمسّ إدارة النوافذ والحالة.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-20" value="أ" data-label="أ — ملفات فقط" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — إفلات ملفات لفتحها في تبويبات، مع احترام قائمة CD-05</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">إفلات واحد أو عدة ملفات = تبويبات؛ ملف مرفوض = رسالة واضحة؛ إفلات نص = لصق عادي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> توافق مع عادة سطح المكتب بتكلفة صغيرة، ويعيد استخدام منطق الفتح؛ لا يمسّ إدارة النوافذ.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-20" value="ب" data-label="ب — ملفات + فصل تبويب">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — أ + سحب التبويب خارج النافذة لفصله</b></span>
+          <span class="opt-desc">نوافذ متعددة بتبويبات.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> تجربة أقوى لمستخدم متعدد الملفات، لكنها تحتاج إدارة حالة بين النوافذ وتتعارض مع فرض النسخة الواحدة وحفظ الجلسة — كلفة عالية في إصدار تصحيحات.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-20" value="ج" data-label="ج — لا إفلات">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — لا دعم للإفلات الآن</b></span>
+          <span class="opt-desc">يُؤجَّل.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> لا كود جديد ولا مخاطرة، لكن المستخدم يجد نفسه يفتح الملفات عبر الحوار فقط — وهو ما يشتكي منه مستخدمو سطح المكتب.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-20">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-20" class="custom" name="note-OD-20" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+</section>
+
+<!-- ============ SEC 6 ============ -->
+<section id="sec6">
+  <h2><span class="num">8</span>القسم 6 — ميزات قادمة</h2>
+  <p class="lede">قراران يحدّدان ما لا يدخل 1.0.02. التوصية في الاثنين واحدة: التأجيل الواضح أفضل من التنفيذ الناقص.</p>
+
+  <article class="decision" id="OD-21" data-id="OD-21" data-title="ميزات إنتاجية">
+    <header class="d-head">
+      <span class="d-id">OD-21</span>
+      <h3>أين نضع عدد الكلمات، وإعادة فتح التبويب المغلق، واستعادة الجلسة، والقوالب؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>مقيّم 1 و2 و4</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> هذه أربع ميزات مختلفة الأثر: عدد الكلمات يعرض ما يُحسب أصلًا في الإحصاءات (رخيص)، وإعادة فتح تبويب مغلق تحتاج مكدّس إغلاق مع مسارات (متوسط)، واستعادة الجلسة تحتاج حفظًا آمنًا لقائمة التبويبات والتعامل مع ملفات اختفت (متوسط إلى عالٍ، ويتقاطع مع OD-16)، والقوالب تحتاج واجهة إدارة ملفات (عالٍ نسبيًا). جمعها في إصدار تصحيحات يعني تأجيل الإصلاحات لصالح ميزات لا تخدم رسالة الإصدار.</p>
+    <div class="opts">
+      <label class="opt">
+        <input type="radio" name="OD-21" value="أ" data-label="أ — الكل في 1.0.02">
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — الأربع ميزات في 1.0.02</b></span>
+          <span class="opt-desc">تنفيذ كامل مع إعدادات واختبارات.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> قيمة مرئية سريعة، لكن الإصدار يصبح «ميزات + تصحيحات» ويستحيل وصفه بسطر، وترتفع مخاطرة تسريب أخطاء بلا اختبار واجهة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-21" value="ب" data-label="ب — كلها في 1.1">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — تُؤجَّل كاملة إلى 1.1</b></span>
+          <span class="opt-desc">تُسجَّل في خارطة الطريق مع ترتيب أولوية.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يبقى 1.0.02 نقيًا وقابلاً للاختبار؛ لكن المستخدم لا يرى أي إضافة، ويبقى إغلاق التبويب بالخطأ بلا رجوع.</span>
+        </span>
+      </label>
+      <label class="opt rec">
+        <input type="radio" name="OD-21" value="ج" data-label="ج — عدد الكلمات فقط الآن" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — عدد الكلمات في 1.0.02، والباقي في 1.1</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">يظهر عدد الكلمات/المحارف في شريط الحالة من الإحصاءات المحسوبة أصلًا (بلا كلفة أداء بعد OD-10)، وتُؤجَّل الثلاث الأخرى.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> مكسب حقيقي لجمهور الكتّاب بتكلفة ساعات قليلة جدًا؛ يحتاج اختبار عرض واحدًا، ويجب ألا يعيد إدخال الحساب الكامل على كل تغيير.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-21" value="د" data-label="د — رفض">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا شيء منها، لا الآن ولا لاحقًا</b></span>
+          <span class="opt-desc">المحرّر يبقى بسيطًا بلا إضافات.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> نطاق ضيق دائم، لكنك تتخلى عن ميزات ذكرها ثلاثة مقيّمين كأسباب لاستخدام المشروع.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-21">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-21" class="custom" name="note-OD-21" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-22" data-id="OD-22" data-title="Markdown متقدم">
+    <header class="d-head">
+      <span class="d-id">OD-22</span>
+      <h3>هل نضيف معاينة Markdown منفصلة وتصدير HTML/PDF، أم نكتفي بالمعاينة الحالية؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>مقيّم 1 و3 و4</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> التمييز الحالي يزيّن النص داخل المحرّر (مشابه لأسلوب Obsidian)، ولا توجد معاينة منفصلة ولا تصدير. المعاينة المنفصلة تحتاج محرّك Markdown كاملًا (قوائم، جداول، صور، روابط) ومزامنة تمرير — أي حزمة كبيرة. تصدير PDF ممكن عبر الطباعة الموجودة (<code>StandardKey.Print</code>) لكنه ورقي الشكل ويحتاج خطوطًا عربية سليمة. كما أن عيب B3 (الاستبدال يتجاهل الخيارات) يجب إصلاحه أولًا لأنه يمسّ نفس شاشة البحث/الاستبدال.</p>
+    <div class="opts">
+      <label class="opt">
+        <input type="radio" name="OD-22" value="أ" data-label="أ — معاينة وتصدير الآن">
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — معاينة منفصلة + تصدير HTML/PDF في 1.0.02</b></span>
+          <span class="opt-desc">لوحة معاينة متزامنة وتصدير بخطوط مضمّنة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يجعل المشروع «محرّر كتابة» لا «مفكرة»، لكنه يضيف تبعية Markdown كبيرة وسطح اختبار واسعًا، ويؤخر التصحيحات.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-22" value="ب" data-label="ب — تصدير فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — تصدير PDF فقط الآن (عبر مسار الطباعة)</b></span>
+          <span class="opt-desc">لا معاينة منفصلة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> فائدة ملموسة بتكلفة متوسطة، لكن جودة الإخراج تعتمد على توفّر QtPrintSupport في الحزمة (بند تغليف قائم)، وقد ينتج PDF بخط عربي رديء إن لم تُضبط الخطوط.</span>
+        </span>
+      </label>
+      <label class="opt rec">
+        <input type="radio" name="OD-22" value="ج" data-label="ج — تأجيل إلى 1.1" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — تُؤجَّل كاملة، ويُصلح B3 الآن</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">إصلاح منطق الاستبدال (الخيارات المُتجاهَلة) داخل 1.0.02، وتأجيل المعاينة والتصدير إلى 1.1.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يُصلح عيبًا فعليًا في وظيفة موجودة، ويحفظ الإصدار من تبعية ثقيلة؛ يبقى المستخدم بلا تصدير حتى 1.1.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-22" value="د" data-label="د — رفض">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا معاينة ولا تصدير إطلاقًا</b></span>
+          <span class="opt-desc">Markdown للتحرير فقط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> بساطة دائمة، لكنه يحدّ من قيمة دعم Markdown الذي تُعلنه الصفحة أصلًا.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-22">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-22" class="custom" name="note-OD-22" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+</section>
+
+<!-- ============ SEC 7 ============ -->
+<section id="sec7">
+  <h2><span class="num">9</span>القسم 7 — التوزيع والتوثيق والجودة</h2>
+  <p class="lede">أربعة قرارات عن الطريقة التي يصل بها المشروع إلى الناس، ومدى مصداقية ما يقوله عن نفسه.</p>
+
+  <article class="decision" id="OD-23" data-id="OD-23" data-title="قنوات التوزيع">
+    <header class="d-head">
+      <span class="d-id">OD-23</span>
+      <h3>هل نُبقي ثماني صيغ حزم، أم نُقلّص إلى Flatpak وAppImage، أم نُضيف قنوات جديدة؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>مقيّم 2 و3 و5</i><i>قرارك السابق</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> الإصدار 1.0.01 نشر تسعة ملفات: deb، rpm، pkg.tar.zst، AppImage، whl، sdist، msi، flatpak، وSHA256SUMS. خمسة منها تُبنى في CI على Linux فقط، واثنان لا يمكن اختبارهما هنا. المشكلات التقنية المؤكدة: AppImage لا يحزم مفسّر بايثون فيعتمد على النظام، وMetainfo غير مشمول في sdist، واعتماد Flatpak على مساحة العمل بدل مستودع نظيف. التوصية الشائعة في التقارير هي تقليص السطح إلى Flatpak+AppImage، لكن قرارك المعلن كان «حسب الإصدار الأول» (كل الصيغ).</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-23" value="أ" data-label="أ — الثماني + إصلاحات" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — تبقى الثماني، وتُصلح عيوبها المؤكدة</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">AppImage يحزم مفسّره، Flatpak يُبنى من مستودع نظيف، Metainfo يدخل sdist، وdeb يعلن QtPrintSupport باعتباره مطلوبًا. تُضاف بوابة تتحقق من كل ملف منشور.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يحترم قرارك ويحفظ جمهور التوزيعات؛ التكلفة أعلى عمل تغليف في هذا الإصدار، وأي تكاسل هنا يُنتج حزمًا تُثبَّت ولا تعمل.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-23" value="ب" data-label="ب — Flatpak + AppImage فقط">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — تقليص إلى Flatpak وAppImage</b></span>
+          <span class="opt-desc">تبقى حزمتا بايثون إضافة اختيارية للمطوّرين.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يقلل الصيانة بوضوح ويطابق توصية ثلاثة مقيّمين؛ لكنه يخالف قرارك السابق، ويُبعد مستخدمي deb/rpm/MSI الذين قد يكونون الأغلبية.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-23" value="ج" data-label="ج — الثماني + Flathub/AUR">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — الثماني + النشر على Flathub وAUR</b></span>
+          <span class="opt-desc">قنوات متاجر إضافة إلى الملفات المباشرة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> وصول أوسع وثقة أعلى، لكن كل قناة التزام مراجعة وتحديث مستمر لمشرف واحد — وهي أكبر مخاطرة ذكرتها التقارير.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-23" value="د" data-label="د — لا تغيير">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا تغيير في التوزيع هذا الإصدار</b></span>
+          <span class="opt-desc">تُبنى الحزم كما هي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر عمل، لكن AppImage يبقى معتمدًا على النظام وقد لا يعمل على جهاز نظيف — أي أن «يعمل على كل التوزيعات» يبقى ادعاءً غير صحيح.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-23">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-23" class="custom" name="note-OD-23" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-24" data-id="OD-24" data-title="صلاحيات Flatpak">
+    <header class="d-head">
+      <span class="d-id">OD-24</span>
+      <h3>هل نُقلّص صلاحية <code>--filesystem=home</code> في حزمة Flatpak؟</h3>
+      <span class="sev sev-p2">متوسط</span>
+    </header>
+    <p class="src"><i>مقيّم 4</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> الحزمة تطلب وصولًا كاملًا إلى مجلد المستخدم. لمحرّر نصوص هذا واسع، ويُضعف مصداقية «تطبيق سطح مكتب آمن». في المقابل: خاصية الحفظ التلقائي واستعادة الجلسة وإعادة فتح الملفات الأخيرة تحتاج مسارات ثابتة؛ وبوابات الملفات في Flatpak تمنح وصولًا لما يختاره المستخدم عبر الحوار، لكن إعادة فتح الملفات من الجلسة السابقة قد تفشل بلا صلاحية دائمة. لذلك التقليص ليس مجانيًا: قد يكسر «الملفات الأخيرة» و«الحفظ التلقائي» بصمت.</p>
+    <div class="opts">
+      <label class="opt">
+        <input type="radio" name="OD-24" value="أ" data-label="أ — تقليص إلى مجلدات المستخدم">
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — تقليص إلى <code>xdg-documents</code> و<code>xdg-download</code> + بوابات</b></span>
+          <span class="opt-desc">الملفات خارج هذين المجلدين تُفتح عبر الحوار فقط.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صلاحيات أنظف وثقة أعلى؛ لكن أي ملف في مجلد عمل أو قرص خارجي يحتاج حوارًا، وقد تفشل إعادة فتح الجلسة — ويحتاج اختبار Flatpak حقيقيًا غير متاح هنا.</span>
+        </span>
+      </label>
+      <label class="opt rec">
+        <input type="radio" name="OD-24" value="ب" data-label="ب — الإبقاء مع توثيق" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — الإبقاء على <code>home</code> في 1.0.02 مع توثيق سببه وخطة تقليصه</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">يبقى الوصول الكامل مع سطر صريح في Metainfo/README يشرح لماذا، وقرار مؤجل إلى 1.1 بعد اختبار إعادة فتح الجلسة تحت بوابات الملفات.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> لا مخاطرة على الحفظ التلقائي أو الملفات الأخيرة؛ يبقى النقد الأمني قائمًا لكنه موثّق ومقصود — وهو أفضل من تقليص يكسر الوظائف بصمت.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-24" value="ج" data-label="ج — تقليص + صلاحية اختيارية">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — تقليص افتراضي + تعليمات <code>flatpak override</code></b></span>
+          <span class="opt-desc">المستخدم يوسّع الصلاحية بنفسه عند الحاجة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> توازن بين الأمان والمرونة، لكنه ينقل عبئًا تقنيًا إلى مستخدم عادي، ويحتاج توثيقًا دقيقًا.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-24" value="د" data-label="د — لا شأن لنا">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — إبقاء الوضع كما هو بلا توثيق</b></span>
+          <span class="opt-desc">لا تغيير ولا شرح.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر عمل، لكن النقد الأمني يبقى بلا جواب، وهو أسهل ما يُلتقط ضد المشروع في أي مراجعة.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-24">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-24" class="custom" name="note-OD-24" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-26" data-id="OD-26" data-title="التوثيق والانطباع الأول">
+    <header class="d-head">
+      <span class="d-id">OD-26</span>
+      <h3>ما الذي نُصلحه في الوثائق والانطباع الأول الآن: التصحيحات فقط، أم فصل اللغتين، أم صور متحركة أيضًا؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>مقيّمون خمسة</i><i>تحقّق في الملفات</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> ادعاءات «صور مفقودة» و«أخطاء إملائية» غير صحيحة، لكن التدقيق كشف انحرافًا حقيقيًا: <code>docs/DEVELOPMENT.md:127</code> يقول إن مسارات CI «غير موضوعة في <code>.github/workflows</code>» وهي موجودة فعلًا، و<code>SECURITY.md</code> يعلن إصدارًا غير منشور (OD-25)، وREADME يوثّق اختصارات ستتغيّر في OD-19/CD-08/CD-10. الأهم للانطباع الأول: صفحة README عربية بالكامل تقريبًا بينما جمهور GitHub العالمي يقرأ الإنجليزية — وهذا ما أشار إليه ثلاثة مقيّمين.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-26" value="أ" data-label="أ — تصحيحات دقيقة فقط" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — تصحيحات دقيقة فقط: DEVELOPMENT، الاختصارات، جدول الصيغ، روابط الإصدار</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">تُصحَّح كل عبارة تخالف الواقع، وتُضاف أرقام أداء حقيقية بدل الصفات، ويُشار إلى سياسة دعم واحدة. لا صور متحركة ولا إعادة هيكلة الآن.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> عمل ساعات قليلة يرفع المصداقية مباشرة؛ لا يوسّع الجمهور لكنه يمنع أن يكشف مستخدمٌ أول تناقض في أول دقيقة.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-26" value="ب" data-label="ب — تصحيحات + فصل اللغتين">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — أ + فصل README إلى عربي وإنجليزي</b></span>
+          <span class="opt-desc">صفحة إنجليزية قصيرة أولًا ثم العربية، أو ملفان مترابطان.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> يفتح المشروع لجمهور GitHub الدولي دون التخلي عن الهوية العربية؛ تكلفة: ترجمة تحتاج صيانة مزدوجة عند كل تغيير.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-26" value="ج" data-label="ج — الكل الآن">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — ب + صور متحركة + دليل استخدام + قوالب Issues</b></span>
+          <span class="opt-desc">حزمة تسويق كاملة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أفضل انطباع أول ممكن، لكن الصور المتحركة تحتاج بيئة واجهة سليمة (غير متاحة هنا) وتُستهلك في وقت الإصلاحات.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-26" value="د" data-label="د — لا شيء">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا تغيير؛ الكود أهم</b></span>
+          <span class="opt-desc">تُترك الوثائق كما هي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر عمل، لكن يبقى في المستودع نصّ يخالف الواقع، ويبقى أول ما يراه الزائر عربيًا بالكامل — وهو ما اعتُبر ضعفًا في أربعة تقارير.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-26">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-26" class="custom" name="note-OD-26" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+
+  <article class="decision" id="OD-27" data-id="OD-27" data-title="جودة الاختبارات والمراجعة">
+    <header class="d-head">
+      <span class="d-id">OD-27</span>
+      <h3>ما مستوى الاختبار والمراجعة الذي نلتزم به قبل 1.0.02: اختبارات انحدار فقط، أم تغطية مرتفعة، أم اختبارات تثبيت؟</h3>
+      <span class="sev sev-p1">عالي</span>
+    </header>
+    <p class="src"><i>مقيّم 4 و5</i><i>تحقّق في الكود</i></p>
+    <p class="facts"><b>الخلفية المحقّقة:</b> المشروع فيه 254 تعريف اختبار، لكن منها ما لا يختبر شيئًا: <code>tests/test_widgets.py:31-32</code> يؤكد أن ترجمة مفتاح تساوي نفسها، و<code>test_text_direction.py:80</code> يثبّت نتيجة خاطئة. سكربتات CI تستخدم <code>os._exit()</code> (تنجح حتى لو فشلت الخطوات)، واختبار MSI يتحقق فقط من <code>--version</code>. في الوقت نفسه لا يمكن تشغيل اختبارات الواجهة في هذه البيئة (مكتبة رسوميات مفقودة)، فأي سلوك بصري (CD-11، CD-04، OD-12) سيُشحن بلا تحقق فعلي. الادعاء بأن التغطية «أكثر من 80%» لم يُثبت ولا يمكن إثباته الآن.</p>
+    <div class="opts">
+      <label class="opt rec">
+        <input type="radio" name="OD-27" value="أ" data-label="أ — اختبار انحدار لكل إصلاح + مراجعة الهدف" checked>
+        <span class="opt-body">
+          <span class="opt-head"><b>أ — اختبار انحدار لكل بند + مراجعة وحدات الاتجاه والملفات + إزالة الاختبارات عديمة المعنى</b> <span class="rec-badge">★ توصية المشروع</span></span>
+          <span class="opt-desc">كل بند في 1.0.02 يأتي باختبار يفشل قبل الإصلاح وينجح بعده؛ تُراجع وحدة الاتجاه ووحدة الملفات يدويًا سطرًا بسطر؛ تُحذف الاختبارات التوتولوجية أو تُحوَّل إلى سلوكية؛ وسلوك الواجهة يُذكر صريحًا في ملاحظات الإصدار كـ«يحتاج تحققًا يدويًا».</span>
+          <span class="opt-conseq"><b>العاقبة:</b> حماية حقيقية من الانحدار بأقل تكلفة ممكنة، وصدق في الوصف؛ لا يحل مشكلة عدم اختبار الواجهة، لكنه يجعلها معلنة لا مخفية.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-27" value="ب" data-label="ب — أ + تغطية 80%">
+        <span class="opt-body">
+          <span class="opt-head"><b>ب — أ + رفع التغطية إلى 80% قبل الإصدار</b></span>
+          <span class="opt-desc">قياس تغطية حقيقي وهدف رقمي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> مؤشر واضح للجودة، لكن جزءًا كبيرًا من الكود واجهي لا يُقاس بلا بيئة رسومية، فقد يتحول الهدف إلى كتابة اختبارات لترضي الرقم.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-27" value="ج" data-label="ج — أ + اختبارات تثبيت">
+        <span class="opt-body">
+          <span class="opt-head"><b>ج — أ + اختبار تثبيت وتشغيل فعلي لكل حزمة</b></span>
+          <span class="opt-desc">تشغيل الحزم داخل حاويات والتقاط صورة واجهة.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> أعلى ثقة ممكنة، لكنه يحتاج بنية CI رسومية (Xvfb) ووقتًا وموارد، وقد يؤخر الإصدار أيامًا بلا أن يمسّ جودة الكود نفسه.</span>
+        </span>
+      </label>
+      <label class="opt">
+        <input type="radio" name="OD-27" value="د" data-label="د — لا التزام جديد">
+        <span class="opt-body">
+          <span class="opt-head"><b>د — لا التزام إضافي</b></span>
+          <span class="opt-desc">تبقى الاختبارات كما هي.</span>
+          <span class="opt-conseq"><b>العاقبة:</b> صفر عمل، لكن اختبار يثبّت خطأً سيمنع إصلاح OD-13، وسكربتات CI قد تعلن نجاحًا كاذبًا — أي أن الإصدار يُشحن بثقة غير مبررة.</span>
+        </span>
+      </label>
+    </div>
+    <div class="custom-row">
+      <label class="custom-label" for="note-OD-27">قرارك الخاص (اختياري)</label>
+      <textarea id="note-OD-27" class="custom" name="note-OD-27" rows="2" placeholder="…"></textarea>
+    </div>
+  </article>
+</section>
+
+<!-- ============ RECO SUMMARY ============ -->
+<section id="reco">
+  <h2><span class="num">★</span>خلاصة التوصيات في سطر لكل قرار</h2>
+  <p class="lede">لو أردت الحسم السريع: هذه هي التوصية كما ظهرت داخل كل بطاقة. اضغط «اعتماد كل التوصيات» في الأعلى لتُختار كلها، ثم عدّل ما تراه.</p>
+  <div class="reco">
+    <ol>
+      <li><b>OD-01:</b> أ — إصدار تصحيح متماسك (13 بندًا + 3 حرجة + 8 منخفضة).</li>
+      <li><b>OD-02:</b> أ — «الأحدث فقط» موثّقًا، بلا حذف.</li>
+      <li><b>OD-03:</b> أ — يبقى <code>1.0.02</code> مع مصدر حقيقة واحد وبوابة تطابق.</li>
+      <li><b>OD-04:</b> أ — كشف فوري + شريط اقتراح، لا تفعيل صامت.</li>
+      <li><b>OD-05:</b> أ — الحفظ التلقائي للتبويب النشط، ويتوقف عند تعديل خارجي.</li>
+      <li><b>OD-06:</b> أ — فحص الفقرة الحالية بسقف 4096 محرفًا.</li>
+      <li><b>OD-07:</b> أ — الأيقونة المشتقة + نقطة لون للحالة.</li>
+      <li><b>OD-08:</b> أ — امتدادات + فحص محتوى + «افتح على أي حال».</li>
+      <li><b>OD-09:</b> أ — صفحة البداية تبويبًا، وX يُغلق التبويب لا التطبيق.</li>
+      <li><b>OD-10:</b> أ — إحصاءات ثابتة + إقران بلا نسخ + تأجيل 150ms.</li>
+      <li><b>OD-11:</b> أ — <code>QLocalServer</code> لنسخة واحدة وتمرير المسار.</li>
+      <li><b>OD-12:</b> أ — رقم واحد لكل فقرة.</li>
+      <li><b>OD-13:</b> أ — <code>unicodedata.bidirectional</code> + قاعدتا P2/P3 + اختبارات.</li>
+      <li><b>OD-14:</b> أ — محاذاة موحّدة موثّقة (لا <code>QTextEdit</code>).</li>
+      <li><b>OD-15:</b> ب — الأدوات العربية كاملة في 1.1، مع «إظهار المحارف الخفية» الآن.</li>
+      <li><b>OD-16:</b> أ — مراقبة + فحص قبل كل حفظ + شريط قرار.</li>
+      <li><b>OD-17:</b> أ — تحصين الإعدادات والترميز معًا.</li>
+      <li><b>OD-18:</b> أ — قياسات حقيقية + سقف + معاينة + بحث متدرّج، بلا mmap.</li>
+      <li><b>OD-19:</b> أ — <code>Ctrl+T</code> تبويبًا، «فوق التطبيقات» إلى <code>Alt+T</code>، وحل تعارض <code>Ctrl+P</code>.</li>
+      <li><b>OD-20:</b> أ — إفلات ملفات فقط.</li>
+      <li><b>OD-21:</b> ج — عدد الكلمات الآن، والباقي في 1.1.</li>
+      <li><b>OD-22:</b> ج — تأجيل المعاينة والتصدير، وإصلاح B3 الآن.</li>
+      <li><b>OD-23:</b> أ — تبقى الثماني مع إصلاح عيوب الحزم.</li>
+      <li><b>OD-24:</b> ب — الإبقاء على صلاحية <code>home</code> في 1.0.02 مع توثيق وخطة تقليص.</li>
+      <li><b>OD-25:</b> أ — السياسة تعلن <code>1.0.x</code> مدعومًا وتُحدَّث مع كل إصدار.</li>
+      <li><b>OD-26:</b> أ — تصحيحات دقيقة فقط؛ فصل اللغات في 1.1.</li>
+      <li><b>OD-27:</b> أ — اختبار انحدار لكل إصلاح + مراجعة الوحدتين الحرجتين.</li>
+    </ol>
+  </div>
+  <p class="hint" style="margin-top:16px"><b>ما لا أوصي به في هذا الإصدار تحديدًا:</b> إعادة كتابة العرض بـ<code>QTextEdit</code> (OD-14)، ووضع mmap/العرض الافتراضي (OD-18)، ولوحة اختصارات قابلة للتخصيص (OD-19)، ونقل المشروع إلى Rust/C++ (لم يقترحه أحد بجدية، وكل التقارير رفضته)، وأي واجهة إضافات (plugins) قبل استقرار جوهر التحرير.</p>
+</section>
+</main>
+
+<footer>
+  <div class="wrap" style="padding:0">
+    <p><b>المنهجية:</b> كل «خلفية محقّقة» في هذا الملف مأخوذة من تشغيل الكود أو قراءته، لا من نقل كلام المقيّمين. أدوات التحقق: تشغيل <code>text_direction</code> على حالات مختلطة، إدخال إعدادات تالفة إلى <code>Settings.load</code>، فحص ربط الاختصارات في <code>main_window.py</code>، مقارنة ملفات <code>packaging/</code> و<code>.github/workflows/</code>، واستعلام <code>gh api</code> لبيانات المستودع.</p>
+    <p><b>الملفات المرتبطة:</b> <code>docs/DECISIONS_1.0.02.ar.md</code> (سجل القرارات المفصّل ومعايير القبول) · <code>docs/ANALYSIS_1.0.02.ar.md</code> (خريطة الإصدار والعيوب) · <code>docs/decisions-1.0.02.html</code> (هذا الملف، ورقة التصويت).</p>
+    <p class="noprint">لا يوجد في هذا الملف أي مورد خارجي (لا خطوط ولا سكربتات من الشبكة)؛ يمكن فتحه بلا إنترنت، وإجاباتك محفوظة محليًا في المتصفح.</p>
+  </div>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+  var KEY = 'mishkah-decisions-1.0.02-v1';
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.decision'));
+  var state = { answers: {}, notes: {} };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (!raw) return;
+      var data = JSON.parse(raw);
+      if (data && typeof data === 'object') {
+        state.answers = data.answers || {};
+        state.notes = data.notes || {};
+      }
+    } catch (e) { /* ignore corrupt storage */ }
+  }
+
+  function restore() {
+    cards.forEach(function (card) {
+      var id = card.dataset.id;
+      var val = state.answers[id];
+      if (val) {
+        var radio = card.querySelector('input[type=radio][value="' + val + '"]');
+        if (radio) radio.checked = true;
+      }
+      var ta = card.querySelector('textarea');
+      if (ta && state.notes[id]) ta.value = state.notes[id];
+    });
+  }
+
+  function save() {
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) { /* storage full/blocked */ }
+  }
+
+  function refresh() {
+    var answered = 0;
+    cards.forEach(function (card) {
+      var id = card.dataset.id;
+      var checked = card.querySelector('input[type=radio]:checked');
+      var ta = card.querySelector('textarea');
+      var hasNote = ta && ta.value.trim().length > 0;
+      var done = !!checked || hasNote;
+      card.classList.toggle('answered', done);
+      if (done) answered++;
+    });
+    var total = cards.length || 1;
+    document.getElementById('score').textContent = answered + ' / ' + cards.length;
+    document.getElementById('bar').style.width = (answered / total * 100).toFixed(1) + '%';
+  }
+
+  document.addEventListener('change', function (e) {
+    var t = e.target;
+    if (t && t.type === 'radio' && t.name) {
+      state.answers[t.name] = t.value;
+      save(); refresh();
+    }
+  });
+
+  document.addEventListener('input', function (e) {
+    var t = e.target;
+    if (t && t.tagName === 'TEXTAREA' && t.name) {
+      var id = t.name.replace(/^note-/, '');
+      var text = t.value.trim();
+      if (text) { state.notes[id] = text; } else { delete state.notes[id]; }
+      save(); refresh();
+    }
+  });
+
+  window.buildReport = function () {
+    var lines = [];
+    lines.push('# قرارات الإصدار 1.0.02 — ورقة مُجابة');
+    lines.push('');
+    lines.push('> المصدر: docs/decisions-1.0.02.html — الجولة الأولى');
+    lines.push('');
+    var chosen = 0;
+    cards.forEach(function (card) {
+      var id = card.dataset.id;
+      var title = card.dataset.title || '';
+      var radio = card.querySelector('input[type=radio]:checked');
+      var ta = card.querySelector('textarea');
+      var note = ta ? ta.value.trim() : '';
+      var label = radio ? (radio.dataset.label || radio.value) : '— لم يُختر —';
+      if (radio || note) chosen++;
+      lines.push('## ' + id + ' — ' + title);
+      lines.push('- الاختيار: ' + label);
+      if (note) lines.push('- قرار خاص (يتقدّم على الخيار): ' + note);
+      lines.push('');
+    });
+    lines.push('---');
+    lines.push('حُسم ' + chosen + ' من ' + cards.length + ' قرارًا.');
+    lines.push('');
+    return lines.join('\n');
+  };
+
+  function toast(msg) {
+    var el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(el._t);
+    el._t = setTimeout(function () { el.classList.remove('on'); }, 2200);
+  }
+
+  window.exportDecisions = function () {
+    var text = window.buildReport();
+    var blob = new Blob([text], { type: 'text/markdown;charset=utf-8' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url;
+    a.download = 'mishkah-1.0.02-decisions.md';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1500);
+    toast('أُنزل ملف القرارات — أرسله لي لنبدأ التنفيذ.');
+  };
+
+  window.copyDecisions = function () {
+    var text = window.buildReport();
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); toast('نُسخت القرارات إلى الحافظة.'); }
+      catch (e) { toast('تعذّر النسخ — استخدم زر التصدير.'); }
+      document.body.removeChild(ta);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast('نُسخت القرارات إلى الحافظة.');
+      }).catch(fallback);
+    } else { fallback(); }
+  };
+
+  window.applyRecommended = function () {
+    if (!confirm('سيتم اختيار «توصية المشروع» في كل قرار لم تختره بعد. المتابعة؟')) return;
+    cards.forEach(function (card) {
+      var rec = card.querySelector('.opt.rec input[type=radio]');
+      if (!rec) return;
+      var any = card.querySelector('input[type=radio]:checked');
+      if (!any) {
+        rec.checked = true;
+        state.answers[rec.name] = rec.value;
+      }
+    });
+    save(); refresh();
+    toast('اعتُمدت التوصيات في القرارات غير المحسومة.');
+  };
+
+  window.resetAll = function () {
+    if (!confirm('سيُفرَّغ كل اختيار وملاحظة. لا يمكن الرجوع. المتابعة؟')) return;
+    cards.forEach(function (card) {
+      var radios = card.querySelectorAll('input[type=radio]');
+      Array.prototype.forEach.call(radios, function (r) { r.checked = false; });
+      var ta = card.querySelector('textarea');
+      if (ta) ta.value = '';
+    });
+    state = { answers: {}, notes: {} };
+    try { localStorage.removeItem(KEY); } catch (e) { /* ignore */ }
+    refresh();
+    toast('فُرِّغ النموذج.');
+  };
+
+  load();
+  restore();
+  refresh();
+})();
+</script>
+</body>
+</html>

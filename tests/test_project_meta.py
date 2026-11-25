@@ -44,7 +44,17 @@ def test_author_appears_only_in_the_about_box():
     assert offenders == [], offenders
 
 
+def _require_qt():
+    """Skip where Qt cannot load (a checkout without libGL)."""
+    try:
+        from PySide6.QtWidgets import QApplication  # noqa: F401
+    except Exception as exc:  # pragma: no cover - depends on the host
+        pytest.skip(f"Qt GUI libraries unavailable: {exc}")
+
+
 def test_about_dialog_credits_author_and_assistants():
+    # The About text lives in a Qt module; skip where Qt cannot load.
+    _require_qt()
     from mishkah.widgets.about_dialog import AI_ASSISTANTS, AUTHOR, about_html
 
     assert "بلال" in AUTHOR
@@ -62,6 +72,7 @@ def test_about_dialog_credits_author_and_assistants():
 
 def test_about_dialog_has_no_rtl_explanation():
     """The direction essay was removed from the About box on request."""
+    _require_qt()
     from mishkah.widgets.about_dialog import about_html
 
     html = about_html().lower()
@@ -142,35 +153,36 @@ def test_single_identity():
 
 
 def test_single_release():
-    """All release metadata carries the literal application version."""
+    """One declaration, and every derived place agrees with it."""
+    import subprocess
+    import sys
     import xml.etree.ElementTree as ET
 
     import mishkah
 
-    assert mishkah.__version__ == "1.0.01"
-    declarations = {
-        "pyproject.toml": r'^version = "([^"]+)"',
-        "src/mishkah/__init__.py": r'^__version__ = "([^"]+)"',
-        "packaging/arch/PKGBUILD": r'^pkgver=(\S+)',
-        "packaging/common/mishkah.1": r'"Mishkah Note ([^"]+)"',
-        "packaging/windows/mishkah.wxs": r'<\?define Version="([^"]+)"',
-        "packaging/rpm/mishkah-note.spec": r'version_override ([\d.]+)',
-    }
-    for relative, pattern in declarations.items():
-        text = (REPO / relative).read_text()
-        matches = re.findall(pattern, text, re.M)
-        assert matches and all(v == "1.0.01" for v in matches), (relative, matches)
+    text = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    version = re.search(r'^version = "([^"]+)"', text, re.M).group(1)
+    assert mishkah.__version__ == version
+
     tree = ET.parse(REPO / "packaging/common/org.mishkahnote.Mishkah.metainfo.xml")
-    assert [r.attrib["version"] for r in tree.findall("releases/release")] == ["1.0.01"]
-    spec = (REPO / "packaging/rpm/mishkah-note.spec").read_text().split("%changelog")[1]
-    assert len(re.findall(r'^\* ', spec, re.M)) == 1
-    assert "1.0.01" in spec
-    for path in _tracked_text_files():
-        try:
-            text = path.read_text()
-        except (UnicodeDecodeError, OSError):
-            continue
-        for line in text.splitlines():
-            if "PEP 440" in line:
-                continue
-            assert not re.search(r'(?<!\d)1\.0\.(?:0|1)(?!\d)', line), (str(path), line)
+    assert [r.attrib["version"] for r in tree.findall("releases/release")][0] == version
+
+    gate = subprocess.run([sys.executable, "tools/check_version.py"],
+                          cwd=REPO, capture_output=True, text=True)
+    assert gate.returncode == 0, gate.stderr
+
+
+def test_version_gate_catches_a_stale_number():
+    """The gate must fail when a derived place keeps the previous release."""
+    import subprocess
+    import sys
+
+    script = (
+        "import sys; sys.path.insert(0, 'tools'); import check_version as c; "
+        "bad = c.check(c.project_version() + '9'); "
+        "print(len(bad)); raise SystemExit(0 if bad else 1)"
+    )
+    result = subprocess.run([sys.executable, "-c", script], cwd=REPO,
+                            capture_output=True, text=True)
+    assert result.returncode == 0, result.stderr
+

@@ -7,14 +7,22 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from PySide6.QtCore import QObject, Qt
+from PySide6.QtCore import QFileSystemWatcher, QObject, Qt, QTimer
 from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mishkah.core import i18n, syntax, tab_style
+from mishkah.core.disk_state import changed_on_disk, stat_signature
+from mishkah.core.file_kinds import READ_ONLY, policy_for_file
 from mishkah.core.languages import editor_font_families, get_language
 from mishkah.core.settings import Settings
-from mishkah.core.text_direction import AUTO, LTR, dominant_direction
+from mishkah.core.text_direction import (
+    AUTO,
+    FIRST_LINE,
+    FIRST_STRONG,
+    LTR,
+    dominant_direction,
+)
 from mishkah.models.document import DocumentModel
 from mishkah.services.file_service import FileService
 from mishkah.views.editor_view import EditorView
@@ -36,6 +44,16 @@ class MainController(QObject):
         self.settings = settings
         self.files = file_service or FileService(self)
         self._docs: Dict[EditorView, DocumentModel] = {}
+        self._invisible_banner = False
+        #: CD-18: documents whose file changed on disk, waiting for a decision.
+        #: A list, not a set: DocumentModel is a dataclass and unhashable.
+        self._changed_docs: List[DocumentModel] = []
+        #: CD-19/M1: reopened with another encoding, awaiting conversion.
+        self._encoding_pending: List[DocumentModel] = []
+        self._watcher: Optional[QFileSystemWatcher] = None
+        #: CD-01: one idle timer, single shot, no background thread.
+        self._autosave_timer: Optional[QTimer] = None
+        self._last_editor: Optional[EditorView] = None
         self._pending_paths: Dict[int, str] = {}   # tab index -> path being loaded
         self._busy = False
         self._close_after_save: set[EditorView] = set()
@@ -44,6 +62,7 @@ class MainController(QObject):
         self.active_theme = self._resolve_theme(settings.theme)
         i18n.set_language(settings.ui_language)
         self._wire()
+        self._init_autosave()
         self._apply_appearance()
 
     # ==================================================================
@@ -63,6 +82,10 @@ class MainController(QObject):
         w.language_changed.connect(self.set_ui_language)
         w.word_wrap_toggled.connect(self.set_word_wrap)
         w.line_numbers_toggled.connect(self.set_line_numbers)
+        w.show_invisible_toggled.connect(self.set_show_invisible_chars)
+        w.file_changed_action.connect(self.on_file_changed_action)
+        w.autosave_toggled.connect(self.set_autosave)
+        w.document_side_toggled.connect(self.set_document_side_first_line)
         w.status_bar_toggled.connect(w.status.setVisible)
         w.encoding_chosen.connect(self.reopen_with_encoding)
         w.line_ending_chosen.connect(self.set_line_ending)
@@ -158,11 +181,14 @@ class MainController(QObject):
         self._docs[editor] = doc
         editor.set_word_wrap(self.settings.word_wrap)
         editor.set_line_numbers_visible(self.settings.line_numbers)
+        editor.set_show_invisible_chars(self.settings.show_invisible_chars)
+        editor.set_document_side_source(self.settings.document_side_source)
         self._apply_editing_options(editor)
         editor.cursor_moved.connect(
             lambda line, col, sel: self.window.status.set_position(line, col, sel))
         editor.zoom_changed.connect(self.window.status.set_zoom)
         editor.direction_changed.connect(self._on_editor_direction)
+        editor.resolved_direction_changed.connect(self._on_resolved_direction)
         editor.stats_changed.connect(self._on_stats)
         editor.textChanged.connect(lambda e=editor: self._on_text_changed(e))
 
@@ -276,7 +302,13 @@ class MainController(QObject):
             editor.set_word_wrap(False)
             editor.set_line_numbers_visible(False)
 
+        # CD-05: decide from the content whether this file may be written.
+        if doc.path is not None and policy_for_file(doc.path) == READ_ONLY:
+            doc.read_only = True
+            self.window.show_banner(
+                i18n.tr("banner.read_only", name=doc.path.name))
         self.window.set_tab_title(editor, self._doc_title(doc), False)
+        self._watch(doc)
         if doc.truncated:
             self.window.show_banner(i18n.tr(
                 "banner.preview", size=_human(8 * 1024 * 1024),
@@ -357,7 +389,18 @@ class MainController(QObject):
                 size=human_size(min(doc.size_on_disk, len(doc.content.encode("utf-8")))),
                 total=human_size(doc.size_on_disk)))
             return False
+        if doc.read_only and not as_copy:
+            self.window.show_banner(
+                i18n.tr("banner.read_only_save", name=self._doc_title(doc)))
+            return False
+        if doc.encoding_pending and not as_copy:
+            self.window.show_encoding_pending(self._doc_title(doc), doc.encoding)
+            if doc not in self._encoding_pending:
+                self._encoding_pending.append(doc)
+            return False
         self._sync_content(editor, doc)
+        if not as_copy and self._file_changed(doc):
+            return False
         target = doc.path
         if as_copy or target is None:
             start = str(target) if target else ""
@@ -373,9 +416,190 @@ class MainController(QObject):
             doc = self._docs.get(editor)
             if doc and doc.is_modified and doc.path and not doc.truncated:
                 self._sync_content(editor, doc)
+                if self._file_changed(doc):
+                    continue
                 self.files.save(doc, doc.path)
 
+    # ==================================================================
+    # CD-01 · autosave
+    # ==================================================================
+    def _init_autosave(self) -> None:
+        self._autosave_timer = QTimer(self)
+        self._autosave_timer.setSingleShot(True)
+        self._autosave_timer.timeout.connect(self._autosave_now)
+        self.window.set_autosave(self.settings.autosave)
+
+    def set_autosave(self, enabled: bool) -> None:
+        """The quick switch in the toolbar, persisted like any other setting."""
+        self.settings.autosave = bool(enabled)
+        self.window.set_autosave(bool(enabled))
+        if not enabled and self._autosave_timer is not None:
+            self._autosave_timer.stop()
+        if enabled:
+            self._arm_autosave()
+
+    def _arm_autosave(self) -> None:
+        if not self.settings.autosave or self._autosave_timer is None:
+            return
+        self._autosave_timer.start(max(500, int(self.settings.autosave_idle_ms)))
+
+    def _autosave_now(self, editor: Optional[EditorView] = None) -> None:
+        """Write the buffer if — and only if — nothing else is in the way."""
+        if not self.settings.autosave:
+            return
+        editor = editor or self.window.current_editor()
+        doc = self.document_for(editor)
+        if editor is None or doc is None:
+            return
+        if (doc.path is None or doc.read_only or doc.truncated
+                or doc.encoding_pending or not doc.is_modified):
+            return
+        if self._changed_docs:
+            return                       # the outside edit has not been answered
+        self._sync_content(editor, doc)
+        if self._file_changed(doc):
+            return
+        self.files.save(doc, doc.path)
+
+    def autosave_enabled(self) -> bool:
+        return bool(self.settings.autosave)
+
+    # ==================================================================
+    # CD-18 · the file changed on disk
+    # ==================================================================
+    def _file_changed(self, doc: DocumentModel) -> bool:
+        """True when the file changed since we read or wrote it.
+
+        Called before *every* write: an autosave that fires two seconds after
+        an outside edit must not silently replace it.
+        """
+        if doc is None or doc.path is None or doc.truncated:
+            return False
+        if not changed_on_disk(doc.path, doc.disk_signature):
+            return False
+        self._show_file_changed(doc)
+        return True
+
+    def _show_file_changed(self, doc: DocumentModel) -> None:
+        if doc not in self._changed_docs:
+            self._changed_docs.append(doc)
+        editor = self._editor_for_document(doc)
+        if editor is not None:
+            index = self.window.index_of(editor)
+            if index >= 0:
+                self.window.tabs.setCurrentIndex(index)
+        try:
+            name = doc.path.name if doc.path else doc.title
+        except AttributeError:          # pragma: no cover - defensive
+            name = ""
+        self.window.show_file_changed(name)
+
+    def _watch(self, doc: DocumentModel) -> None:
+        """Watch the file so an outside edit is noticed before the next save."""
+        if doc.path is None:
+            return
+        if self._watcher is None:
+            self._watcher = QFileSystemWatcher(self)
+            self._watcher.fileChanged.connect(self._on_watched_file_changed)
+        path = str(doc.path)
+        if path not in self._watcher.files():
+            self._watcher.addPath(path)
+
+    def _unwatch(self, doc: DocumentModel) -> None:
+        if self._watcher is None or doc.path is None:
+            return
+        path = str(doc.path)
+        if path in self._watcher.files():
+            self._watcher.removePath(path)
+
+    def _on_watched_file_changed(self, path: str) -> None:
+        for doc in list(self._docs.values()):
+            if doc.path is not None and str(doc.path) == path:
+                if changed_on_disk(doc.path, doc.disk_signature):
+                    self._show_file_changed(doc)
+                else:
+                    # our own atomic write: the signature already matches
+                    self.window.hide_file_changed()
+                break
+
+    def on_file_changed_action(self, action: str) -> None:
+        """Answer the CD-18 banner: reload, overwrite, or dismiss."""
+        doc = self._changed_docs[-1] if self._changed_docs else self.current_document()
+        if doc is None:
+            self.window.hide_file_changed()
+            return
+        editor = self._editor_for_document(doc)
+        self.window.hide_file_changed()
+        if doc in self._changed_docs:
+            self._changed_docs.remove(doc)
+        if action == "convert":
+            if editor is not None:
+                self._convert_encoding(doc, editor)
+            return
+        if action == "dismiss" or editor is None:
+            return
+        if action == "overwrite":
+            doc.disk_signature = stat_signature(doc.path)
+            self._sync_content(editor, doc)
+            self.files.save(doc, doc.path)
+            return
+        if action == "reload":
+            self._reload_from_disk(doc, editor)
+
+    def _convert_encoding(self, doc: DocumentModel, editor: EditorView) -> None:
+        """Accept the new encoding, then save with it (the explicit step)."""
+        doc.encoding_pending = False
+        if doc in self._encoding_pending:
+            self._encoding_pending.remove(doc)
+        self.window.status.set_encoding(doc.encoding)
+        self.window.set_encoding_menu(doc.encoding)
+        self._sync_content(editor, doc)
+        if self._file_changed(doc):
+            return
+        if doc.path is not None:
+            self.files.save(doc, doc.path)
+
+    def _reload_from_disk(self, doc: DocumentModel, editor: EditorView) -> None:
+        """Replace the buffer with what is on disk, dropping undo history."""
+        if doc.path is None:
+            return
+        from mishkah.core import large_file
+
+        try:
+            result = large_file.read_text_chunked(
+                doc.path, encoding=doc.encoding, limit=1 << 62)
+        except Exception as exc:                    # noqa: BLE001 - reported
+            self.window.show_error(i18n.tr("dialog.error.open",
+                                           path=str(doc.path), detail=str(exc)))
+            return
+        text, fmt, truncated, size = result
+        doc.content = text
+        doc.fmt = fmt
+        doc.size_on_disk = size
+        doc.truncated = truncated
+        doc.revision += 1
+        doc.disk_signature = stat_signature(doc.path)
+        # Loading the buffer emits textChanged; without this the fresh content
+        # would be marked as an edit of itself.
+        editor.blockSignals(True)
+        try:
+            editor.load_content(text)
+            # Formatting signals travel as textChanged too, so the direction
+            # pass belongs inside the quiet window.
+            editor.apply_direction(doc.direction_mode or AUTO, announce=False)
+        finally:
+            editor.blockSignals(False)
+        doc.is_modified = False
+        editor.document().setModified(False)
+        self.window.set_tab_title(editor, self._doc_title(doc), False)
+        self._sync_ui(editor)
+        doc.is_modified = False        # nothing above is an edit of the user's
+        self.window.show_banner(i18n.tr("banner.reloaded", name=doc.path.name))
+
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
+        self._watch(doc)
+        if doc in self._changed_docs:
+            self._changed_docs.remove(doc)
         editor = self._editor_for_document(doc)
         if editor is not None:
             self.window.set_tab_title(editor, self._doc_title(doc), doc.is_modified)
@@ -416,6 +640,10 @@ class MainController(QObject):
         if editor is None:
             return
         doc = self._docs.get(editor)
+        if doc is not None:
+            self._unwatch(doc)
+            if doc in self._changed_docs:
+                self._changed_docs.remove(doc)
         if doc and doc.is_modified:
             answer = self.window.confirm_unsaved(self._doc_title(doc))
             if answer == QMessageBox.StandardButton.Cancel:
@@ -438,7 +666,11 @@ class MainController(QObject):
             self._sync_ui(self.window.current_editor())
 
     def _on_tab_changed(self, index: int) -> None:
+        leaving = self._last_editor
         editor = self.window.editor_at(index)
+        if leaving is not None and leaving is not editor:
+            self._autosave_now(leaving)   # one of the three moments (CD-01)
+        self._last_editor = editor
         doc = self.document_for(editor)
         # The pinned tab owns "always on top"; switching away from it drops
         # the hint so the window does not stay above everything silently.
@@ -450,6 +682,7 @@ class MainController(QObject):
         status = self.window.status
         if doc is None:
             return
+        self.refresh_invisible_banner()
         status.set_encoding(doc.encoding)
         status.set_line_ending(doc.line_ending)
         status.set_size(doc.size_label)
@@ -469,7 +702,8 @@ class MainController(QObject):
             i18n.tr("app.title", title=self._doc_title(doc), app=i18n.tr("app.name")))
         if editor is not None:
             status.set_zoom(editor.zoom_percent())
-            status.set_direction(doc.direction_mode, editor.resolved_direction())
+            status.set_direction(doc.direction_mode, editor.resolved_direction(),
+                                 editor.document_side())
 
     def _on_text_changed(self, editor: EditorView) -> None:
         doc = self._docs.get(editor)
@@ -477,6 +711,7 @@ class MainController(QObject):
             return
         was_modified = doc.is_modified
         doc.mark_modified()
+        self._arm_autosave()
         if not was_modified:
             self.window.set_tab_title(editor, self._doc_title(doc), True)
             self.window.setWindowTitle(i18n.tr(
@@ -508,7 +743,8 @@ class MainController(QObject):
         else:
             editor.apply_direction(mode)
         self.window.set_direction_menu(mode)
-        self.window.status.set_direction(mode, editor.resolved_direction())
+        self.window.status.set_direction(mode, editor.resolved_direction(),
+                                         editor.document_side())
 
     def _on_editor_direction(self, mode: str) -> None:
         doc = self.current_document()
@@ -518,6 +754,16 @@ class MainController(QObject):
         editor = self.window.current_editor()
         self.window.status.set_direction(mode,
                                          editor.resolved_direction() if editor else LTR)
+
+    def _on_resolved_direction(self, resolved: str) -> None:
+        """The caret crossed into a paragraph of the other direction."""
+        doc = self.current_document()
+        if doc is None:
+            return
+        editor = self.window.current_editor()
+        self.window.status.set_direction(
+            doc.direction_mode, resolved,
+            editor.document_side() if editor is not None else None)
 
     def auto_detect_direction(self) -> str:
         editor = self.window.current_editor()
@@ -661,6 +907,42 @@ class MainController(QObject):
         for editor in self.window.editors():
             editor.set_line_numbers_visible(enabled)
 
+    def set_document_side_first_line(self, enabled: bool) -> None:
+        """CD-20: let the first line pick the side a document is aligned to."""
+        source = FIRST_LINE if enabled else FIRST_STRONG
+        self.settings.document_side_source = source
+        for editor in self.window.editors():
+            editor.set_document_side_source(source)
+
+    def set_show_invisible_chars(self, enabled: bool) -> None:
+        """Diagnostic overlay: mark formatting characters, never edit them."""
+        self.settings.show_invisible_chars = enabled
+        for editor in self.window.editors():
+            editor.set_show_invisible_chars(enabled)
+        self._report_invisible_chars(enabled)
+
+    def refresh_invisible_banner(self) -> None:
+        """Keep the marker count in step with the document on screen."""
+        if self.settings.show_invisible_chars:
+            self._report_invisible_chars(True)
+
+    def _report_invisible_chars(self, enabled: bool) -> None:
+        """Say *how many* markers exist, so the toggle is never a silent no-op."""
+        from mishkah.core.i18n import tr
+
+        if not enabled:
+            if self._invisible_banner:
+                self.window.hide_banner()
+                self._invisible_banner = False
+            return
+        editor = self.window.current_editor()
+        count = editor.count_invisible_chars() if editor is not None else 0
+        if count:
+            self.window.show_banner(tr("banner.invisible_found", n=count))
+        else:
+            self.window.show_banner(tr("banner.invisible_none"))
+        self._invisible_banner = True
+
     def set_line_ending(self, line_ending: str) -> None:
         doc = self.current_document()
         if doc is None:
@@ -670,10 +952,51 @@ class MainController(QObject):
         self.window.set_line_ending_menu(line_ending)
 
     def reopen_with_encoding(self, encoding: str) -> None:
+        """Read the same file again with *encoding*, in this very tab (M1).
+
+        Opening a second copy was the old behaviour: it silently forked the
+        document and left the user with two tabs, one of them wrong.  The
+        buffer is replaced in place, and saving stays blocked until the user
+        accepts the conversion (see ``save_current``).
+        """
+        editor = self.window.current_editor()
         doc = self.current_document()
-        if doc is None or doc.path is None:
+        if doc is None or editor is None:
             return
-        self._begin_load(doc.path, encoding=encoding)
+        if doc.path is None:
+            doc.set_encoding(encoding)
+            self.window.status.set_encoding(encoding)
+            self.window.set_encoding_menu(encoding)
+            return
+        from mishkah.core import large_file
+
+        try:
+            text, fmt, truncated, size = large_file.read_text_chunked(
+                doc.path, encoding=encoding, limit=1 << 62)
+        except Exception as exc:                    # noqa: BLE001 - reported
+            self.window.show_error(i18n.tr("dialog.error.open",
+                                           path=str(doc.path), detail=str(exc)))
+            return
+        editor.blockSignals(True)
+        try:
+            doc.content = text
+            doc.fmt = fmt
+            doc.size_on_disk = size
+            doc.truncated = truncated
+            doc.disk_signature = stat_signature(doc.path)
+            doc.revision += 1
+            editor.load_content(text)
+            editor.apply_direction(doc.direction_mode or AUTO, announce=False)
+        finally:
+            editor.blockSignals(False)
+        doc.is_modified = False
+        editor.document().setModified(False)
+        doc.encoding_pending = True
+        if doc not in self._encoding_pending:
+            self._encoding_pending.append(doc)
+        self.window.set_tab_title(editor, self._doc_title(doc), False)
+        self._sync_ui(editor)
+        self.window.show_encoding_pending(self._doc_title(doc), doc.encoding)
 
     def _choose_encoding(self) -> None:
         doc = self.current_document()
@@ -828,11 +1151,20 @@ class MainController(QObject):
             editor.set_font(self.editor_font())
             editor.set_word_wrap(self.settings.word_wrap)
             editor.set_line_numbers_visible(self.settings.line_numbers)
+            editor.set_show_invisible_chars(self.settings.show_invisible_chars)
+            editor.set_document_side_source(self.settings.document_side_source)
 
         self.window.act_word_wrap.setChecked(self.settings.word_wrap)
         self.window.act_line_numbers.setChecked(self.settings.line_numbers)
         self.window.status.setVisible(self.settings.show_status_bar)
         self.window.set_line_numbers_visible(self.settings.line_numbers)
+        self.window.set_show_invisible_chars(self.settings.show_invisible_chars)
+        self.window.set_document_side_first_line(
+            self.settings.document_side_source == FIRST_LINE)
+        self.window.set_autosave(self.settings.autosave)
+        if self._autosave_timer is not None:
+            self._autosave_timer.setInterval(
+                max(500, int(self.settings.autosave_idle_ms)))
         self.window.set_word_wrap_enabled(self.settings.word_wrap)
 
         self.window.set_typing_menu_state(

@@ -233,6 +233,211 @@ STRINGS: Dict[str, S] = {
         "bn": "লাইন নম্বর", "pt": "Números de linha", "ru": "Номера строк",
         "ur": "سطر نمبر",
     },
+    "status.document_direction": {
+        "en": "document {direction}", "ar": "المستند {direction}",
+        "zh-Hans": "文档 {direction}", "hi": "दस्तावेज़ {direction}",
+        "es": "documento {direction}", "fr": "document {direction}",
+        "bn": "নথি {direction}", "pt": "documento {direction}",
+        "ru": "документ {direction}", "ur": "دستاویز {direction}",
+    },
+    "action.autosave": {
+        "en": "Autosave", "ar": "حفظ تلقائي",
+        "zh-Hans": "自动保存", "hi": "स्वतः सहेजें",
+        "es": "Guardado automático", "fr": "Enregistrement auto",
+        "bn": "স্বয়ংক্রিয় সেভ", "pt": "Gravação automática",
+        "ru": "Автосохранение", "ur": "خودکار محفوظ کریں",
+    },
+    "action.autosave_off": {
+        "en": "Autosave: off", "ar": "حفظ تلقائي: معطّل",
+        "zh-Hans": "自动保存：关", "hi": "स्वतः सहेजें: बंद",
+        "es": "Guardado automático: no", "fr": "Enreg. auto : non",
+        "bn": "স্বয়ংক্রিয় সেভ: বন্ধ", "pt": "Gravação automática: não",
+        "ru": "Автосохранение: выкл", "ur": "خودکار محفوظ: بند",
+    },
+    "action.autosave_hint": {
+        "en": "Saves shortly after you stop typing, and when you switch tabs",
+        "ar": "يحفظ بعد توقّفك عن الكتابة بقليل، وعند تبديل التبويب",
+        "zh-Hans": "在停止输入片刻后以及切换标签时保存",
+        "hi": "टाइप करना रोकने के थोड़ी देर बाद और टैब बदलने पर सहेजता है",
+        "es": "Guarda poco después de dejar de escribir y al cambiar de pestaña",
+        "fr": "Enregistre peu après la frappe et au changement d'onglet",
+        "bn": "টাইপ করা থামানোর কিছু পরে এবং ট্যাব বদলালে সেভ করে",
+        "pt": "Grava pouco depois de parar de escrever e ao mudar de separador",
+        "ru": "Сохраняет вскоре после остановки ввода и при смене вкладки",
+        "ur": "ٹائپ کرنا روکنے کے کچھ دیر بعد اور ٹیب بدلنے پر محفوظ کرتا ہے",
+    },
+    "banner.read_only": {
+        "en": "{name} looks like a binary file. It is open read-only; use Save As to keep a text copy.",
+        "ar": "{name} يبدو ملفًا ثنائيًا. فُتح للقراءة فقط؛ استخدم «حفظ باسم» لصنع نسخة نصية.",
+        "zh-Hans": "{name} 看起来是二进制文件。已以只读方式打开；如需文本副本请用“另存为”。",
+        "hi": "{name} बाइनरी फ़ाइल जैसी लगती है। यह केवल-पढ़ने के लिए खुली है; पाठ प्रति के लिए “इस रूप में सहेजें”।",
+        "es": "{name} parece un archivo binario. Se abrió solo para lectura; usa «Guardar como» para una copia de texto.",
+        "fr": "{name} semble être un fichier binaire. Ouvert en lecture seule ; utilisez « Enregistrer sous » pour une copie texte.",
+        "bn": "{name} বাইনারি ফাইলের মতো দেখাচ্ছে। এটি কেবল-পঠনযোগ্য; পাঠ্য অনুলিপির জন্য “অন্য নামে সেভ করুন”।",
+        "pt": "{name} parece um ficheiro binário. Abriu só para leitura; use «Guardar como」 para uma cópia de texto.",
+        "ru": "{name} похож на двоичный файл. Открыт только для чтения; «Сохранить как» создаст текстовую копию.",
+        "ur": "{name} بائنری فائل لگتی ہے۔ صرف پڑھنے کے لیے کھلی ہے؛ متنی نقل کے لیے «محفوظ بطور» استعمال کریں۔",
+    },
+    "banner.read_only_save": {
+        "en": "Read-only document: saving is disabled",
+        "ar": "مستند للقراءة فقط: الحفظ معطّل",
+        "zh-Hans": "只读文档：保存已禁用",
+        "hi": "केवल-पढ़ने वाला दस्तावेज़: सहेजना बंद है",
+        "es": "Documento de solo lectura: guardar está desactivado",
+        "fr": "Document en lecture seule : l'enregistrement est désactivé",
+        "bn": "কেবল-পঠনযোগ্য নথি: সেভ করা বন্ধ",
+        "pt": "Documento só de leitura: gravar está desativado",
+        "ru": "Документ только для чтения: сохранение отключено",
+        "ur": "صرف پڑھنے کی دستاویز: محفوظ کرنا بند ہے",
+    },
+    "banner.encoding_pending": {
+        "en": "{name} was reopened as {encoding}. Nothing is written until you convert it explicitly.",
+        "ar": "أُعيد فتح {name} بترميز {encoding}. لن يُكتب شيء حتى تحوّله صراحةً.",
+        "zh-Hans": "{name} 已按 {encoding} 重新打开。在你明确转换之前不会写入。",
+        "hi": "{name} को {encoding} के रूप में फिर खोला गया। स्पष्ट रूप से बदलने तक कुछ नहीं लिखा जाएगा।",
+        "es": "{name} se reabrió como {encoding}. No se escribirá nada hasta que lo conviertas explícitamente.",
+        "fr": "{name} a été rouvert en {encoding}. Rien ne sera écrit avant une conversion explicite.",
+        "bn": "{name} কে {encoding} হিসেবে আবার খোলা হয়েছে। স্পষ্টভাবে রূপান্তর না করলে কিছু লেখা হবে না।",
+        "pt": "{name} foi reaberto como {encoding}. Nada será escrito até converteres explicitamente.",
+        "ru": "{name} открыт заново как {encoding}. Ничего не будет записано без явного преобразования.",
+        "ur": "{name} کو {encoding} کے طور پر دوبارہ کھولا گیا۔ واضح تبدیلی تک کچھ نہیں لکھا جائے گا۔",
+    },
+    "action.convert_and_save": {
+        "en": "Convert and save", "ar": "تحويل وحفظ",
+        "zh-Hans": "转换并保存", "hi": "बदलें और सहेजें",
+        "es": "Convertir y guardar", "fr": "Convertir et enregistrer",
+        "bn": "রূপান্তর করে সেভ করুন", "pt": "Converter e gravar",
+        "ru": "Преобразовать и сохранить", "ur": "تبدیل کر کے محفوظ کریں",
+    },
+    "banner.reloaded": {
+        "en": "Reloaded {name} from disk; undo history cleared",
+        "ar": "أُعيد تحميل {name} من القرص، ومُحي سجل التراجع",
+        "zh-Hans": "已从磁盘重新加载 {name}，撤销历史已清除",
+        "hi": "{name} डिस्क से पुनः लोड हुई; पूर्ववत् इतिहास मिट गया",
+        "es": "Se recargó {name} del disco; se borró el historial de deshacer",
+        "fr": "{name} rechargé depuis le disque ; historique d'annulation effacé",
+        "bn": "ডিস্ক থেকে {name} পুনরায় লোড হয়েছে; আনডু ইতিহাস মুছে গেছে",
+        "pt": "{name} recarregado do disco; histórico de anulação apagado",
+        "ru": "{name} перезагружен с диска; история отмены очищена",
+        "ur": "{name} ڈسک سے دوبارہ لوڈ ہو گئی؛ انڈو کی تاریخ صاف ہو گئی",
+    },
+    "banner.file_changed": {
+        "en": "This file changed on disk after you opened it: {name}. Nothing will be written over it until you choose.",
+        "ar": "تغيّر هذا الملف على القرص بعد أن فتحته: {name}. لن يُكتب فوقه شيء حتى تختار.",
+        "zh-Hans": "此文件在打开后已在磁盘上更改：{name}。在你选择之前不会覆盖它。",
+        "hi": "यह फ़ाइल खोलने के बाद डिस्क पर बदल गई: {name}। जब तक आप चुनेंगे नहीं, इस पर कुछ नहीं लिखा जाएगा।",
+        "es": "Este archivo cambió en el disco después de abrirlo: {name}. No se escribirá nada encima hasta que elijas.",
+        "fr": "Ce fichier a changé sur le disque après son ouverture : {name}. Rien ne sera écrit dessus avant votre choix.",
+        "bn": "খোলার পরে এই ফাইলটি ডিস্কে বদলে গেছে: {name}। আপনি বেছে নেওয়ার আগে এর উপর কিছু লেখা হবে না।",
+        "pt": "Este ficheiro mudou no disco depois de o abrir: {name}. Nada será escrito sobre ele até escolher.",
+        "ru": "Этот файл изменился на диске после открытия: {name}. Ничего не будет записано поверх, пока вы не выберете.",
+        "ur": "یہ فائل کھولنے کے بعد ڈسک پر بدل گئی: {name}۔ آپ کے انتخاب سے پہلے اس پر کچھ نہیں لکھا جائے گا۔",
+    },
+    "action.reload_file": {
+        "en": "Reload from disk", "ar": "إعادة التحميل",
+        "zh-Hans": "从磁盘重新加载", "hi": "डिस्क से पुनः लोड करें",
+        "es": "Recargar del disco", "fr": "Recharger depuis le disque",
+        "bn": "ডিস্ক থেকে পুনরায় লোড", "pt": "Recarregar do disco",
+        "ru": "Перезагрузить с диска", "ur": "ڈسک سے دوبارہ لوڈ کریں",
+    },
+    "action.overwrite_file": {
+        "en": "Overwrite with mine", "ar": "الكتابة فوقه بنسختي",
+        "zh-Hans": "用我的版本覆盖", "hi": "मेरे संस्करण से अधिलेखित करें",
+        "es": "Sobrescribir con la mía", "fr": "Écraser avec la mienne",
+        "bn": "আমার সংস্করণ দিয়ে লিখে ফেলুন", "pt": "Substituir pela minha",
+        "ru": "Перезаписать моим", "ur": "میری نقل سے اوپر لکھیں",
+    },
+    "action.dismiss_banner": {
+        "en": "Dismiss", "ar": "إخفاء",
+        "zh-Hans": "忽略", "hi": "खारिज करें",
+        "es": "Descartar", "fr": "Ignorer",
+        "bn": "উপেক্ষা করুন", "pt": "Descartar",
+        "ru": "Скрыть", "ur": "نظر انداز کریں",
+    },
+    "action.document_side_first_line": {
+        "en": "Align documents by their first line",
+        "ar": "محاذاة المستند حسب سطره الأول",
+        "zh-Hans": "按第一行对齐文档",
+        "hi": "दस्तावेज़ को उसकी पहली पंक्ति से संरेखित करें",
+        "es": "Alinear el documento según su primera línea",
+        "fr": "Aligner le document selon sa première ligne",
+        "bn": "নথিকে তার প্রথম লাইন অনুযায়ী সারিবদ্ধ করুন",
+        "pt": "Alinhar o documento pela primeira linha",
+        "ru": "Выравнивать документ по первой строке",
+        "ur": "دستاویز کو اس کی پہلی سطر کے مطابق سیدھ کریں",
+    },
+    "action.document_side_first_line_hint": {
+        "en": "The first line decides which side the whole document is aligned to; "
+              "each paragraph still follows its own script. Off by default (CD-20).",
+        "ar": "السطر الأول يحدد الجهة التي يُحاذى إليها المستند كله، وكل فقرة تبقى "
+              "مرتّبة حسب لغتها. معطّل افتراضيًا (CD-20).",
+        "zh-Hans": "第一行决定整个文档的对齐方向；每个段落仍按其自身文字排版。默认关闭（CD-20）。",
+        "hi": "पहली पंक्ति तय करती है कि पूरा दस्तावेज़ किस ओर संरेखित होगा; "
+               "प्रत्येक अनुच्छेद अपनी लिपि के अनुसार ही रहेगा। डिफ़ॉल्ट रूप से बंद (CD-20)।",
+        "es": "La primera línea decide hacia qué lado se alinea todo el documento; "
+              "cada párrafo sigue su propio alfabeto. Desactivado por defecto (CD-20).",
+        "fr": "La première ligne décide du côté d'alignement de tout le document ; "
+              "chaque paragraphe suit toujours sa propre écriture. Désactivé par défaut (CD-20).",
+        "bn": "প্রথম লাইন ঠিক করে পুরো নথি কোন দিকে সারিবদ্ধ হবে; "
+              "প্রতিটি অনুচ্ছেদ নিজের লিপি অনুযায়ীই থাকবে। ডিফল্টে বন্ধ (CD-20)।",
+        "pt": "A primeira linha decide para que lado todo o documento é alinhado; "
+              "cada parágrafo continua a seguir o seu próprio alfabeto. Desativado por padrão (CD-20).",
+        "ru": "Первая строка определяет, к какой стороне выравнивается весь документ; "
+              "каждый абзац по-прежнему следует своей письменности. По умолчанию выключено (CD-20).",
+        "ur": "پہلی سطر طے کرتی ہے کہ پوری دستاویز کس طرف سیدھی ہوگی؛ "
+              "ہر پیراگراف اپنی ہی رسم الخط کے مطابق رہے گا۔ بطور طے شدہ بند (CD-20)۔",
+    },
+    "action.show_invisible": {
+        "en": "Show invisible characters", "ar": "إظهار المحارف غير المرئية",
+        "zh-Hans": "显示不可见字符", "hi": "अदृश्य वर्ण दिखाएँ",
+        "es": "Mostrar caracteres invisibles", "fr": "Afficher les caractères invisibles",
+        "bn": "অদৃশ্য অক্ষর দেখান", "pt": "Mostrar caracteres invisíveis",
+        "ru": "Показывать невидимые символы", "ur": "غیر مرئی حروف دکھائیں",
+    },
+    "banner.invisible_found": {
+        "en": "Invisible characters in this document: {n}",
+        "ar": "المحارف غير المرئية في هذا المستند: {n}",
+        "zh-Hans": "本文档中的不可见字符：{n}",
+        "hi": "इस दस्तावेज़ में अदृश्य वर्ण: {n}",
+        "es": "Caracteres invisibles en este documento: {n}",
+        "fr": "Caractères invisibles dans ce document : {n}",
+        "bn": "এই নথিতে অদৃশ্য অক্ষর: {n}",
+        "pt": "Caracteres invisíveis neste documento: {n}",
+        "ru": "Невидимых символов в документе: {n}",
+        "ur": "اس دستاویز میں غیر مرئی حروف: {n}",
+    },
+    "banner.invisible_none": {
+        "en": "No invisible characters in this document",
+        "ar": "لا توجد محارف غير مرئية في هذا المستند",
+        "zh-Hans": "本文档中没有不可见字符",
+        "hi": "इस दस्तावेज़ में कोई अदृश्य वर्ण नहीं है",
+        "es": "No hay caracteres invisibles en este documento",
+        "fr": "Aucun caractère invisible dans ce document",
+        "bn": "এই নথিতে কোনো অদৃশ্য অক্ষর নেই",
+        "pt": "Não há caracteres invisíveis neste documento",
+        "ru": "В документе нет невидимых символов",
+        "ur": "اس دستاویز میں کوئی غیر مرئی حرف نہیں",
+    },
+    "action.show_invisible_hint": {
+        "en": "Marks LRM, RLM, ALM, ZWNJ and other formatting characters "
+              "without changing the text.",
+        "ar": "يُبرز LRM وRLM وALM وZWNJ وغيرها من محارف التنسيق دون تغيير النص.",
+        "zh-Hans": "标出 LRM、RLM、ALM、ZWNJ 等格式字符，不修改文本。",
+        "hi": "LRM, RLM, ALM, ZWNJ और अन्य स्वरूपण वर्णों को चिह्नित करता है, "
+              "पाठ बदले बिना।",
+        "es": "Marca LRM, RLM, ALM, ZWNJ y otros caracteres de formato "
+              "sin cambiar el texto.",
+        "fr": "Signale LRM, RLM, ALM, ZWNJ et d'autres caractères de formatage "
+              "sans modifier le texte.",
+        "bn": "LRM, RLM, ALM, ZWNJ এবং অন্যান্য বিন্যাস অক্ষর চিহ্নিত করে, "
+              "পাঠ না বদলে।",
+        "pt": "Marca LRM, RLM, ALM, ZWNJ e outros caracteres de formatação "
+              "sem alterar o texto.",
+        "ru": "Отмечает LRM, RLM, ALM, ZWNJ и другие символы форматирования, "
+              "не меняя текст.",
+        "ur": "LRM، RLM، ALM، ZWNJ اور دیگر فارمیٹنگ حروف کو نمایاں کرتا ہے، "
+              "متن بدلے بغیر۔",
+    },
     "action.status_bar": {
         "en": "Status bar", "ar": "شريط الحالة", "zh-Hans": "状态栏",
         "hi": "स्थिति पट्टी", "es": "Barra de estado", "fr": "Barre d'état",
@@ -684,12 +889,40 @@ STRINGS: Dict[str, S] = {
         "ru": "Для каждого языка загружается подходящий шрифт.",
         "ur": "ہر زبان اپنے رسم الخط کے مناسب فونٹ کا استعمال کرتی ہے۔",
     },
+    # CD-17: the setting names a *direction* for new paragraphs.  It never
+    # changes how the existing text is aligned: alignment stays document-wide
+    # so every line shares one margin, and calling that "direction" is exactly
+    # the confusion this label removes.
     "settings.default_direction": {
-        "en": "Default text direction", "ar": "اتجاه النص الافتراضي",
-        "zh-Hans": "默认文本方向", "hi": "डिफ़ॉल्ट पाठ दिशा",
-        "es": "Dirección predeterminada", "fr": "Sens par défaut",
-        "bn": "ডিফল্ট লেখার দিক", "pt": "Direção predefinida",
-        "ru": "Направление по умолчанию", "ur": "طے شدہ متن کی سمت",
+        "en": "Direction for new paragraphs", "ar": "اتجاه الفقرات الجديدة",
+        "zh-Hans": "新段落的方向", "hi": "नए अनुच्छेदों की दिशा",
+        "es": "Dirección de los párrafos nuevos", "fr": "Sens des nouveaux paragraphes",
+        "bn": "নতুন অনুচ্ছেদের দিক", "pt": "Direção dos parágrafos novos",
+        "ru": "Направление новых абзацев", "ur": "نئے پیراگراف کی سمت",
+    },
+    "settings.direction_note": {
+        "en": "Each paragraph follows its own first letter. Alignment stays "
+              "the same for the whole document, so lines share one margin.",
+        "ar": "كل فقرة تتبع أول حرف فيها. المحاذاة تبقى واحدة للمستند كله، "
+              "فتتقاسم الأسطر الهامش نفسه.",
+        "zh-Hans": "每个段落跟随自己的首字母。整篇文档使用同一对齐方式，"
+                   "各行共享同一边距。",
+        "hi": "प्रत्येक अनुच्छेद अपने पहले अक्षर का अनुसरण करता है। संरेखण पूरे "
+              "दस्तावेज़ के लिए एक ही रहता है, इसलिए सभी पंक्तियाँ एक ही हाशिया "
+              "साझा करती हैं।",
+        "es": "Cada párrafo sigue su primera letra. La alineación es la misma "
+              "para todo el documento, así que las líneas comparten un margen.",
+        "fr": "Chaque paragraphe suit sa première lettre. L'alignement reste "
+              "le même pour tout le document : les lignes partagent une marge.",
+        "bn": "প্রতিটি অনুচ্ছেদ তার নিজের প্রথম অক্ষর অনুসরণ করে। সারিবিন্যাস "
+              "পুরো নথির জন্য একই থাকে, তাই সব লাইন একই মার্জিন ভাগ করে।",
+        "pt": "Cada parágrafo segue a sua primeira letra. O alinhamento é o "
+              "mesmo para todo o documento, por isso as linhas partilham a margem.",
+        "ru": "Каждый абзац следует за своей первой буквой. Выравнивание "
+              "остаётся общим для всего документа, поэтому все строки делят "
+              "одно поле.",
+        "ur": "ہر پیراگراف اپنے پہلے حرف کی پیروی کرتا ہے۔ سیدھ پوری دستاویز "
+              "کے لیے ایک ہی رہتی ہے، اس لیے تمام سطریں ایک ہی حاشیہ بانٹتی ہیں۔",
     },
     "settings.large_files": {
         "en": "Large files", "ar": "الملفات الكبيرة", "zh-Hans": "大文件",

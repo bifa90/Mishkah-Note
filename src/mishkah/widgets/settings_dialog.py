@@ -135,10 +135,18 @@ class SettingsDialog(QDialog):
         self.cmb_direction.addItem(tr("direction.rtl"), RTL)
         form.addRow(tr("settings.default_direction"), self.cmb_direction)
 
+        direction_note = QLabel(tr("settings.direction_note"))
+        direction_note.setWordWrap(True)
+        direction_note.setObjectName("settingsNote")
+        form.addRow("", direction_note)
+
         self.chk_word_wrap = QCheckBox(tr("action.word_wrap"))
         self.chk_line_numbers = QCheckBox(tr("action.line_numbers"))
         self.chk_status_bar = QCheckBox(tr("action.status_bar"))
-        for widget in (self.chk_word_wrap, self.chk_line_numbers, self.chk_status_bar):
+        self.chk_invisible = QCheckBox(tr("action.show_invisible"))
+        self.chk_invisible.setToolTip(tr("action.show_invisible_hint"))
+        for widget in (self.chk_word_wrap, self.chk_line_numbers,
+                       self.chk_status_bar, self.chk_invisible):
             form.addRow("", widget)
         return self._group(tr("settings.group.editor"), form)
 
@@ -208,6 +216,7 @@ class SettingsDialog(QDialog):
         self.chk_word_wrap.setChecked(s.word_wrap)
         self.chk_line_numbers.setChecked(s.line_numbers)
         self.chk_status_bar.setChecked(s.show_status_bar)
+        self.chk_invisible.setChecked(s.show_invisible_chars)
 
         self.spin_ask_mb.setValue(int(s.ask_before_mb))
         self.spin_limit_mb.setValue(int(s.hard_limit_mb))
@@ -242,6 +251,7 @@ class SettingsDialog(QDialog):
             "word_wrap": self.chk_word_wrap.isChecked(),
             "line_numbers": self.chk_line_numbers.isChecked(),
             "show_status_bar": self.chk_status_bar.isChecked(),
+            "show_invisible_chars": self.chk_invisible.isChecked(),
             "ask_before_mb": self.spin_ask_mb.value(),
             "hard_limit_mb": self.spin_limit_mb.value(),
             "performance_mode": self.chk_perf.isChecked(),

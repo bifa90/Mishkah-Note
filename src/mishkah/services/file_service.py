@@ -16,6 +16,7 @@ from typing import Optional
 from PySide6.QtCore import QObject, QThread, Signal, Slot
 
 from mishkah.core import large_file
+from mishkah.core.disk_state import stat_signature
 from mishkah.core.large_file import (
     BinaryFileError,
     FileTooLargeError,
@@ -104,6 +105,7 @@ class LoadWorker(QThread):
             truncated=result.is_preview,
             read_only=result.is_preview or not _writable(result.path),
             warnings=list(result.warnings),
+            disk_signature=stat_signature(result.path),
         )
         logger.info("loaded %s (%s, %s) in %.0f ms", result.path.name,
                     doc.size_label, doc.encoding, elapsed)
@@ -203,7 +205,8 @@ class FileService(QObject):
         worker = self.sender()
         if isinstance(worker, SaveWorker):
             # Model changes belong to the GUI thread, not the writer thread.
-            doc.mark_saved(worker.target, written, revision=worker.revision)
+            doc.mark_saved(worker.target, written, revision=worker.revision,
+                           signature=stat_signature(worker.target))
         self.save_finished.emit(doc, written)
 
     def _track(self, worker: QThread) -> None:

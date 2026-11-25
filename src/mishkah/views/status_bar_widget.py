@@ -113,13 +113,25 @@ class StatusBarWidget(QFrame):
         self._encoding.setText(text)
         return text
 
-    def set_direction(self, mode: str, resolved: Optional[str] = None) -> None:
+    def set_direction(self, mode: str, resolved: Optional[str] = None,
+                      document: Optional[str] = None) -> None:
+        """Show the caret paragraph, and the document's side when they differ.
+
+        In auto mode the paragraph decides the *text order* while the document
+        decides the *alignment*; saying only one of the two left the other
+        looking like a bug.
+        """
         self._direction_mode = mode
-        if mode == AUTO:
-            shown = resolved or LTR
-            self._direction.setText(f"{_DIRECTION_ICONS[AUTO]} {shown.upper()}")
-        else:
+        if mode != AUTO:
             self._direction.setText(f"{_DIRECTION_ICONS[mode]} {mode.upper()}")
+            self._direction.setToolTip(tr("direction.hint"))
+            return
+        shown = resolved or LTR
+        text = f"{_DIRECTION_ICONS[AUTO]} {shown.upper()}"
+        if document and document != shown:
+            text += " · " + tr("status.document_direction", direction=document.upper())
+        self._direction.setText(text)
+        self._direction.setToolTip(tr("direction.hint"))
 
     def direction_mode(self) -> str:
         return self._direction_mode

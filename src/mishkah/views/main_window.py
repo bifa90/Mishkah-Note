@@ -31,14 +31,17 @@ from PySide6.QtGui import (
 )
 from PySide6.QtWidgets import (
     QFileDialog,
+    QHBoxLayout,
     QLabel,
     QMainWindow,
     QMenu,
     QMessageBox,
+    QPushButton,
     QStyle,
     QStyleOptionTab,
     QTabBar,
     QTabWidget,
+    QToolBar,
     QVBoxLayout,
     QWidget,
 )
@@ -230,6 +233,10 @@ class MainWindow(QMainWindow):
     theme_changed = Signal(str)
     word_wrap_toggled = Signal(bool)
     line_numbers_toggled = Signal(bool)
+    show_invisible_toggled = Signal(bool)
+    file_changed_action = Signal(str)       # reload | overwrite | dismiss | convert
+    autosave_toggled = Signal(bool)
+    document_side_toggled = Signal(bool)
     status_bar_toggled = Signal(bool)
     encoding_chosen = Signal(str)
     line_ending_chosen = Signal(str)
@@ -295,12 +302,95 @@ class MainWindow(QMainWindow):
         self.banner.hide()
         root.insertWidget(0, self.banner)
 
+        # A banner that asks a question: the file changed under our feet and
+        # nothing may be written until the user decides (CD-18).
+        self.action_banner = QWidget(self)
+        self.action_banner.setObjectName("ActionBanner")
+        action_row = QHBoxLayout(self.action_banner)
+        action_row.setContentsMargins(8, 4, 8, 4)
+        self.action_banner_label = QLabel(self.action_banner)
+        self.action_banner_label.setWordWrap(True)
+        action_row.addWidget(self.action_banner_label, 1)
+        self.act_banner_reload = QPushButton(self.action_banner)
+        self.act_banner_overwrite = QPushButton(self.action_banner)
+        self.act_banner_dismiss = QPushButton(self.action_banner)
+        for button, action in ((self.act_banner_reload, "reload"),
+                               (self.act_banner_overwrite, "overwrite"),
+                               (self.act_banner_dismiss, "dismiss")):
+            button.clicked.connect(lambda _=False, a=action: self.file_changed_action.emit(a))
+            action_row.addWidget(button)
+        self.action_banner.hide()
+        root.insertWidget(0, self.action_banner)
+
         self._pinned_index: Optional[int] = None
         self._build_menus()
+        self._build_quick_bar()
+        self._add_autosave_menu_entry()
 
     # ==================================================================
     # menus
     # ==================================================================
+    def _build_quick_bar(self) -> None:
+        """One switch the user asked for by name: autosave, top and visible."""
+        self.quick_bar = QToolBar(self)
+        self.quick_bar.setObjectName("QuickBar")
+        self.quick_bar.setMovable(False)
+        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.quick_bar)
+        self.quick_bar.setToolButtonStyle(
+            Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+        self.act_autosave = QAction(tr("action.autosave"), self)
+        self.act_autosave.setCheckable(True)
+        self.act_autosave.setChecked(False)
+        self.act_autosave.setToolTip(tr("action.autosave_hint"))
+        self.act_autosave.setStatusTip(tr("action.autosave_hint"))
+        self.act_autosave.setIcon(self._autosave_icon())
+        self.act_autosave.toggled.connect(self.autosave_toggled)
+        self.quick_bar.addAction(self.act_autosave)
+
+    def _add_autosave_menu_entry(self) -> None:
+        menu = getattr(self, "menu_view", None)
+        if menu is None:                      # pragma: no cover - defensive
+            return
+        self.act_autosave_menu = QAction(tr("action.autosave"), self)
+        self.act_autosave_menu.setCheckable(True)
+        self.act_autosave_menu.setToolTip(tr("action.autosave_hint"))
+        self.act_autosave_menu.toggled.connect(self.autosave_toggled)
+        menu.addSeparator()
+        menu.addAction(self.act_autosave_menu)
+
+    def _autosave_icon(self) -> QIcon:
+        """A floppy with a one-way arrow: "save by itself".
+
+        Painted rather than taken from the theme because a missing icon in a
+        tool bar is invisible exactly where the user is looking.
+        """
+        icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton)
+        if not icon.isNull():
+            return icon
+        pixmap = QPixmap(16, 16)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        painter.setPen(Qt.GlobalColor.darkGray)
+        painter.setBrush(Qt.GlobalColor.lightGray)
+        painter.drawRect(1, 1, 13, 13)
+        painter.drawRect(4, 2, 6, 4)
+        painter.end()
+        return QIcon(pixmap)
+
+    def set_autosave(self, enabled: bool) -> None:
+        """Keep the quick switch in step with the saved setting (CD-01)."""
+        blocked = self.act_autosave.blockSignals(True)
+        self.act_autosave.setChecked(enabled)
+        self.act_autosave.setText(tr("action.autosave") if enabled
+                                  else tr("action.autosave_off"))
+        self.act_autosave.blockSignals(blocked)
+        menu_action = getattr(self, "act_autosave_menu", None)
+        if menu_action is not None:
+            blocked = menu_action.blockSignals(True)
+            menu_action.setChecked(enabled)
+            menu_action.blockSignals(blocked)
+
     def _build_menus(self) -> None:
         bar = self.menuBar()
         bar.setObjectName("MenuBar")
@@ -368,6 +458,7 @@ class MainWindow(QMainWindow):
 
     def _build_view_menu(self, bar) -> None:
         m_view = bar.addMenu(tr("menu.view"))
+        self.menu_view = m_view
         self.act_zoom_in = self._action(m_view, tr("action.zoom_in"), None, "Ctrl++")
         self.act_zoom_out = self._action(m_view, tr("action.zoom_out"), None, "Ctrl+-")
         self.act_zoom_reset = self._action(m_view, tr("action.zoom_reset"), None,
@@ -382,6 +473,16 @@ class MainWindow(QMainWindow):
         self.act_line_numbers = self._action(m_view, tr("action.line_numbers"), None,
                                              checkable=True, checked=False)
         self.act_line_numbers.toggled.connect(self.line_numbers_toggled)
+        self.act_show_invisible = self._action(
+            m_view, tr("action.show_invisible"), None, None,
+            checkable=True, checked=False)
+        self.act_show_invisible.setToolTip(tr("action.show_invisible_hint"))
+        self.act_show_invisible.toggled.connect(self.show_invisible_toggled)
+        self.act_document_side = self._action(
+            m_view, tr("action.document_side_first_line"), None, None,
+            checkable=True, checked=False)
+        self.act_document_side.setToolTip(tr("action.document_side_first_line_hint"))
+        self.act_document_side.toggled.connect(self.document_side_toggled)
         m_view.addSeparator()
         self.act_syntax = self._action(m_view, tr("action.syntax"),
                                        None, "Ctrl+Shift+H",
@@ -708,6 +809,31 @@ class MainWindow(QMainWindow):
     def hide_banner(self) -> None:
         self.banner.hide()
 
+    def show_file_changed(self, name: str) -> None:
+        """Ask what to do about a file that changed on disk (CD-18)."""
+        self.action_banner_label.setText(tr("banner.file_changed", name=name))
+        self.act_banner_reload.setText(tr("action.reload_file"))
+        self.act_banner_overwrite.setText(tr("action.overwrite_file"))
+        self.act_banner_dismiss.setText(tr("action.dismiss_banner"))
+        self.act_banner_reload.show()
+        self.act_banner_overwrite.show()
+        self.act_banner_dismiss.show()
+        self.action_banner.show()
+
+    def show_encoding_pending(self, name: str, encoding: str) -> None:
+        """The buffer came from another encoding: ask before writing it back."""
+        self.action_banner_label.setText(
+            tr("banner.encoding_pending", name=name, encoding=encoding))
+        self.act_banner_reload.setText(tr("action.convert_and_save"))
+        self.act_banner_reload.show()
+        self.act_banner_overwrite.hide()
+        self.act_banner_dismiss.setText(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.show()
+        self.action_banner.show()
+
+    def hide_file_changed(self) -> None:
+        self.action_banner.hide()
+
     def set_word_wrap_enabled(self, enabled: bool) -> None:
         """Keep the View ▸ Word wrap check state in sync with settings."""
         blocked = self.act_word_wrap.blockSignals(True)
@@ -718,6 +844,18 @@ class MainWindow(QMainWindow):
         blocked = self.act_line_numbers.blockSignals(True)
         self.act_line_numbers.setChecked(visible)
         self.act_line_numbers.blockSignals(blocked)
+
+    def set_document_side_first_line(self, enabled: bool) -> None:
+        """Keep View ▸ Align by first line in sync with settings (CD-20)."""
+        blocked = self.act_document_side.blockSignals(True)
+        self.act_document_side.setChecked(enabled)
+        self.act_document_side.blockSignals(blocked)
+
+    def set_show_invisible_chars(self, visible: bool) -> None:
+        """Keep View ▸ Show invisible characters in sync with settings."""
+        blocked = self.act_show_invisible.blockSignals(True)
+        self.act_show_invisible.setChecked(visible)
+        self.act_show_invisible.blockSignals(blocked)
 
     def set_ui_font(self, font: QFont) -> None:
         self.menuBar().setFont(font)

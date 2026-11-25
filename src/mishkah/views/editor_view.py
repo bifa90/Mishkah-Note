@@ -28,7 +28,7 @@ from __future__ import annotations
 import time
 from typing import Optional
 
-from PySide6.QtCore import QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QMargins, QRect, QRectF, Qt, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -42,11 +42,15 @@ from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit
 from mishkah.core import autocomplete, syntax
 from mishkah.core.text_direction import (
     AUTO,
+    FIRST_LINE,
+    FIRST_STRONG,
     LTR,
     RTL,
     SNIFF_CHARS,
+    document_side,
     dominant_direction,
     first_strong_is_rtl,
+    invisible_spans,
     resolve_direction,
 )
 from mishkah.models.document import DocumentModel
@@ -62,6 +66,15 @@ DEFAULT_FONT_SIZE = 13
 AUTO_DETECT_BLOCKS = 200
 #: Breathing room between the text and the viewport edge, in pixels.
 TEXT_MARGIN = 4
+#: A single paragraph can be an entire 300 MB preview (large files open as one
+#: block).  The diagnostic overlay walks only visible blocks, and this cap
+#: stops it from copying one enormous block on every keystroke.
+MAX_INVISIBLE_SCAN = 20000
+#: Width of one invisible-character marker, in pixels.
+MARKER_WIDTH = 3
+#: Extra pixels kept free on the right edge so a caret at the start of a
+#: right-aligned line is never clipped away.
+CARET_GUARD = 8
 
 # Hardware scan codes for the modifier keys.
 #   Linux/X11 and Wayland (evdev + 8)      : LCtrl 37, LShift 50, RShift 62, RCtrl 105
@@ -93,7 +106,8 @@ class EditorView(QPlainTextEdit):
 
     cursor_moved = Signal(int, int, int)     # line, column, selection length
     zoom_changed = Signal(int)               # percent
-    direction_changed = Signal(str)          # auto | rtl | ltr
+    direction_changed = Signal(str)          # auto | rtl | ltr (mode changed)
+    resolved_direction_changed = Signal(str)  # the caret moved to another direction
     stats_changed = Signal(int, int)         # lines, chars
 
     def __init__(self, document: DocumentModel, font: Optional[QFont] = None,
@@ -111,16 +125,22 @@ class EditorView(QPlainTextEdit):
             self.setFont(font)
 
         self.setUndoRedoEnabled(True)
-        # The document margin is direction-agnostic in Qt (it is always added
-        # on the left), which leaves RTL text glued to the right edge.  The
-        # margin is therefore applied as a *viewport* margin, mirrored for RTL.
-        self.document().setDocumentMargin(0)
+        # Document margin (not viewport margin) is what insets the *text*:
+        # right-aligned text ends on the document's inner edge, so without it
+        # a caret at the start of an RTL line lands exactly on the viewport's
+        # right edge and Qt clips it away.
+        self.document().setDocumentMargin(TEXT_MARGIN + CARET_GUARD)
         self.setLineWrapMode(QPlainTextEdit.LineWrapMode.WidgetWidth)
         self.setTabStopDistance(self.fontMetrics().horizontalAdvance(" ") * self._tab_width)
         self.setMouseTracking(True)
 
         # --- direction state -------------------------------------------------
         self._direction_mode = document.direction_mode or AUTO
+        self._last_resolved = ""
+        self._document_side = None
+        self._side_source = FIRST_STRONG      # CD-20, set from the settings
+        self._side_locked = False             # "first_line" keeps re-deciding
+        self._side_updating = False           # guards against re-entry
         self._chord = _ChordState()
 
         # --- editing conveniences -------------------------------------------
@@ -141,6 +161,7 @@ class EditorView(QPlainTextEdit):
         # most editors never need the extra child widget at all.
         self._gutter: Optional[LineNumberArea] = None
         self._gutter_visible = False
+        self._show_invisible = False
         self.blockCountChanged.connect(self._update_gutter_width)
         self.updateRequest.connect(self._update_gutter)
 
@@ -182,6 +203,9 @@ class EditorView(QPlainTextEdit):
 
         self.setPlainText(text)
         self.document().setModified(False)
+        self._document_side = None          # a new buffer gets a new decision
+        self._side_locked = True            # a loaded file is not "one line"
+        self._sync_auto_alignment()
         self._emit_stats()
 
     # ==================================================================
@@ -217,11 +241,17 @@ class EditorView(QPlainTextEdit):
             cursor.setBlockFormat(block_fmt)
             cursor.endEditBlock()
 
-        # Widget-level direction moves the gutter/scrollbar to the matching
-        # side; for "auto" we follow whatever the caret's paragraph resolved to.
-        direction = self.document_direction()
-        self._apply_alignment(direction)
-        self.setLayoutDirection(_TO_QT_DIRECTION[direction])
+        # An explicit mode owns the widget direction, so the gutter and the
+        # scrollbar move to the matching side.  "auto" deliberately leaves the
+        # widget alone: see _sync_auto_alignment for why.
+        if mode == AUTO:
+            self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+            self._document_side = None
+            self._sync_auto_alignment()     # decides from the text, once
+        else:
+            self._document_side = mode
+            self.setLayoutDirection(_TO_QT_DIRECTION[mode])
+            self._apply_alignment(mode)
         self._update_gutter_width(0)
         self._place_gutter()
         self.viewport().update()
@@ -260,34 +290,101 @@ class EditorView(QPlainTextEdit):
         return LTR
 
     def _sync_auto_alignment(self) -> None:
-        """Follow the document's direction when it changes in auto mode."""
-        if self._direction_mode != AUTO:
+        """Decide the document's side once, then leave it alone.
+
+        Reported after the second hands-on test: following the caret flipped
+        the whole document every time the caret crossed a paragraph, which is
+        far worse than a minority line sitting on the "wrong" side.  So the
+        side is chosen from the document's beginning (``document_side``), and
+        never while the caret moves.
+
+        With ``first_line`` (CD-20) the choice stays open *while the buffer is
+        a single line*: the first line you are typing is the one that decides,
+        so starting a paragraph in another script flips the side until a
+        second line exists.  From then on the document is committed.
+        """
+        if self._direction_mode != AUTO or self._side_updating:
             return
-        resolved = self.document_direction()
-        if resolved != getattr(self, "_aligned_direction", None):
-            self._apply_alignment(resolved)
-            self.setLayoutDirection(_TO_QT_DIRECTION[resolved])
+        if self.document().isEmpty():
+            # An emptied buffer is a new document: nothing is committed yet.
+            self._document_side = None
+            self._side_locked = False
+            return
+        if (self._document_side is not None and not self._side_locked
+                and self._side_source == FIRST_LINE
+                and self.document().blockCount() <= 1):
+            self._document_side = None      # still on the first line: re-decide
+        if self._document_side is None:
+            self._lock_document_side()
+
+    def set_document_side_source(self, source: str) -> None:
+        """Switch between the two ways of choosing a document's side (CD-20)."""
+        source = source if source in (FIRST_LINE, FIRST_STRONG) else FIRST_STRONG
+        if source == self._side_source:
+            return
+        self._side_source = source
+        self._document_side = None
+        self._side_locked = False
+        self._sync_auto_alignment()
+
+    def document_side_source(self) -> str:
+        return self._side_source
+
+    def _lock_document_side(self) -> None:
+        """Choose the side for this document (only called when unlocked)."""
+        text = self._leading_text(limit=SNIFF_CHARS * 16)
+        if first_strong_is_rtl(text) is None:
+            return                          # still neutral: nothing to decide
+        side = document_side(text, self._side_source)
+        self._side_locked = not (self._side_source == FIRST_LINE
+                                 and self.document().blockCount() <= 1)
+        self._side_updating = True
+        try:
+            self._document_side = side
+            self._apply_alignment(side)
+            self._update_gutter_width(0)
             self._place_gutter()
             self.viewport().update()
+        finally:
+            self._side_updating = False
+
+    def document_side(self) -> str:
+        """The side this document is laid out on (``rtl`` or ``ltr``)."""
+        return self._document_side or LTR
 
     def _widget_direction(self) -> Qt.LayoutDirection:
         return _TO_QT_DIRECTION[self.document_direction()]
 
     def resolved_direction(self) -> str:
-        """What the status bar shows in ``auto`` mode.
+        """Direction of the paragraph the caret is in (``auto`` mode).
 
-        The caret's own paragraph wins; when that paragraph holds no strong
-        character (an empty line at the end of a file, a line of punctuation)
-        the document's opening text decides, so an Arabic file keeps saying
-        RTL instead of flipping to LTR just because the caret is on a blank
-        line.
+        Three rules, in this order:
+
+        1. the caret's own paragraph, from its first strong character;
+        2. a blank paragraph inherits the direction of the paragraph above it,
+           which is what happens when you press Enter at the end of an English
+           line — the new line keeps writing English instead of snapping back
+           to whatever the file happens to start with;
+        3. a document that is still neutral everywhere falls back to its
+           opening text, so an Arabic file says RTL even on an empty line.
         """
         if self._direction_mode != AUTO:
             return self._direction_mode
-        text = self.textCursor().block().text()
-        if first_strong_is_rtl(text) is not None:
-            return resolve_direction(text, AUTO)
-        return dominant_direction(self._leading_text())
+        block = self.textCursor().block()
+        text = block.text()
+        verdict = first_strong_is_rtl(text)
+        if verdict is not None:
+            return RTL if verdict else LTR
+        if not text.strip():
+            previous = block.previous()
+            hops = 0
+            while previous.isValid() and hops < 50:
+                verdict = first_strong_is_rtl(previous.text())
+                if verdict is not None:
+                    return RTL if verdict else LTR
+                previous = previous.previous()
+                hops += 1
+        return self._document_side or dominant_direction(self._leading_text())
 
     def _leading_text(self, limit: int = SNIFF_CHARS) -> str:
         """The first *limit* characters of the document, block by block."""
@@ -603,6 +700,10 @@ class EditorView(QPlainTextEdit):
         super().paintEvent(event)
         decorator = self._markdown
         if decorator is None:
+            if self._show_invisible:
+                painter = QPainter(self.viewport())
+                self._paint_invisible_marks(painter)
+                painter.end()
             return
         painter = QPainter(self.viewport())
         painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
@@ -610,6 +711,8 @@ class EditorView(QPlainTextEdit):
                         self.contentOffset(),
                         QRectF(0, 0, self.viewport().width(),
                                self.viewport().height()))
+        if self._show_invisible:
+            self._paint_invisible_marks(painter)
         painter.end()
 
     # ==================================================================
@@ -757,6 +860,77 @@ class EditorView(QPlainTextEdit):
         self._update_gutter_width(0)
         self._place_gutter()
 
+    # -- diagnostics: show invisible characters (CD-16) -----------------
+    def set_show_invisible_chars(self, enabled: bool) -> None:
+        """Draw a marker where a zero-width character sits.
+
+        The characters this reveals (RLM, ZWNJ, BOM, …) have **no width**, so
+        tinting their background paints nothing at all — the first version of
+        this feature did exactly that and showed nothing.  The marks are drawn
+        in paintEvent instead, one thin bar per character, and the document is
+        never modified.
+        """
+        enabled = bool(enabled)
+        if enabled == self._show_invisible:
+            return
+        self._show_invisible = enabled
+        self.viewport().update()
+
+    def show_invisible_chars(self) -> bool:
+        return self._show_invisible
+
+    def _visible_blocks(self):
+        """Blocks that intersect the viewport, top to bottom.
+
+        A widget that has not been shown yet (tests, the moment before the
+        first paint) reports a zero-height viewport; treat that as "a screen
+        worth of text" rather than as "nothing to mark".
+        """
+        offset = self.contentOffset()
+        bottom_limit = self.viewport().height()
+        if bottom_limit <= 0:
+            bottom_limit = self.fontMetrics().lineSpacing() * 200
+        block = self.firstVisibleBlock()
+        while block.isValid():
+            top = self.blockBoundingGeometry(block).translated(offset).top()
+            if top > bottom_limit:
+                break
+            if block.isVisible():
+                yield block
+            block = block.next()
+
+    def count_invisible_chars(self, limit: int = 4_000_000) -> int:
+        """How many invisible characters this document holds (for the banner)."""
+        text = self.toPlainText()[:limit]
+        return len(invisible_spans(text))
+
+    def invisible_mark_rects(self) -> list:
+        """Viewport rectangles where a marker must be drawn (empty when off)."""
+        rects = []
+        if not self._show_invisible:
+            return rects
+        for block in self._visible_blocks():
+            if block.length() - 1 > MAX_INVISIBLE_SCAN:
+                continue                      # a whole-file paragraph: skip
+            text = block.text()
+            if not text:
+                continue
+            for start, _length, _name in invisible_spans(text):
+                cursor = QTextCursor(block)
+                cursor.setPosition(block.position() + start)
+                rect = self.cursorRect(cursor)
+                rects.append(QRect(rect.x(), rect.y(),
+                                   MARKER_WIDTH, max(1, rect.height())))
+        return rects
+
+    def _paint_invisible_marks(self, painter: QPainter) -> None:
+        painter.save()
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(QColor(255, 102, 0))
+        for rect in self.invisible_mark_rects():
+            painter.drawRect(rect)
+        painter.restore()
+
     def line_numbers_visible(self) -> bool:
         return self._gutter_visible
 
@@ -779,12 +953,35 @@ class EditorView(QPlainTextEdit):
         digits = max(2, len(str(max(1, self.blockCount()))))
         return 14 + self.fontMetrics().horizontalAdvance("9") * digits
 
+    def _gutter_on_the_right(self) -> bool:
+        """Which side the gutter belongs to.
+
+        In auto mode the widget itself stays left-to-right (so Qt resolves
+        every paragraph from its own text), but the *document* still has a
+        side — and the numbers must sit on that side, as they would in a
+        right-to-left editor.  An explicit mode decides it outright.
+        """
+        if self._direction_mode == AUTO:
+            return self.document_side() == RTL
+        return self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+
     def _update_gutter_width(self, _=0) -> None:
-        start = self.gutter_width() + TEXT_MARGIN
-        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
-            self.setViewportMargins(TEXT_MARGIN, 0, start, 0)
+        """Reserve the gutter's side plus equal breathing room on both edges.
+
+        Both margins are always ``TEXT_MARGIN`` or larger, so the first
+        character of a line — and the caret sitting on it — is never clipped
+        against the viewport, in either direction, with or without a gutter.
+        """
+        edge = self.gutter_width() + TEXT_MARGIN
+        if self._gutter_on_the_right():
+            wanted = QMargins(TEXT_MARGIN, 0, edge, 0)
         else:
-            self.setViewportMargins(start, 0, TEXT_MARGIN, 0)
+            wanted = QMargins(edge, 0, TEXT_MARGIN, 0)
+        # Setting the same margins again re-triggers the viewport update that
+        # asked for them in the first place; bail out while they already match.
+        if self.viewportMargins() == wanted:
+            return
+        self.setViewportMargins(wanted.left(), 0, wanted.right(), 0)
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
         gutter = self._gutter
@@ -808,7 +1005,7 @@ class EditorView(QPlainTextEdit):
             return
         cr = self.contentsRect()
         width = self.gutter_width()
-        if self.layoutDirection() == Qt.LayoutDirection.RightToLeft:
+        if self._gutter_on_the_right():
             x = cr.right() - width + 1
         else:
             x = cr.left()
@@ -820,24 +1017,33 @@ class EditorView(QPlainTextEdit):
         painter = QPainter(self._gutter)
         painter.fillRect(event.rect(), QColor(0, 0, 0, 0))
         painter.setPen(QColor("#8a8a8a"))
-        align = (Qt.AlignmentFlag.AlignLeft if
-                 self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        align = (Qt.AlignmentFlag.AlignLeft if self._gutter_on_the_right()
                  else Qt.AlignmentFlag.AlignRight)
         gutter_width = self._gutter.width()
+        offset = self.contentOffset()
         block = self.firstVisibleBlock()
-        number = block.blockNumber()
-        top = round(self.blockBoundingGeometry(block)
-                    .translated(self.contentOffset()).top())
-        bottom = top + round(self.blockBoundingRect(block).height())
-        height = self.fontMetrics().height()
-        while block.isValid() and top <= event.rect().bottom():
-            if block.isVisible() and bottom >= event.rect().top():
-                painter.drawText(4, top, gutter_width - 8, height,
-                                 align, str(number + 1))
+        # Each block is measured from its own geometry.  Accumulating rounded
+        # heights drifts by a pixel every few hundred paragraphs (CD-11), and
+        # a wrapped or Markdown-spaced paragraph is taller than the font box.
+        while block.isValid():
+            top = round(self.blockBoundingGeometry(block).translated(offset).top())
+            if top > event.rect().bottom():
+                break
+            height = round(self.blockBoundingRect(block).height())
+            if block.isVisible() and top + height >= event.rect().top():
+                layout = block.layout()
+                if layout is not None and layout.lineCount():
+                    line = layout.lineAt(0)
+                    line_top = top + round(line.y())
+                    line_height = max(1, round(line.height()))
+                else:                      # pragma: no cover - layout not ready
+                    line_top, line_height = top, self.fontMetrics().height()
+                # One number per paragraph, on its first visual line: wrapping
+                # adds lines but never a second number.
+                painter.drawText(QRect(4, line_top, gutter_width - 8, line_height),
+                                 align | Qt.AlignmentFlag.AlignTop,
+                                 str(block.blockNumber() + 1))
             block = block.next()
-            top = bottom
-            bottom = top + round(self.blockBoundingRect(block).height())
-            number += 1
         painter.end()
 
     # ==================================================================
@@ -849,7 +1055,15 @@ class EditorView(QPlainTextEdit):
                                cursor.columnNumber() + 1,
                                len(cursor.selectedText()))
         if self._direction_mode == AUTO:
-            self.setLayoutDirection(self._widget_direction())
+            # The document's side was decided at load time and does not move
+            # while the caret does; only the status chip follows the caret.
+            self._sync_auto_alignment()
+            resolved = self.resolved_direction()
+            if resolved != self._last_resolved:
+                self._last_resolved = resolved
+                # Visible proof that detection is per paragraph even where Qt
+                # cannot align per paragraph: the status chip follows the caret.
+                self.resolved_direction_changed.emit(resolved)
 
     def _emit_stats(self) -> None:
         doc = self.document()

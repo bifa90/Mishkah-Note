@@ -10,7 +10,7 @@ from PySide6.QtCore import Qt
 from mishkah.core import tab_style
 from mishkah.core.settings import Settings
 
-pytestmark = pytest.mark.usefixtures("qapp")
+pytestmark = [pytest.mark.gui, pytest.mark.usefixtures("qapp")]
 
 
 @pytest.fixture()

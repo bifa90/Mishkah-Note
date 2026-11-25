@@ -11,7 +11,7 @@ from mishkah.core.i18n_data import STRINGS
 from mishkah.core.languages import all_languages
 from mishkah.core.settings import Settings
 
-pytestmark = pytest.mark.usefixtures("qapp")
+pytestmark = [pytest.mark.gui, pytest.mark.usefixtures("qapp")]
 
 
 # ---------------------------------------------------------------------------
@@ -28,8 +28,15 @@ def test_translation_is_not_the_key_itself():
     for lang in all_languages():
         i18n.set_language(lang.code)
         assert i18n.tr("settings.title") != "settings.title"
-        assert i18n.tr("app.title", title="x.txt", app="A") == \
-            i18n.tr("app.title", title="x.txt", app="A")
+
+
+def test_placeholders_are_substituted_in_every_language():
+    """``tr`` must render values, not echo the template or leave braces behind."""
+    for lang in all_languages():
+        i18n.set_language(lang.code)
+        rendered = i18n.tr("app.title", title="x.txt", app="A")
+        assert "x.txt" in rendered and "A" in rendered, (lang.code, rendered)
+        assert "{" not in rendered and "}" not in rendered, (lang.code, rendered)
 
 
 def test_ten_most_spoken_languages_are_offered():

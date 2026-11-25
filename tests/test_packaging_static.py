@@ -27,7 +27,9 @@ def test_appimage_version_snippet_reads_project_version():
     result = subprocess.run([sys.executable, "-c", snippet], cwd=REPO,
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "1.0.01"
+    from mishkah import __version__
+
+    assert result.stdout.strip() == __version__
 
 
 def test_sdist_includes_windows_build_inputs():

@@ -28,6 +28,21 @@ requires_qt = pytest.mark.skipif(
     reason=f"PySide6/Qt system libraries unavailable: {globals().get('_QT_IMPORT_ERROR', '')}",
 )
 
+#: Modules that build real widgets.  They are marked ``gui`` and skipped
+#: entirely when Qt cannot load (a bare checkout without libGL), so a failure
+#: here always means a real regression rather than a missing system package.
+QT_ONLY_MODULES = (
+    "test_controller.py",
+    "test_editing_features.py",
+    "test_editor_direction.py",
+    "test_invisible_chars.py",
+    "test_markdown.py",
+    "test_tabs.py",
+    "test_widgets.py",
+)
+if not qt_available:
+    collect_ignore = list(QT_ONLY_MODULES)
+
 
 @pytest.fixture(scope="session")
 def qapp():

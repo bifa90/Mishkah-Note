@@ -7,7 +7,8 @@ The package exposes only stable metadata here; everything else lives in
 
 from __future__ import annotations
 
-__version__ = "1.0.01"
+from mishkah._version import __version__
+
 APP_VERSION = __version__
 
 APP_NAME = "Mishkah Note"

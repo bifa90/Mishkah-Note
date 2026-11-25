@@ -7,6 +7,8 @@ import sys
 
 import pytest
 
+from mishkah import __version__
+
 
 @pytest.mark.parametrize("flag", ["--version", "--help", "-h"])
 def test_metadata_flags_do_not_load_qt(flag):
@@ -17,11 +19,12 @@ def test_metadata_flags_do_not_load_qt(flag):
     )
     result = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert ("1.0.01" if flag == "--version" else "Usage:") in result.stdout
+    expected = __version__ if flag == "--version" else "Usage:"
+    assert expected in result.stdout
 
 
 def test_python_module_version():
     result = subprocess.run([sys.executable, "-m", "mishkah", "--version"],
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
-    assert result.stdout.strip() == "1.0.01"
+    assert result.stdout.strip() == __version__

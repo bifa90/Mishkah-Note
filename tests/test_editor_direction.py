@@ -9,7 +9,7 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-pytestmark = pytest.mark.usefixtures("qapp")
+pytestmark = [pytest.mark.gui, pytest.mark.usefixtures("qapp")]
 
 Qt = pytest.importorskip("PySide6.QtCore").Qt
 
@@ -30,7 +30,7 @@ def _dispose_widgets(qapp):
         widget.deleteLater()
     qapp.sendPostedEvents(None, QEvent.Type.DeferredDelete)
 
-from mishkah.core.text_direction import AUTO, LTR, RTL  # noqa: E402
+from mishkah.core.text_direction import AUTO, FIRST_LINE, FIRST_STRONG, LTR, RTL  # noqa: E402
 from mishkah.models.document import DocumentModel  # noqa: E402
 from mishkah.views.editor_view import (  # noqa: E402
     EditorView,
@@ -369,3 +369,205 @@ def test_status_direction_on_a_blank_line_follows_the_document(qapp):
     cursor.movePosition(cursor.MoveOperation.End)
     editor.setTextCursor(cursor)
     assert editor.resolved_direction() == LTR
+
+
+# ---------------------------------------------------------------------
+# CD-11 / CD-16: the document's side is decided once and never moves with
+# the caret; the status chip still reports the caret's paragraph.
+# ---------------------------------------------------------------------
+def _move_to_block(editor, index):
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.Start)
+    for _ in range(index):
+        cursor.movePosition(cursor.MoveOperation.Down)
+    editor.setTextCursor(cursor)
+
+
+def _alignment(editor):
+    return editor.document().defaultTextOption().alignment()
+
+
+def test_mixed_document_keeps_one_side_while_the_caret_moves(qapp):
+    """Following the caret flipped the whole view; a fixed side does not."""
+    editor = make_editor(qapp, "مرحبا بالعالم\n123 hello", mode=AUTO)
+    _move_to_block(editor, 0)
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+    _move_to_block(editor, 1)
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight, "the side must not move"
+
+
+def test_document_side_comes_from_the_first_line(qapp):
+    """An English file that turns Arabic half-way is still an English file."""
+    editor = make_editor(qapp, "hello\nمرحبا بالعالم\nمرحبا بالعالم", mode=AUTO)
+    assert editor.document_side() == LTR
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignLeft
+
+
+def test_new_empty_document_takes_the_side_of_the_first_word(qapp):
+    editor = make_editor(qapp, "", mode=AUTO)
+    assert editor.document_side() == LTR
+    editor.setPlainText("مرحبا")
+    editor._sync_auto_alignment()
+    assert editor.document_side() == RTL
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+    editor.setPlainText("مرحبا\nhello world")     # a minority line changes nothing
+    editor._sync_auto_alignment()
+    assert editor.document_side() == RTL
+
+
+def test_auto_mode_keeps_the_widget_ltr_but_moves_the_gutter(qapp):
+    """The document's side decides where the numbers go; the widget stays LTR.
+
+    A left-to-right widget keeps Qt's per-paragraph resolution intact, so the
+    gutter has to follow the document's side by itself instead of following
+    the widget's direction.
+    """
+    editor = make_editor(qapp, "مرحبا بالعالم\n123 hello", mode=AUTO)
+    editor.set_line_numbers_visible(True)
+    assert editor.layoutDirection() == Qt.LayoutDirection.LeftToRight
+    margins = editor.viewportMargins()
+    assert margins.right() > margins.left(), "RTL document: numbers on the right"
+    _move_to_block(editor, 1)
+    assert editor.viewportMargins() == margins          # and they never jump
+
+
+def test_gutter_follows_the_document_side_in_auto_mode(qapp):
+    editor = make_editor(qapp, "hello world\nمرحبا", mode=AUTO)   # opens English
+    editor.set_line_numbers_visible(True)
+    margins = editor.viewportMargins()
+    assert margins.left() > margins.right(), "LTR document: numbers on the left"
+
+
+def test_explicit_rtl_moves_the_gutter_to_the_right(qapp):
+    editor = make_editor(qapp, "hello", mode=RTL)
+    editor.apply_direction(RTL, announce=False)
+    editor.set_line_numbers_visible(True)
+    margins = editor.viewportMargins()
+    assert editor.layoutDirection() == Qt.LayoutDirection.RightToLeft
+    assert margins.right() > margins.left()
+
+
+def test_both_edges_keep_breathing_room(qapp):
+    editor = make_editor(qapp, "مرحبا", mode=AUTO)
+    editor.set_line_numbers_visible(False)
+    margins = editor.viewportMargins()
+    assert margins.left() >= 4 and margins.right() >= 4
+
+
+def test_status_chip_follows_the_caret_across_directions(qapp):
+    editor = make_editor(qapp, "مرحبا\n123 hello", mode=AUTO)
+    seen = []
+    editor.resolved_direction_changed.connect(seen.append)
+    _move_to_block(editor, 0)
+    _move_to_block(editor, 1)
+    assert LTR in seen
+
+
+def test_blank_paragraph_inherits_the_paragraph_above(qapp):
+    """Pressing Enter at the end of an English line keeps writing English."""
+    editor = make_editor(qapp, "hello\n", mode=AUTO)
+    _move_to_block(editor, 1)
+    assert editor.resolved_direction() == LTR
+    editor.setPlainText("مرحبا\n")
+    _move_to_block(editor, 1)
+    assert editor.resolved_direction() == RTL
+
+
+# ---------------------------------------------------------------------
+# CD-11: a caret sitting at the start of a right-aligned line must stay
+# inside the viewport (it used to be clipped away on the right edge)
+# ---------------------------------------------------------------------
+def test_caret_at_the_start_of_an_rtl_line_stays_visible(qapp):
+    editor = make_editor(qapp, "مرحبا بالعالم\n", mode=AUTO)
+    editor.resize(600, 160)
+    editor.show()
+    qapp.processEvents()
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.Start)
+    editor.setTextCursor(cursor)
+    qapp.processEvents()
+
+    rect = editor.cursorRect()
+    width = editor.viewport().width()
+    assert 0 <= rect.left() < width
+    assert rect.right() <= width - 4, (rect, width)
+    assert width - rect.right() >= 4, "no room on the right: the caret is clipped"
+
+
+
+def test_first_line_mode_re_decides_while_the_first_line_is_being_written(qapp):
+    """CD-20: the first line picks the side, until a second line exists."""
+    editor = make_editor(qapp, "", mode=AUTO)
+    editor.set_document_side_source(FIRST_LINE)
+    editor.insertPlainText("hello")
+    assert editor.document_side() == LTR
+    editor.selectAll()
+    editor.insertPlainText("مرحبا")
+    assert editor.document_side() == RTL
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+
+
+def test_first_line_mode_commits_once_the_document_has_two_lines(qapp):
+    editor = make_editor(qapp, "", mode=AUTO)
+    editor.set_document_side_source(FIRST_LINE)
+    editor.insertPlainText("مرحبا\nhello world")
+    assert editor.document_side() == RTL        # second line changes nothing
+    assert _alignment(editor) & Qt.AlignmentFlag.AlignRight
+
+
+def test_the_previous_rule_commits_on_the_first_character(qapp):
+    """Default (first_strong): the first character decides for good."""
+    editor = make_editor(qapp, "", mode=AUTO)
+    assert editor.document_side_source() == FIRST_STRONG
+    editor.insertPlainText("hello")
+    editor.selectAll()
+    editor.insertPlainText("مرحبا")
+    assert editor.document_side() == LTR
+
+
+def test_replacing_everything_follows_the_rule_in_force(qapp):
+    """Committed text keeps its side; a first line still being written does not."""
+    committed = make_editor(qapp, "", mode=AUTO)          # first_strong default
+    committed.insertPlainText("hello world")
+    committed.selectAll()
+    committed.insertPlainText("مرحبا بالعالم")
+    assert committed.document_side() == LTR
+
+    live = make_editor(qapp, "", mode=AUTO)
+    live.set_document_side_source(FIRST_LINE)
+    live.insertPlainText("hello world")
+    live.selectAll()
+    live.insertPlainText("مرحبا بالعالم")
+    assert live.document_side() == RTL, "the first line is still being written"
+
+
+def test_emptying_the_buffer_makes_it_a_new_document(qapp):
+    for source in (FIRST_STRONG, FIRST_LINE):
+        editor = make_editor(qapp, "", mode=AUTO)
+        editor.set_document_side_source(source)
+        editor.insertPlainText("hello world")
+        assert editor.document_side() == LTR
+        editor.clear()
+        editor.insertPlainText("مرحبا")
+        assert editor.document_side() == RTL, "an empty buffer is a new document"
+
+
+def test_the_view_menu_switches_the_rule(qapp, tmp_path):
+    from mishkah.controllers.main_controller import MainController
+    from mishkah.core.settings import Settings
+    from mishkah.services.file_service import FileService
+    from mishkah.views.main_window import MainWindow
+
+    settings = Settings(path=tmp_path / "settings.json", restore_session=False)
+    window = MainWindow()
+    controller = MainController(window, settings, FileService())
+    try:
+        editor = controller.new_document()
+        editor.insertPlainText("hello")
+        window.act_document_side.setChecked(True)
+        assert settings.document_side_source == FIRST_LINE
+        assert editor.document_side_source() == FIRST_LINE
+        window.act_document_side.setChecked(False)
+        assert settings.document_side_source == FIRST_STRONG
+    finally:
+        window.close()

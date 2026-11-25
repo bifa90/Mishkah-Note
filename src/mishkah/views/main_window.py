@@ -320,10 +320,17 @@ class MainWindow(QMainWindow):
         self.act_banner_dismiss.setFlat(True)
         self.act_banner_dismiss.setFixedWidth(28)
         self.act_banner_dismiss.setText("\u2715")
-        for button, action in ((self.act_banner_reload, "reload"),
-                               (self.act_banner_overwrite, "overwrite"),
-                               (self.act_banner_dismiss, "dismiss")):
-            button.clicked.connect(lambda _=False, a=action: self.file_changed_action.emit(a))
+        # The primary button changes meaning per banner: reload a changed file,
+        # convert an encoding, or save a document that has no path yet.
+        self._primary_banner_action = "reload"
+        self.act_banner_reload.clicked.connect(
+            lambda: self.file_changed_action.emit(self._primary_banner_action))
+        self.act_banner_overwrite.clicked.connect(
+            lambda: self.file_changed_action.emit("overwrite"))
+        self.act_banner_dismiss.clicked.connect(
+            lambda: self.file_changed_action.emit("dismiss"))
+        for button in (self.act_banner_reload, self.act_banner_overwrite,
+                       self.act_banner_dismiss):
             action_row.addWidget(button)
         self.action_banner.hide()
         root.insertWidget(root.indexOf(self.tabs) + 1, self.action_banner)
@@ -859,6 +866,7 @@ class MainWindow(QMainWindow):
     def show_file_changed(self, name: str) -> None:
         """Ask what to do about a file that changed on disk (CD-18)."""
         self.action_banner_label.setText(tr("banner.file_changed", name=name))
+        self._primary_banner_action = "reload"
         self.act_banner_reload.setText(tr("action.reload_file"))
         self.act_banner_overwrite.setText(tr("action.overwrite_file"))
         self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
@@ -871,6 +879,7 @@ class MainWindow(QMainWindow):
         """The buffer came from another encoding: ask before writing it back."""
         self.action_banner_label.setText(
             tr("banner.encoding_pending", name=name, encoding=encoding))
+        self._primary_banner_action = "convert"
         self.act_banner_reload.setText(tr("action.convert_and_save"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.hide()
@@ -882,6 +891,7 @@ class MainWindow(QMainWindow):
         """Autosave needs a path before it can mean anything (CD-01)."""
         self.action_banner_label.setText(
             tr("banner.autosave_needs_save", name=name))
+        self._primary_banner_action = "save_file"
         self.act_banner_reload.setText(tr("action.save_file"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.hide()

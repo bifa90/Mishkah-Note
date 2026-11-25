@@ -849,7 +849,7 @@ class MainWindow(QMainWindow):
         self.action_banner_label.setText(tr("banner.file_changed", name=name))
         self.act_banner_reload.setText(tr("action.reload_file"))
         self.act_banner_overwrite.setText(tr("action.overwrite_file"))
-        self.act_banner_dismiss.setText(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.show()
         self.act_banner_dismiss.show()

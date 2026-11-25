@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -50,6 +51,11 @@ class MainController(QObject):
         self._changed_docs: List[DocumentModel] = []
         #: CD-19/M1: reopened with another encoding, awaiting conversion.
         self._encoding_pending: List[DocumentModel] = []
+        #: Monotonic time of our own last write per path.  The file watcher
+        #: fires for that write too, and at that instant the recorded signature
+        #: is still the old one — which used to raise a banner claiming an
+        #: outside edit that never happened.
+        self._writes: Dict[str, float] = {}
         self._watcher: Optional[QFileSystemWatcher] = None
         #: CD-01: one idle timer, single shot, no background thread.
         self._autosave_timer: Optional[QTimer] = None
@@ -408,7 +414,7 @@ class MainController(QObject):
             if not chosen:
                 return False
             target = Path(chosen)
-        self.files.save(doc, target)
+        self._save_doc(doc, target)
         return True
 
     def save_all(self) -> None:
@@ -418,7 +424,7 @@ class MainController(QObject):
                 self._sync_content(editor, doc)
                 if self._file_changed(doc):
                     continue
-                self.files.save(doc, doc.path)
+                self._save_doc(doc, doc.path)
 
     # ==================================================================
     # CD-01 · autosave
@@ -459,7 +465,7 @@ class MainController(QObject):
         self._sync_content(editor, doc)
         if self._file_changed(doc):
             return
-        self.files.save(doc, doc.path)
+        self._save_doc(doc, doc.path)
 
     def autosave_enabled(self) -> bool:
         return bool(self.settings.autosave)
@@ -512,7 +518,27 @@ class MainController(QObject):
         if path in self._watcher.files():
             self._watcher.removePath(path)
 
+    #: How long after our own write the watcher is ignored.  Long enough for
+    #: the worker to finish and the signature to be refreshed, short enough
+    #: that a genuine outside edit right afterwards is still noticed.
+    WRITE_QUIET_SECONDS = 2.0
+
+    def _note_write(self, doc: DocumentModel) -> None:
+        if doc is not None and doc.path is not None:
+            self._writes[str(doc.path)] = time.monotonic()
+
+    def _watcher_is_hearing_itself(self, path: str) -> bool:
+        stamp = self._writes.get(path)
+        return stamp is not None and (time.monotonic() - stamp) < self.WRITE_QUIET_SECONDS
+
+    def _save_doc(self, doc: DocumentModel, target) -> None:
+        """The one place that starts a write: notes it, then asks the service."""
+        self._note_write(doc)
+        self.files.save(doc, target)
+
     def _on_watched_file_changed(self, path: str) -> None:
+        if self._watcher_is_hearing_itself(path):
+            return                       # our own write, not an outside edit
         for doc in list(self._docs.values()):
             if doc.path is not None and str(doc.path) == path:
                 if changed_on_disk(doc.path, doc.disk_signature):
@@ -541,7 +567,7 @@ class MainController(QObject):
         if action == "overwrite":
             doc.disk_signature = stat_signature(doc.path)
             self._sync_content(editor, doc)
-            self.files.save(doc, doc.path)
+            self._save_doc(doc, doc.path)
             return
         if action == "reload":
             self._reload_from_disk(doc, editor)
@@ -557,7 +583,7 @@ class MainController(QObject):
         if self._file_changed(doc):
             return
         if doc.path is not None:
-            self.files.save(doc, doc.path)
+            self._save_doc(doc, doc.path)
 
     def _reload_from_disk(self, doc: DocumentModel, editor: EditorView) -> None:
         """Replace the buffer with what is on disk, dropping undo history."""
@@ -598,8 +624,11 @@ class MainController(QObject):
 
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
         self._watch(doc)
+        self._note_write(doc)
         if doc in self._changed_docs:
             self._changed_docs.remove(doc)
+        if not self._changed_docs:
+            self.window.hide_file_changed()
         editor = self._editor_for_document(doc)
         if editor is not None:
             self.window.set_tab_title(editor, self._doc_title(doc), doc.is_modified)

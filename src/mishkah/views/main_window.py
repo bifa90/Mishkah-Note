@@ -41,7 +41,6 @@ from PySide6.QtWidgets import (
     QStyleOptionTab,
     QTabBar,
     QTabWidget,
-    QToolBar,
     QVBoxLayout,
     QWidget,
 )
@@ -55,6 +54,7 @@ from mishkah.models.document import DocumentModel
 from mishkah.views.editor_view import EditorView
 from mishkah.views.status_bar_widget import StatusBarWidget
 from mishkah.widgets.find_dialog import FindReplaceBar
+from mishkah.widgets.toggle_switch import ToggleSwitch
 
 ENCODINGS = (
     "utf-8", "utf-8-sig", "utf-16-le", "utf-16-be", "utf-32",
@@ -300,7 +300,9 @@ class MainWindow(QMainWindow):
         self.banner.setObjectName("Banner")
         self.banner.setWordWrap(True)
         self.banner.hide()
-        root.insertWidget(0, self.banner)
+        # Under the tab strip, where the eye already is: a banner floating
+        # above the menus looked detached from the document it talks about.
+        root.insertWidget(root.indexOf(self.tabs) + 1, self.banner)
 
         # A banner that asks a question: the file changed under our feet and
         # nothing may be written until the user decides (CD-18).
@@ -314,38 +316,70 @@ class MainWindow(QMainWindow):
         self.act_banner_reload = QPushButton(self.action_banner)
         self.act_banner_overwrite = QPushButton(self.action_banner)
         self.act_banner_dismiss = QPushButton(self.action_banner)
+        self.act_banner_dismiss.setObjectName("BannerDismiss")
+        self.act_banner_dismiss.setFlat(True)
+        self.act_banner_dismiss.setFixedWidth(28)
+        self.act_banner_dismiss.setText("\u2715")
         for button, action in ((self.act_banner_reload, "reload"),
                                (self.act_banner_overwrite, "overwrite"),
                                (self.act_banner_dismiss, "dismiss")):
             button.clicked.connect(lambda _=False, a=action: self.file_changed_action.emit(a))
             action_row.addWidget(button)
         self.action_banner.hide()
-        root.insertWidget(0, self.action_banner)
+        root.insertWidget(root.indexOf(self.tabs) + 1, self.action_banner)
 
         self._pinned_index: Optional[int] = None
         self._build_menus()
-        self._build_quick_bar()
-        self._add_autosave_menu_entry()
+        self._build_autosave_control()
 
     # ==================================================================
     # menus
     # ==================================================================
-    def _build_quick_bar(self) -> None:
-        """One switch the user asked for by name: autosave, top and visible."""
-        self.quick_bar = QToolBar(self)
-        self.quick_bar.setObjectName("QuickBar")
-        self.quick_bar.setMovable(False)
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.quick_bar)
-        self.quick_bar.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+    def _build_autosave_control(self) -> None:
+        """The autosave switch lives in the menu bar row, before *File*.
+
+        One state holder (``act_autosave``) is shared by the switch and the
+        View menu entry, so the two can never disagree.
+        """
         self.act_autosave = QAction(tr("action.autosave"), self)
         self.act_autosave.setCheckable(True)
         self.act_autosave.setChecked(False)
         self.act_autosave.setToolTip(tr("action.autosave_hint"))
-        self.act_autosave.setStatusTip(tr("action.autosave_hint"))
-        self.act_autosave.setIcon(self._autosave_icon())
         self.act_autosave.toggled.connect(self.autosave_toggled)
-        self.quick_bar.addAction(self.act_autosave)
+
+        self.autosave_switch = ToggleSwitch(self)
+        self.autosave_switch.setToolTip(tr("action.autosave_hint"))
+        self.autosave_switch.setAccessibleName(tr("action.autosave"))
+        self.autosave_switch.toggled.connect(self.act_autosave.setChecked)
+        self.act_autosave.toggled.connect(
+            lambda checked: self.autosave_switch.setChecked(checked, emit=False))
+        self._place_autosave_switch()
+        self._add_autosave_menu_entry()
+
+    def _place_autosave_switch(self) -> None:
+        """Pin the switch to the start of the menu row, once.
+
+        ``QMenuBar`` deletes whatever widget it replaces, so the switch is
+        created once, placed once, and never re-parented afterwards; a
+        language change only refreshes its texts.
+        """
+        rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        corner = (Qt.Corner.TopRightCorner if rtl else Qt.Corner.TopLeftCorner)
+        bar = self.menuBar()
+        if bar.cornerWidget(corner) is not self.autosave_switch:
+            bar.setCornerWidget(self.autosave_switch, corner)
+        self.autosave_switch.show()
+
+    def _add_autosave_menu_entry(self) -> None:
+        menu = getattr(self, "menu_view", None)
+        if menu is None:                      # pragma: no cover - defensive
+            return
+        self.act_autosave_menu = QAction(tr("action.autosave"), self)
+        self.act_autosave_menu.setCheckable(True)
+        self.act_autosave_menu.setToolTip(tr("action.autosave_hint"))
+        self.act_autosave_menu.toggled.connect(self.autosave_toggled)
+        menu.addSeparator()
+        menu.addAction(self.act_autosave_menu)
 
     def _add_autosave_menu_entry(self) -> None:
         menu = getattr(self, "menu_view", None)
@@ -379,17 +413,18 @@ class MainWindow(QMainWindow):
         return QIcon(pixmap)
 
     def set_autosave(self, enabled: bool) -> None:
-        """Keep the quick switch in step with the saved setting (CD-01)."""
+        """Keep the switch, the menu entry and the tooltip in step (CD-01)."""
         blocked = self.act_autosave.blockSignals(True)
         self.act_autosave.setChecked(enabled)
         self.act_autosave.setText(tr("action.autosave") if enabled
                                   else tr("action.autosave_off"))
         self.act_autosave.blockSignals(blocked)
-        menu_action = getattr(self, "act_autosave_menu", None)
-        if menu_action is not None:
-            blocked = menu_action.blockSignals(True)
-            menu_action.setChecked(enabled)
-            menu_action.blockSignals(blocked)
+        self.autosave_switch.setChecked(enabled, emit=False)
+        self.autosave_switch.setToolTip(tr("action.autosave_hint"))
+        if hasattr(self, "act_autosave_menu"):
+            blocked = self.act_autosave_menu.blockSignals(True)
+            self.act_autosave_menu.setChecked(enabled)
+            self.act_autosave_menu.blockSignals(blocked)
 
     def _build_menus(self) -> None:
         bar = self.menuBar()
@@ -827,7 +862,7 @@ class MainWindow(QMainWindow):
         self.act_banner_reload.setText(tr("action.convert_and_save"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.hide()
-        self.act_banner_dismiss.setText(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
         self.act_banner_dismiss.show()
         self.action_banner.show()
 
@@ -866,6 +901,13 @@ class MainWindow(QMainWindow):
         """Rebuild every label after a UI-language switch."""
         self.menuBar().clear()
         self._build_menus()
+        self._add_autosave_menu_entry()
+        self.act_autosave.setText(tr("action.autosave")
+                                  if self.autosave_switch.isChecked()
+                                  else tr("action.autosave_off"))
+        self.autosave_switch.setToolTip(tr("action.autosave_hint"))
+        self.autosave_switch.setAccessibleName(tr("action.autosave"))
+        self.autosave_switch.show()
         self.find_bar.retranslate()
         self.status.retranslate()
 

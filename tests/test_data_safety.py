@@ -13,6 +13,8 @@ pytestmark = [pytest.mark.gui, pytest.mark.usefixtures("qapp")]
 
 pytest.importorskip("PySide6")
 
+from PySide6.QtCore import Qt  # noqa: E402
+
 
 @pytest.fixture(autouse=True)
 def _dispose_widgets(qapp):
@@ -200,19 +202,126 @@ def test_reopen_with_another_encoding_stays_in_the_same_tab(qapp, tmp_path):
 
 
 def test_the_switch_is_reachable_twice(qapp, tmp_path):
-    """Toolbar and View menu must agree, and both must exist."""
+    """The menu-bar switch and the View entry are the same state."""
     window, controller, settings = _controller(tmp_path)
     try:
-        assert window.quick_bar.isVisible() is not None
-        assert window.act_autosave.icon().isNull() is False, "the button has an icon"
+        assert window.autosave_switch.isChecked() is False
         assert window.act_autosave_menu.isCheckable()
 
-        window.act_autosave.setChecked(True)
+        window.autosave_switch.toggle()
+        assert window.autosave_switch.isChecked() is True
+        assert window.act_autosave.isChecked() is True
         assert window.act_autosave_menu.isChecked() is True
         assert settings.autosave is True
 
         window.act_autosave_menu.setChecked(False)
-        assert window.act_autosave.isChecked() is False
+        assert window.autosave_switch.isChecked() is False
         assert settings.autosave is False
+    finally:
+        window.close()
+
+
+def test_the_switch_sits_in_the_menu_row(qapp, tmp_path):
+    """It is the menu bar's corner widget, not a second toolbar."""
+    window, controller, _ = _controller(tmp_path)
+    try:
+        bar = window.menuBar()
+        corner_widgets = {bar.cornerWidget(Qt.Corner.TopLeftCorner),
+                          bar.cornerWidget(Qt.Corner.TopRightCorner)}
+        assert window.autosave_switch in corner_widgets
+    finally:
+        window.close()
+
+
+def test_the_switch_paints_grey_when_off_and_green_when_on(qapp, tmp_path):
+    from mishkah.widgets.toggle_switch import TRACK_OFF, TRACK_ON
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        window.autosave_switch.setChecked(False)
+        off = window.autosave_switch.grab().toImage()
+        window.autosave_switch.setChecked(True)
+        on = window.autosave_switch.grab().toImage()
+        assert _has_colour(off, TRACK_OFF), "off must look grey"
+        assert _has_colour(on, TRACK_ON), "on must look green"
+    finally:
+        window.close()
+
+
+def _has_colour(image, colour, tolerance=12):
+    for x in range(image.width()):
+        for y in range(image.height()):
+            pixel = image.pixelColor(x, y)
+            if (abs(pixel.red() - colour.red()) <= tolerance
+                    and abs(pixel.green() - colour.green()) <= tolerance
+                    and abs(pixel.blue() - colour.blue()) <= tolerance):
+                return True
+    return False
+
+
+def test_the_banner_sits_below_the_tabs(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    try:
+        layout = window.centralWidget().layout()
+        tabs_index = layout.indexOf(window.tabs)
+        assert layout.indexOf(window.banner) > tabs_index
+        assert layout.indexOf(window.action_banner) > tabs_index
+    finally:
+        window.close()
+
+
+def test_the_dismiss_control_is_a_cross(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    try:
+        window.show_file_changed("note.txt")
+        assert window.act_banner_dismiss.text() == "\u2715"
+        assert window.act_banner_dismiss.toolTip()
+        seen = []
+        window.file_changed_action.connect(seen.append)
+        window.act_banner_dismiss.click()
+        assert seen == ["dismiss"]
+    finally:
+        window.close()
+
+
+def test_our_own_write_does_not_raise_the_guard_banner(qapp, tmp_path):
+    """The false 'another copy' message: the watcher hears our own save."""
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor, doc = _typed_doc(controller, tmp_path / "note.txt")
+        editor.setPlainText("edited\n")
+        controller._note_write(doc)                 # a save has just happened
+        controller._on_watched_file_changed(str(doc.path))
+        assert window.action_banner.isHidden(), "no banner for our own write"
+        assert not controller._changed_docs
+    finally:
+        window.close()
+
+
+def test_a_real_outside_edit_still_raises_it(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor, doc = _typed_doc(controller, tmp_path / "note.txt")
+        (tmp_path / "note.txt").write_text("outside\n", encoding="utf-8")
+        controller._on_watched_file_changed(str(doc.path))
+        assert not window.action_banner.isHidden()
+        assert controller._changed_docs == [doc]
+    finally:
+        window.close()
+
+
+def test_a_successful_save_settles_the_banner(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    writes = []
+    controller.files.save = lambda doc, tgt=None: writes.append((doc, tgt))
+    try:
+        editor, doc = _typed_doc(controller, tmp_path / "note.txt")
+        (tmp_path / "note.txt").write_text("outside\n", encoding="utf-8")
+        controller._on_watched_file_changed(str(doc.path))
+        assert not window.action_banner.isHidden()
+
+        controller.on_file_changed_action("overwrite")
+        assert window.action_banner.isHidden(), "the answer closes the question"
+        assert writes
     finally:
         window.close()

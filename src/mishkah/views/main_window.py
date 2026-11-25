@@ -26,7 +26,6 @@ from PySide6.QtGui import (
     QKeySequence,
     QPainter,
     QPalette,
-    QPen,
     QPixmap,
     QPolygonF,
 )
@@ -55,6 +54,7 @@ from mishkah.models.document import DocumentModel
 from mishkah.views.editor_view import EditorView
 from mishkah.views.status_bar_widget import StatusBarWidget
 from mishkah.widgets.find_dialog import FindReplaceBar
+from mishkah.widgets.icons import themed_cross_icon
 from mishkah.widgets.toggle_switch import ToggleSwitch
 
 ENCODINGS = (
@@ -896,23 +896,8 @@ class MainWindow(QMainWindow):
                 return
 
     def _cross_icon(self, size: int = 10) -> QIcon:
-        """Two strokes, drawn at twice the size for crisp high-DPI edges."""
-        pixmap = QPixmap(size * 2, size * 2)
-        pixmap.setDevicePixelRatio(2.0)
-        pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
-        pen = QPen(self.palette().color(QPalette.ColorRole.WindowText))
-        pen.setWidthF(1.6)
-        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
-        painter.setPen(pen)
-        inset = 1.5
-        painter.drawLine(QPointF(inset, inset),
-                         QPointF(size - inset, size - inset))
-        painter.drawLine(QPointF(size - inset, inset),
-                         QPointF(inset, size - inset))
-        painter.end()
-        return QIcon(pixmap)
+        """The dismiss ``×``: painted, never typed (see ``widgets.icons``)."""
+        return themed_cross_icon(self, size)
 
     def _relayout_banners(self) -> None:
         """Pin every visible banner right under the tab strip.
@@ -980,6 +965,19 @@ class MainWindow(QMainWindow):
             tr("banner.encoding_pending", name=name, encoding=encoding))
         self._primary_banner_action = "convert"
         self.act_banner_reload.setText(tr("action.convert_and_save"))
+        self.act_banner_reload.show()
+        self.act_banner_overwrite.hide()
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.show()
+        self.action_banner.show()
+        self._relayout_banners()
+
+    def show_preview(self, name: str, size: str, total: str) -> None:
+        """A preview is honest about itself and offers the way out (CD-11)."""
+        self.action_banner_label.setText(
+            tr("banner.preview", size=size, total=total))
+        self._primary_banner_action = "open_full"
+        self.act_banner_reload.setText(tr("action.open_full"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.hide()
         self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))

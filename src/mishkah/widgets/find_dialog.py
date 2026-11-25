@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QSize, Qt, QTimer, Signal
 from PySide6.QtWidgets import (
     QCheckBox,
     QFrame,
@@ -18,10 +18,15 @@ from PySide6.QtWidgets import (
 )
 
 from mishkah.core.i18n import tr
+from mishkah.widgets.icons import close_button_stylesheet, cross_icon, themed_cross_icon
+
+#: How long typing in the find field has to pause before the search runs.
+INCREMENTAL_MS = 180
 
 
 class FindReplaceBar(QFrame):
     find_requested = Signal(str, bool)      # needle, backward
+    incremental_requested = Signal(str)     # needle, as you type (CD-11)
     replace_requested = Signal(str, str)    # needle, replacement
     replace_all_requested = Signal(str, str)
     closed = Signal()
@@ -47,10 +52,19 @@ class FindReplaceBar(QFrame):
         self.find_edit.returnPressed.connect(self.find_next)
         self._find_prev = QPushButton(tr("find.previous"))
         self._find_next = QPushButton(tr("find.next"))
-        self._close = QPushButton("✕")
+        # Painted, not typed: "✕" renders as an empty box on fonts that lack
+        # the glyph (the same bug the banner's dismiss button had).
+        self._close = QPushButton()
         self._close.setObjectName("CloseButton")
+        self._close.setText("")
+        self._close.setIcon(cross_icon(10))
+        self._close.setIconSize(QSize(10, 10))
         self._close.setFixedSize(24, 24)
+        self._close.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._close.setStyleSheet(close_button_stylesheet(12))
         self._close.setToolTip(tr("dialog.close"))
+        if not self._close.icon().isNull():
+            self._close.setIcon(themed_cross_icon(self, 10))
         row1.addWidget(QLabel(tr("find.what")))
         row1.addWidget(self.find_edit, 1)
         row1.addWidget(self._find_prev)
@@ -82,6 +96,15 @@ class FindReplaceBar(QFrame):
         self.use_regex = QCheckBox(tr("find.regex"))
         self.wrap = QCheckBox(tr("find.wrap_around"))
         self.wrap.setChecked(True)
+        self._incremental = QTimer(self)
+        self._incremental.setSingleShot(True)
+        self._incremental.setInterval(INCREMENTAL_MS)
+        self._incremental.timeout.connect(self._emit_incremental)
+        self.find_edit.textChanged.connect(self._incremental.start)
+        self.match_case.stateChanged.connect(self._restart_incremental)
+        self.whole_word.stateChanged.connect(self._restart_incremental)
+        self.use_regex.stateChanged.connect(self._restart_incremental)
+
         self._toggle_replace = QPushButton(tr("action.replace"))
         self._toggle_replace.setCheckable(True)
         for widget in (self.match_case, self.whole_word, self.use_regex, self.wrap):
@@ -118,8 +141,26 @@ class FindReplaceBar(QFrame):
         self.find_edit.selectAll()
 
     def hide_bar(self) -> None:
+        self._incremental.stop()
+        self.set_match_state(True)
         self.hide()
         self.closed.emit()
+
+    # ----------------------------------------------------------- incremental
+    def _restart_incremental(self, *_args) -> None:
+        if self.isVisible() and self.find_edit.text():
+            self._incremental.start()
+
+    def _emit_incremental(self) -> None:
+        needle = self.find_edit.text()
+        if needle:
+            self.incremental_requested.emit(needle)
+
+    def set_match_state(self, found: bool) -> None:
+        """Colour the placeholder side of the field, never the text itself."""
+        self.find_edit.setProperty("noMatch", "true" if not found else "false")
+        self.find_edit.style().unpolish(self.find_edit)
+        self.find_edit.style().polish(self.find_edit)
 
     def find_next(self) -> None:
         self.find_requested.emit(self.find_edit.text(), False)
@@ -155,6 +196,8 @@ class FindReplaceBar(QFrame):
         self.wrap.setText(tr("find.wrap_around"))
         self._toggle_replace.setText(tr("action.replace"))
         self._close.setToolTip(tr("dialog.close"))
+        if not self._close.icon().isNull():
+            self._close.setIcon(themed_cross_icon(self, 10))
 
     def keyPressEvent(self, event) -> None:  # noqa: N802 (Qt naming)
         if event.key() == Qt.Key.Key_Escape:

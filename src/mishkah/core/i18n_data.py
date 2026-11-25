@@ -1396,6 +1396,13 @@ STRINGS: Dict[str, S] = {
         "fr": "Tous les fichiers (*)", "bn": "সব ফাইল (*)",
         "pt": "Todos os ficheiros (*)", "ru": "Все файлы (*)", "ur": "تمام فائلیں (*)",
     },
+    "action.open_full": {
+        "en": "Open fully", "ar": "افتح الملف كاملًا",
+        "zh-Hans": "完整打开", "hi": "पूरा खोलें",
+        "es": "Abrir completo", "fr": "Ouvrir entièrement",
+        "bn": "সম্পূর্ণ খুলুন", "pt": "Abrir por completo",
+        "ru": "Открыть полностью", "ur": "پوری کھولیں",
+    },
     "banner.preview": {
         "en": "Preview only — showing the first {size} of a {total} file. Save is disabled.",
         "ar": "معاينة فقط — يُعرض أول {size} من ملف بحجم {total}. الحفظ معطّل.",

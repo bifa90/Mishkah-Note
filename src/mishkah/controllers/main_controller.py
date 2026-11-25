@@ -135,6 +135,7 @@ class MainController(QObject):
         w.act_zoom_reset.triggered.connect(self._zoom_reset)
 
         w.find_bar.find_requested.connect(self._on_find)
+        w.find_bar.incremental_requested.connect(self._on_incremental_find)
         w.find_bar.replace_requested.connect(self._on_replace)
         w.find_bar.replace_all_requested.connect(self._on_replace_all)
         w.find_bar.closed.connect(lambda: self._focus_editor())
@@ -273,7 +274,10 @@ class MainController(QObject):
 
         size = path.stat().st_size
         ask_mb = self.settings.ask_before_mb
-        limit_mb = None
+        # The configured ceiling was never handed to the loader: any file at
+        # all was read whole into memory.  Above the ceiling the tab now opens
+        # as a preview and says so (CD-11 / M4).
+        limit_mb = max(1, int(self.settings.hard_limit_mb or 0)) or None
         if ask_mb and size > ask_mb * 1024 * 1024:
             if not self.window.ask_big_file(
                     path.name, _human(size)):
@@ -323,9 +327,11 @@ class MainController(QObject):
         self.window.set_tab_title(editor, self._doc_title(doc), False)
         self._watch(doc)
         if doc.truncated:
-            self.window.show_banner(i18n.tr(
-                "banner.preview", size=_human(8 * 1024 * 1024),
-                total=_human(doc.size_on_disk)))
+            from mishkah.core.large_file import PREVIEW_BYTES
+            shown = min(PREVIEW_BYTES,
+                        int(self.settings.hard_limit_mb or 0) * 1024 * 1024)
+            self.window.show_preview(doc.title, _human(shown),
+                                     _human(doc.size_on_disk))
         elif doc.read_only:
             self.window.show_banner(i18n.tr("banner.readonly"))
         else:
@@ -594,6 +600,9 @@ class MainController(QObject):
             if editor is None or not self.save_current():
                 self._autosave_after_save = False     # cancelled: stay off
             return
+        if action == "open_full":
+            self._open_preview_fully(doc)
+            return
         if action == "convert":
             if editor is not None:
                 self._convert_encoding(doc, editor)
@@ -607,6 +616,17 @@ class MainController(QObject):
             return
         if action == "reload":
             self._reload_from_disk(doc, editor)
+
+    def _open_preview_fully(self, doc: DocumentModel) -> None:
+        """Read the whole file into the preview tab the user is looking at."""
+        if doc.path is None:
+            return
+        editor = self._editor_for_document(doc)
+        if editor is None:
+            return
+        index = self.window.index_of(editor)
+        self._pending_paths[index] = str(doc.path)
+        self.files.load(doc.path, encoding=doc.encoding, limit_mb=None)
 
     def _convert_encoding(self, doc: DocumentModel, editor: EditorView) -> None:
         """Accept the new encoding, then save with it (the explicit step)."""
@@ -892,6 +912,9 @@ class MainController(QObject):
     def show_find(self, replace_mode: bool) -> None:
         editor = self.window.current_editor()
         seed = editor.textCursor().selectedText() if editor else ""
+        # Where the search starts from: incremental search always comes back
+        # to this point, so refining a word does not walk down the document.
+        self._find_anchor = editor.textCursor().position() if editor else 0
         self.window.find_bar.show_bar(replace_mode, seed)
         self._place_find_bar()
 
@@ -902,12 +925,34 @@ class MainController(QObject):
         x = self.window.width() - bar.width() - margin - 24
         bar.move(max(margin, x), 76)
 
+    def _on_incremental_find(self, needle: str) -> None:
+        """Search while the needle is being typed (CD-11).
+
+        The caret keeps walking to the first match after the point where the
+        bar was opened, so typing one more character refines the hit instead
+        of skipping to the next one.  Nothing is marked modified: only the
+        selection moves.
+        """
+        editor = self.window.current_editor()
+        if editor is None or not needle:
+            return
+        anchor = getattr(self, "_find_anchor", None)
+        if anchor is not None and 0 <= anchor <= editor.document().characterCount():
+            cursor = editor.textCursor()
+            cursor.setPosition(anchor)
+            editor.setTextCursor(cursor)
+        options = dict(self.window.find_bar.options())
+        options["wrap"] = False          # incremental search never wraps
+        found = editor.find_text(needle, backward=False, **options)
+        self.window.find_bar.set_match_state(found)
+
     def _on_find(self, needle: str, backward: bool) -> None:
         editor = self.window.current_editor()
         if editor is None or not needle:
             return
         options = self.window.find_bar.options()
         found = editor.find_text(needle, backward=backward, **options)
+        self.window.find_bar.set_match_state(found)
         if not found:
             self.window.status.set_position(
                 *self._cursor_position(editor), 0)

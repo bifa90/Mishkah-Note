@@ -97,6 +97,8 @@ QLineEdit {
     selection-color: #000000;
 }
 QLineEdit:focus { border: 1px solid #4CC2FF; border-bottom: 2px solid #4CC2FF; }
+QLineEdit[noMatch="true"] { border: 1px solid #E06C6C; }
+QLineEdit[noMatch="true"]:focus { border: 1px solid #E06C6C; border-bottom: 2px solid #E06C6C; }
 
 QCheckBox { background: transparent; spacing: 6px; }
 QCheckBox::indicator {

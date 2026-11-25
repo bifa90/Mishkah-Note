@@ -26,9 +26,9 @@ chord changes direction; using it together with another key (e.g.
 from __future__ import annotations
 
 import time
-from typing import Optional
+from typing import Optional, Tuple
 
-from PySide6.QtCore import QMargins, QRect, QRectF, Qt, Signal
+from PySide6.QtCore import QMargins, QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
@@ -88,6 +88,17 @@ RIGHT_SHIFT_CODES = frozenset({62, 54, 60})
 # The chord must be completed quickly to count as a direction switch.
 CHORD_TIMEOUT_S = 1.5
 
+#: How long typing has to pause before the counters and the document side are
+#: worked out again (CD-07).  One pass per burst instead of one per keystroke.
+STATS_IDLE_MS = 150
+
+#: Extra lines the live Markdown layer decorates above and below the viewport
+#: (CD-07).  Anything further away cannot be seen, so it is not parsed.
+MARKDOWN_WINDOW_LINES = 400
+
+#: Longest paragraph prefix inspected when pairing a bracket (CD-03).
+PAIR_SCAN_LIMIT = 4096
+
 _ALIGNMENT = {
     LTR: Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignAbsolute,
     RTL: Qt.AlignmentFlag.AlignRight | Qt.AlignmentFlag.AlignAbsolute,
@@ -144,6 +155,20 @@ class EditorView(QPlainTextEdit):
         self._side_updating = False           # guards against re-entry
         self._chord = _ChordState()
 
+        # --- deferred work (CD-07) -------------------------------------------
+        # Counting the buffer and re-deciding the document side on every
+        # keystroke is what made a big paste feel sticky.  Both are now one
+        # pass per typing burst instead of one per character.
+        self._stats_timer = QTimer(self)
+        self._stats_timer.setSingleShot(True)
+        self._stats_timer.setInterval(STATS_IDLE_MS)
+        self._stats_timer.timeout.connect(self._emit_stats)
+        self._alignment_timer = QTimer(self)
+        self._alignment_timer.setSingleShot(True)
+        self._alignment_timer.setInterval(STATS_IDLE_MS)
+        self._alignment_timer.timeout.connect(self._sync_auto_alignment)
+        self._markdown_window = None
+
         # --- editing conveniences -------------------------------------------
         self._auto_close = True
         self._auto_indent = True
@@ -168,9 +193,10 @@ class EditorView(QPlainTextEdit):
 
         self.cursorPositionChanged.connect(self._emit_cursor)
         self.cursorPositionChanged.connect(self._sync_markdown_caret)
+        self.verticalScrollBar().valueChanged.connect(self._update_markdown_window)
         self.selectionChanged.connect(self._emit_cursor)
-        self.document().contentsChanged.connect(self._emit_stats)
-        self.document().contentsChanged.connect(self._sync_auto_alignment)
+        self.document().contentsChanged.connect(self._schedule_stats)
+        self.document().contentsChanged.connect(self._schedule_alignment)
 
         self.apply_direction(self._direction_mode, announce=False)
         self._update_gutter_width(0)
@@ -333,7 +359,13 @@ class EditorView(QPlainTextEdit):
 
     def _lock_document_side(self) -> None:
         """Choose the side for this document (only called when unlocked)."""
-        text = self._leading_text(limit=SNIFF_CHARS * 16)
+        if self._side_source == FIRST_LINE:
+            # The ``first_line`` rule only ever looks at the first line: an
+            # unlocked (still being written) document used to read 64 kB per
+            # keystroke just to decide which side that one line is on (CD-07).
+            text = self.document().firstBlock().text()
+        else:
+            text = self._leading_text(limit=SNIFF_CHARS * 16)
         if first_strong_is_rtl(text) is None:
             return                          # still neutral: nothing to decide
         side = document_side(text, self._side_source)
@@ -501,16 +533,39 @@ class EditorView(QPlainTextEdit):
         self.setTextCursor(cursor)
 
     # -- pairing ---------------------------------------------------------
+    def neighbour_chars(self) -> Tuple[str, str]:
+        """The characters either side of the caret, read without a copy.
+
+        ``self.toPlainText()`` copies the whole buffer; at 5 MB that was the
+        expensive part of typing ``(`` or pressing Backspace (CD-07).
+        """
+        cursor = self.textCursor()
+        before = after = ""
+        back = QTextCursor(cursor)
+        if back.movePosition(QTextCursor.MoveOperation.PreviousCharacter,
+                             QTextCursor.MoveMode.KeepAnchor):
+            before = back.selectedText().replace("\u2029", "\n")[-1:]
+        ahead = QTextCursor(cursor)
+        if ahead.movePosition(QTextCursor.MoveOperation.NextCharacter,
+                              QTextCursor.MoveMode.KeepAnchor):
+            after = ahead.selectedText().replace("\u2029", "\n")[:1]
+        return before, after
+
+    def paragraph_prefix(self, limit: int = PAIR_SCAN_LIMIT) -> str:
+        """The current paragraph's text up to the caret, capped at *limit*."""
+        cursor = QTextCursor(self.textCursor())
+        cursor.movePosition(QTextCursor.MoveOperation.StartOfBlock,
+                            QTextCursor.MoveMode.KeepAnchor)
+        text = cursor.selectedText().replace("\u2029", "\n")
+        return text[-limit:] if limit and len(text) > limit else text
+
     def _apply_pairing(self, char: str) -> bool:
         cursor = self.textCursor()
         selected = cursor.hasSelection()
         if selected:
             before, after = "", ""
         else:
-            position = cursor.position()
-            text = self.toPlainText()
-            before = text[max(0, position - 1):position]
-            after = text[position:position + 1]
+            before, after = self.neighbour_chars()
 
         if autocomplete.should_skip_closer(char, after):
             cursor.movePosition(QTextCursor.MoveOperation.Right)
@@ -541,10 +596,7 @@ class EditorView(QPlainTextEdit):
         if not self._auto_close or self.textCursor().hasSelection():
             return False
         cursor = self.textCursor()
-        position = cursor.position()
-        text = self.toPlainText()
-        before = text[max(0, position - 1):position]
-        after = text[position:position + 1]
+        before, after = self.neighbour_chars()
         if autocomplete.deletion_span(before or " ", before, after) != 2:
             return False
         cursor.beginEditBlock()
@@ -682,6 +734,8 @@ class EditorView(QPlainTextEdit):
         if self._markdown is None:
             self._markdown = MarkdownDecorator(self.document(),
                                                self._theme_name, self.font())
+            self._markdown.set_window(*self._markdown_window_range())
+            self._markdown.invalidate_cache()
             self._markdown.set_active_block(self.textCursor().blockNumber())
         else:
             self._markdown.set_theme(self._theme_name)
@@ -695,7 +749,28 @@ class EditorView(QPlainTextEdit):
 
     def _sync_markdown_caret(self) -> None:
         if self._markdown is not None:
+            self._update_markdown_window()
             self._markdown.set_active_block(self.textCursor().blockNumber())
+
+    def _markdown_window_range(self) -> Tuple[int, int]:
+        """Blocks worth decorating: the visible ones plus a margin (CD-07)."""
+        first = self.cursorForPosition(QPoint(0, 0)).blockNumber()
+        height = max(1, self.viewport().height())
+        last = self.cursorForPosition(QPoint(0, height - 1)).blockNumber()
+        if last < first:
+            last = first
+        last_block = max(0, self.document().blockCount() - 1)
+        return (max(0, first - MARKDOWN_WINDOW_LINES),
+                min(last_block, last + MARKDOWN_WINDOW_LINES))
+
+    def _update_markdown_window(self, _value: int = 0) -> None:
+        """Re-highlight only when the viewport moved past the margin."""
+        decorator = self._markdown
+        if decorator is None:
+            return
+        if decorator.set_window(*self._markdown_window_range()):
+            decorator.invalidate_cache()
+            decorator.rehighlight()
 
     def paintEvent(self, event) -> None:  # noqa: N802 (Qt naming)
         super().paintEvent(event)
@@ -1009,6 +1084,7 @@ class EditorView(QPlainTextEdit):
     def resizeEvent(self, event) -> None:  # noqa: N802
         super().resizeEvent(event)
         self._place_gutter()
+        self._update_markdown_window()
 
     def _place_gutter(self) -> None:
         """Position the gutter on the side matching the text direction."""
@@ -1067,9 +1143,11 @@ class EditorView(QPlainTextEdit):
                                cursor.columnNumber() + 1,
                                len(cursor.selectedText()))
         if self._direction_mode == AUTO:
-            # The document's side was decided at load time and does not move
-            # while the caret does; only the status chip follows the caret.
-            self._sync_auto_alignment()
+            # A committed side is never re-decided while the caret moves; only
+            # a document whose side can still change (an unlocked first line)
+            # is decided here, and that read is one line long (CD-07).
+            if not self._side_locked:
+                self._sync_auto_alignment()
             resolved = self.resolved_direction()
             if resolved != self._last_resolved:
                 self._last_resolved = resolved
@@ -1077,9 +1155,25 @@ class EditorView(QPlainTextEdit):
                 # cannot align per paragraph: the status chip follows the caret.
                 self.resolved_direction_changed.emit(resolved)
 
+    def _schedule_stats(self) -> None:
+        """Count once the typing stops (CD-07)."""
+        if not self._stats_timer.isActive():
+            self._stats_timer.start()
+
     def _emit_stats(self) -> None:
+        self._stats_timer.stop()
         doc = self.document()
         self.stats_changed.emit(doc.blockCount(), doc.characterCount())
+
+    def _schedule_alignment(self) -> None:
+        """Re-decide the document side after the burst, not during it."""
+        if self.document().isEmpty():
+            # An emptied buffer is a new document: forget the old side now,
+            # so the very next character decides it again.
+            self._sync_auto_alignment()
+            return
+        if not self._alignment_timer.isActive():
+            self._alignment_timer.start()
 
     # ==================================================================
     # find helpers

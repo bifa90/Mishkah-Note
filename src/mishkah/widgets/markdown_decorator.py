@@ -118,6 +118,13 @@ class MarkdownDecorator(QSyntaxHighlighter):
         self._theme = "dark" if theme == "dark" else "light"
         self._base_font = QFont(base_font) if base_font is not None else QFont(document.defaultFont())
         self._active_block = -1
+        #: Only blocks inside this inclusive range are decorated (CD-07).
+        self._window_start = 0
+        self._window_end = MAX_MARKDOWN_BLOCKS
+        #: ``(next block number, fence state)`` from the last parsed block, so
+        #: a sequential pass carries the state forward instead of replaying
+        #: the 400 lines above every single paragraph (CD-07).
+        self._state_cache = None
 
     # ------------------------------------------------------------------
     # configuration
@@ -137,6 +144,26 @@ class MarkdownDecorator(QSyntaxHighlighter):
         self._base_font = QFont(font)
         self.rehighlight()
 
+    def set_window(self, start: int, end: int) -> bool:
+        """Restrict decoration to ``start..end`` (CD-07).
+
+        Returns ``True`` when the window actually moved, so the caller knows
+        a ``rehighlight`` is needed.  Decorating twenty thousand paragraphs
+        nobody can see was the reason a large document scrolled heavily.
+        """
+        start = max(0, int(start))
+        end = max(start, int(end))
+        if (start, end) == (self._window_start, self._window_end):
+            return False
+        self._window_start, self._window_end = start, end
+        return True
+
+    def window(self):
+        return self._window_start, self._window_end
+
+    def _in_window(self, number: int) -> bool:
+        return self._window_start <= number <= self._window_end
+
     def set_active_block(self, number: int) -> None:
         """Reveal the Markdown source of the paragraph under the caret."""
         if number == self._active_block:
@@ -155,7 +182,8 @@ class MarkdownDecorator(QSyntaxHighlighter):
     # ------------------------------------------------------------------
     def highlightBlock(self, text: str) -> None:  # noqa: N802 (Qt naming)
         block = self.currentBlock()
-        if block.blockNumber() > MAX_MARKDOWN_BLOCKS:
+        if (block.blockNumber() > MAX_MARKDOWN_BLOCKS
+                or not self._in_window(block.blockNumber())):
             self.setCurrentBlockUserData(None)
             return
         line, _ = self._parse(block)
@@ -176,17 +204,28 @@ class MarkdownDecorator(QSyntaxHighlighter):
         trusted.  Replaying a bounded window above the block is cheap and
         keeps fenced code correct after any edit.
         """
-        window = min(block.blockNumber(), _STATE_WINDOW)
-        start = block.blockNumber() - window
-        state = markdown._State()  # noqa: SLF001 - module-internal state object
-        current = self.document().findBlockByNumber(start)
-        for _ in range(window):
-            _, state = markdown.parse_line(current.text(), current.next().text()
-                                           if current.next().isValid() else None,
-                                           state)
-            current = current.next()
+        number = block.blockNumber()
+        cached = self._state_cache
+        if cached is not None and cached[0] == number:
+            state = cached[1]
+        else:
+            window = min(number, _STATE_WINDOW)
+            state = markdown._State()  # noqa: SLF001 - module-internal state
+            current = self.document().findBlockByNumber(number - window)
+            for _ in range(window):
+                _, state = markdown.parse_line(
+                    current.text(),
+                    current.next().text() if current.next().isValid() else None,
+                    state)
+                current = current.next()
         following = block.next().text() if block.next().isValid() else None
-        return markdown.parse_line(block.text(), following, state)
+        line, state = markdown.parse_line(block.text(), following, state)
+        self._state_cache = (number + 1, state)
+        return line, state
+
+    def invalidate_cache(self) -> None:
+        """Forget the streaming state (after an edit or a window move)."""
+        self._state_cache = None
 
     # ------------------------------------------------------------------
     # formats

@@ -138,6 +138,7 @@ class EditorView(QPlainTextEdit):
         self._direction_mode = document.direction_mode or AUTO
         self._last_resolved = ""
         self._document_side = None
+        self._top_inset = 0                   # room reserved for a banner
         self._side_source = FIRST_STRONG      # CD-20, set from the settings
         self._side_locked = False             # "first_line" keeps re-deciding
         self._side_updating = False           # guards against re-entry
@@ -861,6 +862,17 @@ class EditorView(QPlainTextEdit):
         self._place_gutter()
 
     # -- diagnostics: show invisible characters (CD-16) -----------------
+    def set_top_inset(self, pixels: int) -> None:
+        """Reserve room at the top so a banner never covers the first line."""
+        pixels = max(0, int(pixels))
+        if pixels == self._top_inset:
+            return
+        self._top_inset = pixels
+        self._update_gutter_width(0)
+
+    def top_inset(self) -> int:
+        return self._top_inset
+
     def set_show_invisible_chars(self, enabled: bool) -> None:
         """Draw a marker where a zero-width character sits.
 
@@ -974,14 +986,14 @@ class EditorView(QPlainTextEdit):
         """
         edge = self.gutter_width() + TEXT_MARGIN
         if self._gutter_on_the_right():
-            wanted = QMargins(TEXT_MARGIN, 0, edge, 0)
+            wanted = QMargins(TEXT_MARGIN, self._top_inset, edge, 0)
         else:
-            wanted = QMargins(edge, 0, TEXT_MARGIN, 0)
+            wanted = QMargins(edge, self._top_inset, TEXT_MARGIN, 0)
         # Setting the same margins again re-triggers the viewport update that
         # asked for them in the first place; bail out while they already match.
         if self.viewportMargins() == wanted:
             return
-        self.setViewportMargins(wanted.left(), 0, wanted.right(), 0)
+        self.setViewportMargins(wanted.left(), wanted.top(), wanted.right(), 0)
 
     def _update_gutter(self, rect: QRect, dy: int) -> None:
         gutter = self._gutter

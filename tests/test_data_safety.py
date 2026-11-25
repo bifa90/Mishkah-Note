@@ -452,3 +452,65 @@ def test_ctrl_alt_s_toggles_the_switch(qapp, tmp_path):
         assert controller.autosave_enabled() is False
     finally:
         window.close()
+
+
+def test_a_first_save_without_an_extension_gets_one(qapp, tmp_path):
+    window, controller, settings = _controller(tmp_path)
+    writes = []
+    try:
+        controller.files.save = lambda doc, tgt=None: writes.append((doc, tgt))
+        editor = controller.new_document()
+        editor.setPlainText("hello there\n")
+        window.save_file_dialog = lambda start="": str(tmp_path / "note")
+
+        assert controller.save_current() is True
+        assert writes and writes[0][1] == tmp_path / "note.txt"
+    finally:
+        window.close()
+
+
+def test_the_extension_follows_the_setting(qapp, tmp_path):
+    window, controller, settings = _controller(tmp_path)
+    writes = []
+    try:
+        controller.files.save = lambda doc, tgt=None: writes.append((doc, tgt))
+        settings.default_extension = "md"
+        editor = controller.new_document()
+        editor.setPlainText("plain words\n")
+        window.save_file_dialog = lambda start="": str(tmp_path / "note")
+        assert controller.save_current() is True
+        assert writes[0][1] == tmp_path / "note.md"
+    finally:
+        window.close()
+
+
+def test_a_typed_extension_is_never_replaced(qapp, tmp_path):
+    window, controller, settings = _controller(tmp_path)
+    writes = []
+    try:
+        controller.files.save = lambda doc, tgt=None: writes.append((doc, tgt))
+        editor = controller.new_document()
+        editor.setPlainText("hello\n")
+        window.save_file_dialog = lambda start="": str(tmp_path / "note.rst")
+        assert controller.save_current() is True
+        assert writes[0][1] == tmp_path / "note.rst"
+    finally:
+        window.close()
+
+
+def test_a_visible_banner_reserves_room_for_the_first_line(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        assert editor.top_inset() == 0
+
+        window.show()
+        window.show_file_changed("note.txt")
+        assert editor.top_inset() > 0, "the text is pushed down, not covered"
+        assert editor.viewportMargins().top() == editor.top_inset()
+
+        window.hide_file_changed()
+        window._relayout_banners()
+        assert editor.top_inset() == 0
+    finally:
+        window.close()

@@ -14,7 +14,11 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mishkah.core import i18n, syntax, tab_style
 from mishkah.core.disk_state import changed_on_disk, stat_signature
-from mishkah.core.file_kinds import READ_ONLY, policy_for_file
+from mishkah.core.file_kinds import (
+    READ_ONLY,
+    ensure_extension,
+    policy_for_file,
+)
 from mishkah.core.languages import editor_font_families, get_language
 from mishkah.core.settings import Settings
 from mishkah.core.text_direction import (
@@ -416,7 +420,10 @@ class MainController(QObject):
             chosen = self.window.save_file_dialog(start)
             if not chosen:
                 return False
-            target = Path(chosen)
+            # A bare name would be written without an extension; the dialog's
+            # filter is a hint, not something the file manager enforces.
+            target = ensure_extension(Path(chosen), doc.content,
+                                      self.settings.default_extension)
         self._save_doc(doc, target)
         return True
 

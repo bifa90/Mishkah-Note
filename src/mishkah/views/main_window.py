@@ -130,7 +130,8 @@ class TabBar(QTabBar):
 
     def set_tab_pinned(self, index: int, pinned: bool) -> None:
         colour = tab_style.get(self.tab_color(index), self._theme)
-        ink = colour.ink if colour else ("#A0A0A0" if self._theme == "dark" else "#5C5C5C")
+        ink = (tab_style.readable_ink(colour.fill, colour.ink) if colour
+               else ("#A0A0A0" if self._theme == "dark" else "#5C5C5C"))
         self.setTabIcon(index, pin_icon(ink) if pinned else QIcon())
         self.update()
 
@@ -158,10 +159,29 @@ class TabBar(QTabBar):
             if colour is None:
                 style.drawControl(QStyle.ControlElement.CE_TabBarTabShape,
                                   option, painter, self)
+                style.drawControl(QStyle.ControlElement.CE_TabBarTabLabel,
+                                  option, painter, self)
             else:
                 self._paint_coloured_tab(painter, option, colour)
-            style.drawControl(QStyle.ControlElement.CE_TabBarTabLabel,
-                              option, painter, self)
+                # The label is drawn here, not by the style: the stylesheet
+                # fixes the text colour for every tab, and a pastel fill in a
+                # dark window left the name unreadable.
+                self._paint_coloured_label(painter, option, colour)
+
+    @staticmethod
+    def _paint_coloured_label(painter: QPainter, option: QStyleOptionTab,
+                              colour) -> None:
+        ink = tab_style.readable_ink(colour.fill, colour.ink)
+        rect = option.rect.adjusted(10, 0, -10, 0)
+        if rect.width() <= 0:
+            return
+        text = option.fontMetrics.elidedText(option.text,
+                                             Qt.TextElideMode.ElideRight,
+                                             rect.width())
+        painter.save()
+        painter.setPen(QColor(ink))
+        painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), text)
+        painter.restore()
 
     @staticmethod
     def _paint_coloured_tab(painter: QPainter, option: QStyleOptionTab, colour) -> None:
@@ -892,10 +912,15 @@ class MainWindow(QMainWindow):
         return QIcon(pixmap)
 
     def _relayout_banners(self) -> None:
-        """Pin every visible banner right under the tab strip."""
+        """Pin every visible banner right under the tab strip.
+
+        The editor on screen reserves the same height as a top inset, so the
+        banner pushes the text down instead of sitting on its first line.
+        """
         bar = self.tabs.tabBar()
         top = bar.height() if bar.isVisible() else 0
         width = max(0, self.tabs.width())
+        reserved = 0
         for widget in (self.banner, self.action_banner):
             if widget.isHidden():
                 continue
@@ -905,6 +930,16 @@ class MainWindow(QMainWindow):
             widget.setGeometry(0, top, width, height)
             widget.raise_()
             top += height
+            reserved += height
+        self._apply_banner_inset(reserved)
+
+    def _apply_banner_inset(self, height: int) -> None:
+        editor = self.current_editor()
+        if editor is None:
+            return
+        # Only the banner area itself is reserved: the tab bar is not part of
+        # the editor's viewport.
+        editor.set_top_inset(max(0, height))
 
     def resizeEvent(self, event) -> None:      # noqa: N802 - Qt naming
         super().resizeEvent(event)

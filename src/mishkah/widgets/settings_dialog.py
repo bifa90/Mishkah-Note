@@ -177,6 +177,11 @@ class SettingsDialog(QDialog):
         form.setLabelAlignment(Qt.AlignmentFlag.AlignLeading)
         form.setFieldGrowthPolicy(QFormLayout.FieldGrowthPolicy.AllNonFixedFieldsGrow)
 
+        self.cmb_extension = QComboBox()
+        for code in ("txt", "md", "auto"):
+            self.cmb_extension.addItem(tr(f"extension.{code}"), code)
+        form.addRow(tr("settings.extension"), self.cmb_extension)
+
         self.spin_ask_mb = QSpinBox()
         self.spin_ask_mb.setRange(0, 8192)
         self.spin_ask_mb.setSuffix(" MB")
@@ -205,6 +210,7 @@ class SettingsDialog(QDialog):
         self._select(self.cmb_language, s.ui_language)
         self._select(self.cmb_theme, s.theme)
         self._select(self.cmb_direction, s.default_direction)
+        self._select(self.cmb_extension, s.default_extension)
 
         if s.font_family:
             self.cmb_font.setCurrentFont(QFont(s.font_family))
@@ -252,6 +258,7 @@ class SettingsDialog(QDialog):
             "line_numbers": self.chk_line_numbers.isChecked(),
             "show_status_bar": self.chk_status_bar.isChecked(),
             "show_invisible_chars": self.chk_invisible.isChecked(),
+            "default_extension": self.cmb_extension.currentData(),
             "ask_before_mb": self.spin_ask_mb.value(),
             "hard_limit_mb": self.spin_limit_mb.value(),
             "performance_mode": self.chk_perf.isChecked(),

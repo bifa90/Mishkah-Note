@@ -32,6 +32,52 @@ BINARY_CONTROL_RATIO = 0.30
 TEXT = "text"
 READ_ONLY = "read_only"
 
+#: How a name gets its extension when the user types none on the first save.
+DEFAULT_EXTENSIONS = ("txt", "md", "auto")
+
+#: Lines inspected when guessing a format from the content.
+GUESS_LINES = 60
+
+
+def guess_extension(text: str, mode: str = "auto") -> str:
+    """The extension a nameless save should get (CD-05 · save).
+
+    ``txt`` and ``md`` are the user's explicit choice; ``auto`` reads the
+    opening lines and picks what they look like — a heading or a list is
+    Markdown, ``def``/``import`` is Python, a leading brace is JSON, and
+    everything else is plain text.
+    """
+    if mode in ("txt", "md"):
+        return mode
+    head = "\n".join(text.splitlines()[:GUESS_LINES]).strip()
+    if not head:
+        return "txt"
+    lowered = head.lower()
+    if lowered.startswith(("<!doctype", "<html", "<head", "<body")):
+        return "html"
+    if head[0] in "{[":
+        return "json"
+    lines = [line.strip() for line in head.splitlines() if line.strip()]
+    if any(line.startswith(("```", "# ", "## ", "### ", "> ",
+                            "- ", "* ", "+ ")) for line in lines):
+        return "md"
+    if any(line.startswith(("def ", "class ", "import ", "from "))
+           or line.endswith(":") and line.split("(")[0].isidentifier()
+           for line in lines):
+        return "py"
+    if any(line.startswith(("function ", "const ", "let ", "#!/usr/bin/env"))
+           for line in lines):
+        return "js" if not any("{" in line and ":" in line for line in lines) else "json"
+    return "txt"
+
+
+def ensure_extension(path: Path, text: str, mode: str = "txt") -> Path:
+    """Give *path* an extension when it has none — never overwrite one."""
+    path = Path(path)
+    if path.suffix:
+        return path
+    return path.with_name(f"{path.name}.{guess_extension(text, mode)}")
+
 
 def sniff(sample: bytes) -> str:
     """``"text"`` or ``"read_only"`` for a slice of the file's first bytes."""

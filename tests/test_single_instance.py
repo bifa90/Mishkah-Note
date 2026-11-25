@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from mishkah.core.single_instance import (
+from mishkah.services.single_instance import (
     InstanceServer,
     paths_to_payload,
     payload_to_paths,

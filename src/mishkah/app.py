@@ -116,14 +116,14 @@ def main(argv: Optional[List[str]] = None) -> int:
     # A second launch hands its paths to the running window and exits (CD-09).
     paths = [Path(a) for a in argv[1:] if not a.startswith("-")]
     if not safe_mode:
-        from mishkah.core import single_instance
+        from mishkah.services import single_instance
 
         if single_instance.send_to_running_instance([str(p) for p in paths]):
             logger.info("handed %d path(s) to the running instance", len(paths))
             return 0
     instance_server = None
     if not safe_mode:
-        from mishkah.core import single_instance
+        from mishkah.services import single_instance
 
         instance_server = single_instance.start_server()
 

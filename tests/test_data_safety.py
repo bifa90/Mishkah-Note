@@ -181,10 +181,12 @@ def test_a_save_after_reopen_is_blocked_until_conversion(qapp, tmp_path):
 
 def test_reopen_with_another_encoding_stays_in_the_same_tab(qapp, tmp_path):
     path = tmp_path / "arabic.txt"
-    path.write_bytes("مرحبا\n".encode("cp1256"))
     window, controller, _ = _controller(tmp_path)
     try:
         editor, doc = _typed_doc(controller, path, "????\n")
+        # The tab was opened on a mis-decoded file; now put the real bytes in
+        # place and read them again with the right encoding.
+        path.write_bytes("مرحبا\n".encode("cp1256"))
         tabs_before = window.tab_count()
 
         controller.reopen_with_encoding("cp1256")

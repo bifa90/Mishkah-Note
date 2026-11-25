@@ -510,7 +510,39 @@ def test_a_visible_banner_reserves_room_for_the_first_line(qapp, tmp_path):
         assert editor.viewportMargins().top() == editor.top_inset()
 
         window.hide_file_changed()
-        window._relayout_banners()
+        assert editor.top_inset() == 0, "the line goes back up when it closes"
+    finally:
+        window.close()
+
+
+def test_dismissing_the_banner_lifts_the_text_back(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        window.show()
+        window.show_file_changed("note.txt")
+        assert editor.top_inset() > 0
+
+        window.act_banner_dismiss.click()      # the ✕ on the banner
+        window.hide_file_changed()
+        assert window.action_banner.isHidden()
         assert editor.top_inset() == 0
+        assert editor.viewportMargins().top() == 0
+    finally:
+        window.close()
+
+
+def test_the_inset_follows_the_visible_tab(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    try:
+        first = controller.new_document()
+        second = controller.new_document()
+        window.show()
+        window.show_file_changed("note.txt")
+        assert window.current_editor() is second
+        assert second.top_inset() > 0 and first.top_inset() == 0
+
+        window.tabs.setCurrentIndex(0)
+        assert first.top_inset() > 0 and second.top_inset() == 0
     finally:
         window.close()

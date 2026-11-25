@@ -860,6 +860,9 @@ class MainWindow(QMainWindow):
 
     def _on_tab_changed(self, index: int) -> None:
         self._refresh_tab_menu(index)
+        # A banner follows the window, not the tab: hand its inset to the
+        # editor that just came to the front and clear the one that left.
+        self._relayout_banners()
         self.tab_changed.emit(index)
 
     def _refresh_tab_menu(self, index: int) -> None:
@@ -934,12 +937,15 @@ class MainWindow(QMainWindow):
         self._apply_banner_inset(reserved)
 
     def _apply_banner_inset(self, height: int) -> None:
-        editor = self.current_editor()
-        if editor is None:
-            return
-        # Only the banner area itself is reserved: the tab bar is not part of
-        # the editor's viewport.
-        editor.set_top_inset(max(0, height))
+        """Reserve *height* on the editor on screen, and nowhere else.
+
+        Every other editor gets its inset cleared: a document that sat under a
+        banner must not stay pushed down once the banner is gone or another
+        tab is in front.
+        """
+        current = self.current_editor()
+        for editor in self.editors():
+            editor.set_top_inset(max(0, height) if editor is current else 0)
 
     def resizeEvent(self, event) -> None:      # noqa: N802 - Qt naming
         super().resizeEvent(event)
@@ -952,6 +958,8 @@ class MainWindow(QMainWindow):
 
     def hide_banner(self) -> None:
         self.banner.hide()
+        # Without this the text stays pushed down by a banner that is gone.
+        self._relayout_banners()
 
     def show_file_changed(self, name: str) -> None:
         """Ask what to do about a file that changed on disk (CD-18)."""
@@ -994,6 +1002,7 @@ class MainWindow(QMainWindow):
 
     def hide_file_changed(self) -> None:
         self.action_banner.hide()
+        self._relayout_banners()
 
     def set_word_wrap_enabled(self, enabled: bool) -> None:
         """Keep the View ▸ Word wrap check state in sync with settings."""

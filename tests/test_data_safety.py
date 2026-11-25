@@ -353,7 +353,14 @@ def test_asking_for_autosave_on_an_unsaved_file_asks_for_a_path(qapp, tmp_path):
 def test_the_save_button_gives_the_document_a_path_and_then_turns_on(
         qapp, tmp_path):
     window, controller, settings = _controller(tmp_path)
-    controller.files.save = lambda doc, tgt=None: None       # no worker thread
+
+    def fake_save(doc, tgt=None):
+        """Behave like the worker's completion, without its thread."""
+        written = len(doc.content.encode("utf-8"))
+        doc.mark_saved(tgt or doc.path, written, revision=doc.revision)
+        controller._on_saved(doc, written)
+
+    controller.files.save = fake_save
     try:
         editor = controller.new_document()
         editor.setPlainText("hello\n")

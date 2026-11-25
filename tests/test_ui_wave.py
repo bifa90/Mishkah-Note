@@ -147,3 +147,46 @@ def test_dropped_text_is_left_to_the_editor(qapp, tmp_path):
         assert window._dropped_paths(type("E", (), {"mimeData": lambda self: data})()) == []
     finally:
         window.close()
+
+
+# ------------------------------------------------------------------ CD-13
+def test_paste_without_formatting_takes_the_text(qapp, tmp_path):
+    from PySide6.QtGui import QGuiApplication
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("start ")
+        cursor = editor.textCursor()
+        cursor.movePosition(cursor.MoveOperation.End)
+        editor.setTextCursor(cursor)
+
+        QGuiApplication.clipboard().setText("plain words")
+        assert editor.paste_plain() is True
+        assert editor.document().toPlainText() == "start plain words"
+        assert "Ctrl+Shift+V" in {s.toString() for s in window.act_paste_plain.shortcuts()}
+    finally:
+        window.close()
+
+
+# ------------------------------------------------------------------ CD-12
+def test_markdown_is_offered_never_switched_silently(qapp, tmp_path):
+    from PySide6.QtTest import QTest
+
+    window, controller, settings = _controller(tmp_path)
+    try:
+        settings.live_markdown = False
+        editor = controller.new_document()
+        editor.setPlainText("# Title\n\n- one\n- two\n")
+        QTest.qWait(700)
+        assert editor.detected_language() == "markdown"
+        assert settings.live_markdown is False, "no silent switch"
+        assert window.action_banner.isHidden() is False
+        assert window._primary_banner_action == "enable_markdown"   # noqa: SLF001
+
+        window.act_banner_reload.click()
+        assert settings.live_markdown is True
+        assert editor.live_markdown_enabled() is True
+        assert window.action_banner.isHidden() is True
+    finally:
+        window.close()

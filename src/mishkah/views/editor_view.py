@@ -649,6 +649,30 @@ class EditorView(QPlainTextEdit):
     # ==================================================================
     # word completion popup
     # ==================================================================
+    def paste_plain(self) -> bool:
+        """Paste the clipboard as text only (CD-13).
+
+        Rich text from a browser would arrive with fonts and colours that the
+        buffer cannot keep anyway; taking the plain flavour is what users
+        mean by "paste without formatting".
+        """
+        from PySide6.QtGui import QGuiApplication
+
+        clipboard = QGuiApplication.clipboard()
+        mime = clipboard.mimeData() if clipboard is not None else None
+        text = clipboard.text() if clipboard is not None else ""
+        if mime is not None and not text and mime.hasUrls():
+            text = "\n".join(url.toLocalFile() or url.toString()
+                              for url in mime.urls())
+        if not text:
+            return False
+        cursor = self.textCursor()
+        cursor.beginEditBlock()
+        cursor.insertText(text)
+        cursor.endEditBlock()
+        self.setTextCursor(cursor)
+        return True
+
     def show_completions(self) -> None:
         """Suggest words already typed in this document (Ctrl+Space)."""
         if not self._word_completion:

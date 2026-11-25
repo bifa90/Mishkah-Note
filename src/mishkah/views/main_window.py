@@ -100,6 +100,7 @@ class TabBar(QTabBar):
 
     new_tab_requested = Signal()
     paths_dropped = Signal(list)      # CD-22: files dropped on the window
+    paste_plain_requested = Signal()  # CD-13: Ctrl+Shift+V
     pin_toggled = Signal(int)
     colour_chosen = Signal(int, str)
     close_requested = Signal(int)
@@ -305,6 +306,7 @@ class MainWindow(QMainWindow):
     file_new = Signal()
     new_tab_requested = Signal()
     paths_dropped = Signal(list)      # CD-22: files dropped on the window
+    paste_plain_requested = Signal()  # CD-13: Ctrl+Shift+V
     file_open = Signal()
     file_save = Signal()
     file_save_as = Signal()
@@ -601,6 +603,9 @@ class MainWindow(QMainWindow):
                                      QKeySequence.StandardKey.Copy)
         self.act_paste = self._action(m_edit, tr("action.paste"), None,
                                       QKeySequence.StandardKey.Paste)
+        self.act_paste_plain = self._action(m_edit, tr("action.paste_plain"),
+                                            self.paste_plain_requested.emit,
+                                            "Ctrl+Shift+V")
         self.act_delete = self._action(m_edit, tr("action.delete"), None, "Del")
         m_edit.addSeparator()
         self.act_find = self._action(m_edit, tr("action.find"), None,
@@ -1090,6 +1095,18 @@ class MainWindow(QMainWindow):
             tr("banner.preview", size=size, total=total))
         self._primary_banner_action = "open_full"
         self.act_banner_reload.setText(tr("action.open_full"))
+        self.act_banner_reload.show()
+        self.act_banner_overwrite.hide()
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.show()
+        self.action_banner.show()
+        self._relayout_banners()
+
+    def show_markdown_hint(self) -> None:
+        """Offer live Markdown for a buffer that looks like Markdown (CD-12)."""
+        self.action_banner_label.setText(tr("banner.markdown_hint"))
+        self._primary_banner_action = "enable_markdown"
+        self.act_banner_reload.setText(tr("action.enable_markdown"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.hide()
         self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))

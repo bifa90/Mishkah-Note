@@ -42,6 +42,7 @@ QT_ONLY_MODULES = (
     "test_w3a_fixes.py",
     "test_language_detection.py",
     "test_ui_wave.py",
+    "test_single_instance.py",
     "test_tabs.py",
     "test_widgets.py",
 )

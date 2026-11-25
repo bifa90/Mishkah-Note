@@ -121,6 +121,7 @@ class MainController(QObject):
 
         w.new_tab_requested.connect(self.new_document)
         w.paths_dropped.connect(self._open_dropped_paths)
+        w.paste_plain_requested.connect(self._paste_plain)
         w.act_undo.triggered.connect(lambda: self._editor_op("undo"))
         w.act_redo.triggered.connect(lambda: self._editor_op("redo"))
         w.act_cut.triggered.connect(lambda: self._editor_op("cut"))
@@ -264,6 +265,12 @@ class MainController(QObject):
 
     def current_document(self) -> Optional[DocumentModel]:
         return self.document_for(self.window.current_editor())
+
+    def _paste_plain(self) -> None:
+        """Edit ▸ Paste without formatting (CD-13)."""
+        editor = self.window.current_editor()
+        if editor is not None and not editor.isReadOnly():
+            editor.paste_plain()
 
     def _open_dropped_paths(self, paths) -> None:
         """Open files dropped on the window, each in its own tab (CD-22).
@@ -618,6 +625,16 @@ class MainController(QObject):
             if editor is None or not self.save_current():
                 self._autosave_after_save = False     # cancelled: stay off
             return
+        if action == "enable_markdown":
+            self.set_live_markdown(True)
+            self.window.set_typing_menu_state(
+                self.settings.auto_close_brackets,
+                self.settings.auto_indent,
+                self.settings.syntax_highlighting,
+                self.current_document().language if self.current_document() else "auto",
+                True,
+            )
+            return
         if action == "open_full":
             self._open_preview_fully(doc)
             return
@@ -828,6 +845,14 @@ class MainController(QObject):
         label = syntax.get_language(code).name
         self.window.status.set_language(label)
         doc = self._docs.get(editor)
+        # Markdown has its own, more useful offer: turn the formatted view on
+        # (CD-12 keeps it opt-in, so it is never switched silently).
+        if (code == syntax.MARKDOWN_SPEC.code and doc is not None
+                and not self.settings.live_markdown and not doc.language_banner_shown):
+            doc.language_banner_shown = True
+            if self.document_for(self.window.current_editor()) is doc:
+                self.window.show_markdown_hint()
+            return
         # One note per document: telling the user again on every refinement
         # would be noise, and the banner pushes the text down while they type.
         if doc is None or doc.language_banner_shown:

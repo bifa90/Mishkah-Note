@@ -193,6 +193,11 @@ class SettingsDialog(QDialog):
         self.spin_limit_mb.setSuffix(" MB")
         form.addRow(tr("settings.large_files"), self.spin_limit_mb)
 
+        limit_note = QLabel(tr("settings.large_files.note"))
+        limit_note.setWordWrap(True)
+        limit_note.setObjectName("settingsNote")
+        form.addRow(limit_note)
+
         self.chk_restore = QCheckBox(tr("settings.restore_session"))
         form.addRow(self.chk_restore)
 

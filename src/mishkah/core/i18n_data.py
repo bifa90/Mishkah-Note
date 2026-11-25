@@ -953,10 +953,34 @@ STRINGS: Dict[str, S] = {
               "کے لیے ایک ہی رہتی ہے، اس لیے تمام سطریں ایک ہی حاشیہ بانٹتی ہیں۔",
     },
     "settings.large_files": {
-        "en": "Large files", "ar": "الملفات الكبيرة", "zh-Hans": "大文件",
-        "hi": "बड़ी फ़ाइलें", "es": "Archivos grandes", "fr": "Fichiers volumineux",
-        "bn": "বড় ফাইল", "pt": "Ficheiros grandes", "ru": "Большие файлы",
-        "ur": "بڑی فائلیں",
+        "en": "Open as a preview above", "ar": "افتح كمعاينة إذا تجاوز الحجم",
+        "zh-Hans": "超过此大小则仅预览", "hi": "इससे बड़ी फ़ाइल पूर्वावलोकन में खोलें",
+        "es": "Abrir como vista previa por encima de",
+        "fr": "Ouvrir en aperçu au-delà de",
+        "bn": "এর বেশি হলে পূর্বরূপে খুলুন", "pt": "Abrir como pré-visualização acima de",
+        "ru": "Открывать как просмотр при размере больше",
+        "ur": "اس سے بڑی فائل پیش نظارہ میں کھولیں",
+    },
+    "settings.large_files.note": {
+        "en": "A larger file opens read-only, showing its beginning, with an "
+              "\"Open fully\" button. Always ask first.",
+        "ar": "الملف الأكبر يُفتح للقراءة فقط مع بدايته، ويظهر زر «افتح الملف كاملًا»، "
+              "ويُسأل دائمًا قبل التحميل.",
+        "zh-Hans": "更大的文件以只读方式显示开头，并提供“完整打开”按钮；加载前总会询问。",
+        "hi": "बड़ी फ़ाइल केवल पढ़ने योग्य रूप में शुरुआत दिखाती है और \"पूरा खोलें\" "
+              "बटन देती है; लोड से पहले हमेशा पूछा जाता है।",
+        "es": "Un archivo mayor se abre solo lectura con su inicio y un botón "
+              "«Abrir completo». Siempre se pregunta antes.",
+        "fr": "Un fichier plus gros s'ouvre en lecture seule avec son début et un "
+              "bouton « Ouvrir entièrement ». La question est toujours posée.",
+        "bn": "বড় ফাইল কেবল-পাঠ্য হিসেবে শুরু দেখায় এবং \"সম্পূর্ণ খুলুন\" বোতাম দেয়; "
+              "লোডের আগে সবসময় জিজ্ঞাসা করা হয়।",
+        "pt": "Um ficheiro maior abre só de leitura com o início e um botão "
+              "«Abrir por completo». Pergunta sempre antes.",
+        "ru": "Больший файл открывается только для чтения, с началом и кнопкой "
+              "«Открыть полностью». Перед загрузкой всегда спрашиваем.",
+        "ur": "بڑی فائل صرف پڑھنے کے لیے شروع دکھاتی ہے اور «پوری کھولیں» بٹن دیتی ہے؛ "
+              "لوڈ سے پہلے ہمیشہ پوچھا جاتا ہے۔",
     },
     "settings.extension": {
         "en": "Add extension on save", "ar": "إضافة الامتداد عند الحفظ",
@@ -1395,6 +1419,13 @@ STRINGS: Dict[str, S] = {
         "hi": "सभी फ़ाइलें (*)", "es": "Todos los archivos (*)",
         "fr": "Tous les fichiers (*)", "bn": "সব ফাইল (*)",
         "pt": "Todos os ficheiros (*)", "ru": "Все файлы (*)", "ur": "تمام فائلیں (*)",
+    },
+    "dialog.progress": {
+        "en": "Loading… {done} of {total}", "ar": "جارٍ التحميل… {done} من {total}",
+        "zh-Hans": "正在加载… {done} / {total}", "hi": "लोड हो रहा है… {done} / {total}",
+        "es": "Cargando… {done} de {total}", "fr": "Chargement… {done} sur {total}",
+        "bn": "লোড হচ্ছে… {done} / {total}", "pt": "Carregando… {done} de {total}",
+        "ru": "Загрузка… {done} из {total}", "ur": "لوڈ ہو رہا ہے… {done} میں سے {total}",
     },
     "action.open_full": {
         "en": "Open fully", "ar": "افتح الملف كاملًا",

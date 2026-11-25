@@ -39,6 +39,7 @@ QT_ONLY_MODULES = (
     "test_markdown.py",
     "test_performance.py",
     "test_preview_and_search.py",
+    "test_w3a_fixes.py",
     "test_tabs.py",
     "test_widgets.py",
 )

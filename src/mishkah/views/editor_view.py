@@ -25,6 +25,7 @@ chord changes direction; using it together with another key (e.g.
 
 from __future__ import annotations
 
+import re
 import time
 from typing import Optional, Tuple
 
@@ -154,6 +155,9 @@ class EditorView(QPlainTextEdit):
         self._side_locked = False             # "first_line" keeps re-deciding
         self._side_updating = False           # guards against re-entry
         self._chord = _ChordState()
+        #: True while only formats are being changed (direction pass).  A
+        #: format-only change must never mark the document as edited (B1).
+        self._formatting = False
 
         # --- deferred work (CD-07) -------------------------------------------
         # Counting the buffer and re-deciding the document side on every
@@ -238,8 +242,23 @@ class EditorView(QPlainTextEdit):
     # ==================================================================
     # text direction
     # ==================================================================
+    def in_formatting_pass(self) -> bool:
+        """True while the direction pass is rewriting formats, not text."""
+        return self._formatting
+
     def apply_direction(self, mode: str, announce: bool = True) -> None:
         """Set the base direction of *every* paragraph (the real fix)."""
+        was_modified = self.document().isModified()
+        self._formatting = True
+        try:
+            self._apply_direction(mode, announce)
+        finally:
+            self._formatting = False
+            # Choosing a side is a view decision: the file on disk did not
+            # change, so the tab must not show as modified (B1).
+            self.document().setModified(was_modified)
+
+    def _apply_direction(self, mode: str, announce: bool = True) -> None:
         if mode not in (AUTO, LTR, RTL):
             mode = AUTO
         changed = mode != self._direction_mode
@@ -479,15 +498,19 @@ class EditorView(QPlainTextEdit):
         if key in (Qt.Key.Key_Return, Qt.Key.Key_Enter) and self._auto_indent:
             return self._enter_with_indent()
 
+        # Shift+Tab first: some platforms report it as Tab with the shift
+        # modifier rather than as Backtab, and the old order inserted a tab
+        # where the user asked to outdent (M5).
+        if (key == Qt.Key.Key_Backtab
+                or (key == Qt.Key.Key_Tab
+                    and modifiers & Qt.KeyboardModifier.ShiftModifier)):
+            self.indent_selection(outdent=True)
+            return True
         if key == Qt.Key.Key_Tab:
             if self.textCursor().hasSelection():
                 self.indent_selection()
             else:
                 self.textCursor().insertText(self._indent_unit)
-            return True
-        if (key == Qt.Key.Key_Backtab
-                or (key == Qt.Key.Key_Tab and modifiers & Qt.KeyboardModifier.ShiftModifier)):
-            self.indent_selection(outdent=True)
             return True
 
         if key == Qt.Key.Key_Backspace:
@@ -1210,12 +1233,39 @@ class EditorView(QPlainTextEdit):
         self.setTextCursor(cursor)
         return bool(self.find(target, flags))  # type: ignore[arg-type]
 
+    @staticmethod
+    def selection_matches(selected: str, needle: str, case_sensitive: bool = False,
+                          whole_word: bool = False, regex: bool = False) -> bool:
+        """Does *selected* really match *needle* under these options? (B3)"""
+        if not needle:
+            return False
+        pattern = needle if regex else re.escape(needle)
+        if whole_word:
+            pattern = rf"(?<!\w)(?:{pattern})(?!\w)"
+        flags = 0 if case_sensitive else re.IGNORECASE
+        try:
+            compiled = re.compile(pattern, flags)
+        except re.error:
+            return False
+        # fullmatch, so a selection that merely *contains* the needle (the
+        # replaced-all-the-wrong-text bug) is refused.
+        return compiled.fullmatch(selected) is not None
+
     def replace_current(self, needle: str, replacement: str,
-                        case_sensitive: bool = False) -> bool:
+                        case_sensitive: bool = False, whole_word: bool = False,
+                        regex: bool = False) -> bool:
+        """Replace the selection, but only when it is a real match (B3).
+
+        The old code replaced whatever was selected: with *whole word* on, a
+        hit was found inside ``concatenate`` and the whole word was wiped.
+        """
         cursor = self.textCursor()
-        if not cursor.hasSelection() or cursor.selectedText() != needle:
-            if case_sensitive and cursor.selectedText().lower() != needle.lower():
-                return False
+        if not cursor.hasSelection():
+            return False
+        selected = cursor.selectedText().replace("\u2029", "\n")
+        if not self.selection_matches(selected, needle, case_sensitive,
+                                      whole_word, regex):
+            return False
         cursor.insertText(replacement)
         return True
 

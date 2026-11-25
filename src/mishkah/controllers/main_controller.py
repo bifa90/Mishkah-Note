@@ -801,6 +801,10 @@ class MainController(QObject):
         doc = self._docs.get(editor)
         if doc is None or doc.truncated:
             return
+        if editor.in_formatting_pass():
+            # A direction change rewrites formats only; the file is untouched
+            # and the tab must not claim otherwise (B1).
+            return
         was_modified = doc.is_modified
         doc.mark_modified()
         self._arm_autosave()
@@ -963,7 +967,10 @@ class MainController(QObject):
         if editor is None or not needle:
             return
         options = self.window.find_bar.options()
-        if editor.replace_current(needle, replacement, options["case_sensitive"]):
+        if editor.replace_current(needle, replacement,
+                                  case_sensitive=options["case_sensitive"],
+                                  whole_word=options["whole_word"],
+                                  regex=options["regex"]):
             editor.find_text(needle, case_sensitive=options["case_sensitive"],
                              whole_word=options["whole_word"],
                              regex=options["regex"], wrap=options["wrap"])

@@ -15,6 +15,8 @@ pytest.importorskip("PySide6")
 
 from PySide6.QtCore import Qt  # noqa: E402
 
+from mishkah.core.i18n import tr  # noqa: E402
+
 
 @pytest.fixture(autouse=True)
 def _dispose_widgets(qapp):
@@ -228,7 +230,13 @@ def test_the_switch_sits_in_the_menu_row(qapp, tmp_path):
         bar = window.menuBar()
         corner_widgets = {bar.cornerWidget(Qt.Corner.TopLeftCorner),
                           bar.cornerWidget(Qt.Corner.TopRightCorner)}
-        assert window.autosave_switch in corner_widgets
+        assert window.autosave_holder in corner_widgets
+        assert window.autosave_switch.parent() is window.autosave_holder
+        assert window.autosave_label.text()
+
+        row = window.autosave_holder.layout()
+        assert (row.indexOf(window.autosave_label)
+                < row.indexOf(window.autosave_switch)), "words before switch"
     finally:
         window.close()
 
@@ -323,5 +331,72 @@ def test_a_successful_save_settles_the_banner(qapp, tmp_path):
         controller.on_file_changed_action("overwrite")
         assert window.action_banner.isHidden(), "the answer closes the question"
         assert writes
+    finally:
+        window.close()
+
+
+def test_asking_for_autosave_on_an_unsaved_file_asks_for_a_path(qapp, tmp_path):
+    """The switch may not turn green before the document has a home."""
+    window, controller, settings = _controller(tmp_path)
+    try:
+        controller.new_document()                    # untitled, no path
+        window.autosave_switch.toggle()
+
+        assert window.autosave_switch.isChecked() is False, "stays off for now"
+        assert settings.autosave is False
+        assert not window.action_banner.isHidden()
+        assert window.act_banner_reload.text() == tr("action.save_file")
+    finally:
+        window.close()
+
+
+def test_the_save_button_gives_the_document_a_path_and_then_turns_on(
+        qapp, tmp_path):
+    window, controller, settings = _controller(tmp_path)
+    controller.files.save = lambda doc, tgt=None: None       # no worker thread
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("hello\n")
+        window.autosave_switch.toggle()
+        assert window.autosave_switch.isChecked() is False
+
+        target = tmp_path / "fresh.txt"
+        window.save_file_dialog = lambda start="": str(target)
+        window.act_banner_reload.click()
+
+        doc = controller.current_document()
+        assert doc.path == target, "the dialog result reached the model"
+        assert settings.autosave is True, "autosave starts once the file exists"
+        assert window.autosave_switch.isChecked() is True
+        assert window.action_banner.isHidden()
+    finally:
+        window.close()
+
+
+def test_cancelling_the_dialog_keeps_autosave_off(qapp, tmp_path):
+    window, controller, settings = _controller(tmp_path)
+    try:
+        controller.new_document()
+        window.autosave_switch.toggle()
+        window.save_file_dialog = lambda start="": ""        # cancelled
+        window.act_banner_reload.click()
+        assert settings.autosave is False
+        assert window.autosave_switch.isChecked() is False
+    finally:
+        window.close()
+
+
+def test_the_cross_dismisses_the_save_notice_and_keeps_autosave_off(
+        qapp, tmp_path):
+    window, controller, settings = _controller(tmp_path)
+    try:
+        controller.new_document()
+        window.autosave_switch.toggle()
+        assert not window.action_banner.isHidden()
+
+        window.act_banner_dismiss.click()
+        assert window.action_banner.isHidden()
+        assert settings.autosave is False
+        assert window.autosave_switch.isChecked() is False
     finally:
         window.close()

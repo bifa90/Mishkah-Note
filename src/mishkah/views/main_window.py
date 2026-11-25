@@ -347,10 +347,19 @@ class MainWindow(QMainWindow):
         self.act_autosave.setToolTip(tr("action.autosave_hint"))
         self.act_autosave.toggled.connect(self.autosave_toggled)
 
-        self.autosave_switch = ToggleSwitch(self)
+        # The user asked for the words before the switch, in the same row.
+        self.autosave_holder = QWidget(self)
+        holder_row = QHBoxLayout(self.autosave_holder)
+        holder_row.setContentsMargins(8, 0, 8, 0)
+        holder_row.setSpacing(6)
+        self.autosave_label = QLabel(tr("action.autosave_label"),
+                                     self.autosave_holder)
+        holder_row.addWidget(self.autosave_label)
+        self.autosave_switch = ToggleSwitch(self.autosave_holder)
         self.autosave_switch.setToolTip(tr("action.autosave_hint"))
-        self.autosave_switch.setAccessibleName(tr("action.autosave"))
+        self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
         self.autosave_switch.toggled.connect(self.act_autosave.setChecked)
+        holder_row.addWidget(self.autosave_switch)
         self.act_autosave.toggled.connect(
             lambda checked: self.autosave_switch.setChecked(checked, emit=False))
         self._place_autosave_switch()
@@ -366,9 +375,9 @@ class MainWindow(QMainWindow):
         rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
         corner = (Qt.Corner.TopRightCorner if rtl else Qt.Corner.TopLeftCorner)
         bar = self.menuBar()
-        if bar.cornerWidget(corner) is not self.autosave_switch:
-            bar.setCornerWidget(self.autosave_switch, corner)
-        self.autosave_switch.show()
+        if bar.cornerWidget(corner) is not self.autosave_holder:
+            bar.setCornerWidget(self.autosave_holder, corner)
+        self.autosave_holder.show()
 
     def _add_autosave_menu_entry(self) -> None:
         menu = getattr(self, "menu_view", None)
@@ -866,6 +875,17 @@ class MainWindow(QMainWindow):
         self.act_banner_dismiss.show()
         self.action_banner.show()
 
+    def show_save_first(self, name: str) -> None:
+        """Autosave needs a path before it can mean anything (CD-01)."""
+        self.action_banner_label.setText(
+            tr("banner.autosave_needs_save", name=name))
+        self.act_banner_reload.setText(tr("action.save_file"))
+        self.act_banner_reload.show()
+        self.act_banner_overwrite.hide()
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.show()
+        self.action_banner.show()
+
     def hide_file_changed(self) -> None:
         self.action_banner.hide()
 
@@ -905,9 +925,10 @@ class MainWindow(QMainWindow):
         self.act_autosave.setText(tr("action.autosave")
                                   if self.autosave_switch.isChecked()
                                   else tr("action.autosave_off"))
+        self.autosave_label.setText(tr("action.autosave_label"))
         self.autosave_switch.setToolTip(tr("action.autosave_hint"))
-        self.autosave_switch.setAccessibleName(tr("action.autosave"))
-        self.autosave_switch.show()
+        self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
+        self.autosave_holder.show()
         self.find_bar.retranslate()
         self.status.retranslate()
 

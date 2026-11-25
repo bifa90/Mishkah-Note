@@ -56,6 +56,9 @@ class MainController(QObject):
         #: is still the old one — which used to raise a banner claiming an
         #: outside edit that never happened.
         self._writes: Dict[str, float] = {}
+        #: The user asked for autosave on a document that has no path yet;
+        #: it turns on by itself once the save dialog has given it one.
+        self._autosave_after_save = False
         self._watcher: Optional[QFileSystemWatcher] = None
         #: CD-01: one idle timer, single shot, no background thread.
         self._autosave_timer: Optional[QTimer] = None
@@ -436,7 +439,21 @@ class MainController(QObject):
         self.window.set_autosave(self.settings.autosave)
 
     def set_autosave(self, enabled: bool) -> None:
-        """The quick switch in the toolbar, persisted like any other setting."""
+        """The switch above the menus, persisted like any other setting.
+
+        Autosave without a path is a promise the editor cannot keep, so asking
+        for it on an unsaved document opens the save dialog instead of turning
+        green: the switch only flips once the file exists.
+        """
+        if enabled:
+            editor = self.window.current_editor()
+            doc = self.document_for(editor)
+            if doc is not None and doc.path is None:
+                self.settings.autosave = False
+                self.window.set_autosave(False)
+                self._autosave_after_save = True
+                self.window.show_save_first(self._doc_title(doc))
+                return
         self.settings.autosave = bool(enabled)
         self.window.set_autosave(bool(enabled))
         if not enabled and self._autosave_timer is not None:
@@ -549,7 +566,7 @@ class MainController(QObject):
                 break
 
     def on_file_changed_action(self, action: str) -> None:
-        """Answer the CD-18 banner: reload, overwrite, or dismiss."""
+        """Answer a banner: reload, overwrite, convert, save file, or dismiss."""
         doc = self._changed_docs[-1] if self._changed_docs else self.current_document()
         if doc is None:
             self.window.hide_file_changed()
@@ -558,6 +575,12 @@ class MainController(QObject):
         self.window.hide_file_changed()
         if doc in self._changed_docs:
             self._changed_docs.remove(doc)
+        if action == "save_file":
+            self.window.hide_file_changed()
+            editor = self.window.current_editor()
+            if editor is None or not self.save_current():
+                self._autosave_after_save = False     # cancelled: stay off
+            return
         if action == "convert":
             if editor is not None:
                 self._convert_encoding(doc, editor)
@@ -625,6 +648,9 @@ class MainController(QObject):
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
         self._watch(doc)
         self._note_write(doc)
+        if self._autosave_after_save and doc.path is not None:
+            self._autosave_after_save = False
+            self.set_autosave(True)
         if doc in self._changed_docs:
             self._changed_docs.remove(doc)
         if not self._changed_docs:

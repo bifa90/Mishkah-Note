@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -26,6 +26,7 @@ from PySide6.QtGui import (
     QKeySequence,
     QPainter,
     QPalette,
+    QPen,
     QPixmap,
     QPolygonF,
 )
@@ -296,17 +297,17 @@ class MainWindow(QMainWindow):
         root.addWidget(self.status, 0)
 
         # ---- banners -------------------------------------------------------
-        self.banner = QLabel(self)
+        # Children of the tab widget, pinned under the tab strip: the layout
+        # cannot put anything between a QTabWidget's bar and its pages, and a
+        # widget in the vertical layout ends up under the document instead.
+        self.banner = QLabel(self.tabs)
         self.banner.setObjectName("Banner")
         self.banner.setWordWrap(True)
         self.banner.hide()
-        # Under the tab strip, where the eye already is: a banner floating
-        # above the menus looked detached from the document it talks about.
-        root.insertWidget(root.indexOf(self.tabs) + 1, self.banner)
 
         # A banner that asks a question: the file changed under our feet and
         # nothing may be written until the user decides (CD-18).
-        self.action_banner = QWidget(self)
+        self.action_banner = QWidget(self.tabs)
         self.action_banner.setObjectName("ActionBanner")
         action_row = QHBoxLayout(self.action_banner)
         action_row.setContentsMargins(8, 4, 8, 4)
@@ -318,8 +319,17 @@ class MainWindow(QMainWindow):
         self.act_banner_dismiss = QPushButton(self.action_banner)
         self.act_banner_dismiss.setObjectName("BannerDismiss")
         self.act_banner_dismiss.setFlat(True)
-        self.act_banner_dismiss.setFixedWidth(28)
-        self.act_banner_dismiss.setText("\u2715")
+        self.act_banner_dismiss.setText("")
+        self.act_banner_dismiss.setIcon(self._cross_icon())
+        self.act_banner_dismiss.setIconSize(QSize(10, 10))
+        self.act_banner_dismiss.setFixedSize(QSize(22, 22))
+        self.act_banner_dismiss.setCursor(Qt.CursorShape.PointingHandCursor)
+        # A round button: a glyph in the system font can arrive as tofu, so the
+        # cross is drawn, and the ring is a stylesheet of its own.
+        self.act_banner_dismiss.setStyleSheet(
+            "QPushButton#BannerDismiss { border: none; border-radius: 11px; }"
+            "QPushButton#BannerDismiss:hover { background: rgba(127,127,127,60); }"
+            "QPushButton#BannerDismiss:pressed { background: rgba(127,127,127,110); }")
         # The primary button changes meaning per banner: reload a changed file,
         # convert an encoding, or save a document that has no path yet.
         self._primary_banner_action = "reload"
@@ -333,7 +343,6 @@ class MainWindow(QMainWindow):
                        self.act_banner_dismiss):
             action_row.addWidget(button)
         self.action_banner.hide()
-        root.insertWidget(root.indexOf(self.tabs) + 1, self.action_banner)
 
         self._pinned_index: Optional[int] = None
         self._build_menus()
@@ -351,7 +360,7 @@ class MainWindow(QMainWindow):
         self.act_autosave = QAction(tr("action.autosave"), self)
         self.act_autosave.setCheckable(True)
         self.act_autosave.setChecked(False)
-        self.act_autosave.setToolTip(tr("action.autosave_hint"))
+        self.act_autosave.setToolTip(self._autosave_tooltip())
         self.act_autosave.toggled.connect(self.autosave_toggled)
 
         # The user asked for the words before the switch, in the same row.
@@ -363,7 +372,7 @@ class MainWindow(QMainWindow):
                                      self.autosave_holder)
         holder_row.addWidget(self.autosave_label)
         self.autosave_switch = ToggleSwitch(self.autosave_holder)
-        self.autosave_switch.setToolTip(tr("action.autosave_hint"))
+        self.autosave_switch.setToolTip(self._autosave_tooltip())
         self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
         self.autosave_switch.toggled.connect(self.act_autosave.setChecked)
         holder_row.addWidget(self.autosave_switch)
@@ -374,6 +383,10 @@ class MainWindow(QMainWindow):
         # over an autosave that was not running.
         self._place_autosave_switch()
         self._add_autosave_menu_entry()
+
+    @staticmethod
+    def _autosave_tooltip() -> str:
+        return f"{tr('action.autosave_hint')} (Ctrl+Alt+S)"
 
     def _place_autosave_switch(self) -> None:
         """Pin the switch to the start of the menu row, once.
@@ -395,7 +408,8 @@ class MainWindow(QMainWindow):
             return
         self.act_autosave_menu = QAction(tr("action.autosave"), self)
         self.act_autosave_menu.setCheckable(True)
-        self.act_autosave_menu.setToolTip(tr("action.autosave_hint"))
+        self.act_autosave_menu.setToolTip(self._autosave_tooltip())
+        self.act_autosave_menu.setShortcut("Ctrl+Alt+S")
         self.act_autosave_menu.toggled.connect(self.autosave_toggled)
         menu.addSeparator()
         menu.addAction(self.act_autosave_menu)
@@ -406,7 +420,8 @@ class MainWindow(QMainWindow):
             return
         self.act_autosave_menu = QAction(tr("action.autosave"), self)
         self.act_autosave_menu.setCheckable(True)
-        self.act_autosave_menu.setToolTip(tr("action.autosave_hint"))
+        self.act_autosave_menu.setToolTip(self._autosave_tooltip())
+        self.act_autosave_menu.setShortcut("Ctrl+Alt+S")
         self.act_autosave_menu.toggled.connect(self.autosave_toggled)
         menu.addSeparator()
         menu.addAction(self.act_autosave_menu)
@@ -439,7 +454,7 @@ class MainWindow(QMainWindow):
                                   else tr("action.autosave_off"))
         self.act_autosave.blockSignals(blocked)
         self.autosave_switch.setChecked(enabled, emit=False)
-        self.autosave_switch.setToolTip(tr("action.autosave_hint"))
+        self.autosave_switch.setToolTip(self._autosave_tooltip())
         if hasattr(self, "act_autosave_menu"):
             blocked = self.act_autosave_menu.blockSignals(True)
             self.act_autosave_menu.setChecked(enabled)
@@ -472,8 +487,9 @@ class MainWindow(QMainWindow):
         self.act_save_as = self._action(m_file, tr("menu.file.save_as"),
                                         self.file_save_as,
                                         QKeySequence.StandardKey.SaveAs)
+        # Ctrl+Alt+S belongs to the autosave switch now; save-all moves aside.
         self.act_save_all = self._action(m_file, tr("menu.file.save_all"),
-                                         self.file_save_all, "Ctrl+Alt+S")
+                                         self.file_save_all, "Ctrl+Alt+Shift+S")
         m_file.addSeparator()
         self.act_print = self._action(m_file, tr("menu.file.print"),
                                       self.file_print, QKeySequence.StandardKey.Print)
@@ -856,9 +872,48 @@ class MainWindow(QMainWindow):
                 action.setChecked(True)
                 return
 
+    def _cross_icon(self, size: int = 10) -> QIcon:
+        """Two strokes, drawn at twice the size for crisp high-DPI edges."""
+        pixmap = QPixmap(size * 2, size * 2)
+        pixmap.setDevicePixelRatio(2.0)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        pen = QPen(self.palette().color(QPalette.ColorRole.WindowText))
+        pen.setWidthF(1.6)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        inset = 1.5
+        painter.drawLine(QPointF(inset, inset),
+                         QPointF(size - inset, size - inset))
+        painter.drawLine(QPointF(size - inset, inset),
+                         QPointF(inset, size - inset))
+        painter.end()
+        return QIcon(pixmap)
+
+    def _relayout_banners(self) -> None:
+        """Pin every visible banner right under the tab strip."""
+        bar = self.tabs.tabBar()
+        top = bar.height() if bar.isVisible() else 0
+        width = max(0, self.tabs.width())
+        for widget in (self.banner, self.action_banner):
+            if widget.isHidden():
+                continue
+            height = widget.sizeHint().height()
+            if isinstance(widget, QLabel):
+                height = max(height, widget.heightForWidth(width))
+            widget.setGeometry(0, top, width, height)
+            widget.raise_()
+            top += height
+
+    def resizeEvent(self, event) -> None:      # noqa: N802 - Qt naming
+        super().resizeEvent(event)
+        self._relayout_banners()
+
     def show_banner(self, text: str) -> None:
         self.banner.setText(text)
         self.banner.show()
+        self._relayout_banners()
 
     def hide_banner(self) -> None:
         self.banner.hide()
@@ -874,6 +929,7 @@ class MainWindow(QMainWindow):
         self.act_banner_overwrite.show()
         self.act_banner_dismiss.show()
         self.action_banner.show()
+        self._relayout_banners()
 
     def show_encoding_pending(self, name: str, encoding: str) -> None:
         """The buffer came from another encoding: ask before writing it back."""
@@ -886,6 +942,7 @@ class MainWindow(QMainWindow):
         self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
         self.act_banner_dismiss.show()
         self.action_banner.show()
+        self._relayout_banners()
 
     def show_save_first(self, name: str) -> None:
         """Autosave needs a path before it can mean anything (CD-01)."""
@@ -898,6 +955,7 @@ class MainWindow(QMainWindow):
         self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
         self.act_banner_dismiss.show()
         self.action_banner.show()
+        self._relayout_banners()
 
     def hide_file_changed(self) -> None:
         self.action_banner.hide()
@@ -939,7 +997,7 @@ class MainWindow(QMainWindow):
                                   if self.autosave_switch.isChecked()
                                   else tr("action.autosave_off"))
         self.autosave_label.setText(tr("action.autosave_label"))
-        self.autosave_switch.setToolTip(tr("action.autosave_hint"))
+        self.autosave_switch.setToolTip(self._autosave_tooltip())
         self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
         self.autosave_holder.show()
         self.find_bar.retranslate()

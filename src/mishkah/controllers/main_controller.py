@@ -436,25 +436,29 @@ class MainController(QObject):
         self._autosave_timer = QTimer(self)
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self._autosave_now)
-        self.window.set_autosave(self.settings.autosave)
+        self.window.set_autosave(False)      # per document, off until asked
 
     def set_autosave(self, enabled: bool) -> None:
-        """The switch above the menus, persisted like any other setting.
+        """The switch above the menus, for *this* document only (CD-01).
 
-        Autosave without a path is a promise the editor cannot keep, so asking
-        for it on an unsaved document opens the save dialog instead of turning
-        green: the switch only flips once the file exists.
+        Autosave is a property of the tab: turning it on for one file must not
+        follow the user to the next one.  Autosave without a path is a promise
+        the editor cannot keep, so asking for it on an unsaved document opens
+        the save dialog instead of turning green: the switch only flips once
+        the file exists.
         """
-        if enabled:
-            editor = self.window.current_editor()
-            doc = self.document_for(editor)
-            if doc is not None and doc.path is None:
-                self.settings.autosave = False
-                self.window.set_autosave(False)
-                self._autosave_after_save = True
-                self.window.show_save_first(self._doc_title(doc))
-                return
-        self.settings.autosave = bool(enabled)
+        editor = self.window.current_editor()
+        doc = self.document_for(editor)
+        if doc is None:
+            self.window.set_autosave(False)
+            return
+        if enabled and doc.path is None:
+            doc.autosave = False
+            self.window.set_autosave(False)
+            self._autosave_after_save = True
+            self.window.show_save_first(self._doc_title(doc))
+            return
+        doc.autosave = bool(enabled)
         self.window.set_autosave(bool(enabled))
         if not enabled and self._autosave_timer is not None:
             self._autosave_timer.stop()
@@ -462,17 +466,17 @@ class MainController(QObject):
             self._arm_autosave()
 
     def _arm_autosave(self) -> None:
-        if not self.settings.autosave or self._autosave_timer is None:
+        doc = self.current_document()
+        if (self._autosave_timer is None or doc is None
+                or not doc.autosave):
             return
         self._autosave_timer.start(max(500, int(self.settings.autosave_idle_ms)))
 
     def _autosave_now(self, editor: Optional[EditorView] = None) -> None:
         """Write the buffer if — and only if — nothing else is in the way."""
-        if not self.settings.autosave:
-            return
         editor = editor or self.window.current_editor()
         doc = self.document_for(editor)
-        if editor is None or doc is None:
+        if editor is None or doc is None or not doc.autosave:
             return
         if (doc.path is None or doc.read_only or doc.truncated
                 or doc.encoding_pending or not doc.is_modified):
@@ -485,7 +489,9 @@ class MainController(QObject):
         self._save_doc(doc, doc.path)
 
     def autosave_enabled(self) -> bool:
-        return bool(self.settings.autosave)
+        """True when the document on screen has autosave on."""
+        doc = self.current_document()
+        return bool(doc is not None and doc.autosave)
 
     # ==================================================================
     # CD-18 · the file changed on disk
@@ -650,7 +656,10 @@ class MainController(QObject):
         self._note_write(doc)
         if self._autosave_after_save and doc.path is not None:
             self._autosave_after_save = False
-            self.set_autosave(True)
+            doc.autosave = True
+            if self.document_for(self.window.current_editor()) is doc:
+                self.window.set_autosave(True)
+            self._arm_autosave()
         if doc in self._changed_docs:
             self._changed_docs.remove(doc)
         if not self._changed_docs:
@@ -738,6 +747,7 @@ class MainController(QObject):
         if doc is None:
             return
         self.refresh_invisible_banner()
+        self.window.set_autosave(bool(doc.autosave))
         status.set_encoding(doc.encoding)
         status.set_line_ending(doc.line_ending)
         status.set_size(doc.size_label)
@@ -1216,7 +1226,8 @@ class MainController(QObject):
         self.window.set_show_invisible_chars(self.settings.show_invisible_chars)
         self.window.set_document_side_first_line(
             self.settings.document_side_source == FIRST_LINE)
-        self.window.set_autosave(self.settings.autosave)
+        doc_now = self.current_document()
+        self.window.set_autosave(bool(doc_now and doc_now.autosave))
         if self._autosave_timer is not None:
             self._autosave_timer.setInterval(
                 max(500, int(self.settings.autosave_idle_ms)))

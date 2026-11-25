@@ -516,10 +516,12 @@ STRINGS: Dict[str, S] = {
         "ru": "Ф&ормат", "ur": "&شکل",
     },
     "menu.language": {
-        "en": "Interface language", "ar": "لغة الواجهة", "zh-Hans": "界面语言",
-        "hi": "इंटरफ़ेस भाषा", "es": "Idioma de la interfaz",
-        "fr": "Langue de l'interface", "bn": "ইন্টারফেস ভাষা",
-        "pt": "Idioma da interface", "ru": "Язык интерфейса", "ur": "انٹرفیس زبان",
+        "en": "Interface language (language)", "ar": "لغة الواجهة (language)",
+        "zh-Hans": "界面语言 (language)",
+        "hi": "इंटरफ़ेस भाषा (language)", "es": "Idioma de la interfaz (language)",
+        "fr": "Langue de l'interface (language)", "bn": "ইন্টারফেস ভাষা (language)",
+        "pt": "Idioma da interface (language)", "ru": "Язык интерфейса (language)",
+        "ur": "انٹرفیس زبان (language)",
     },
     "action.encoding": {
         "en": "Reopen with encoding…", "ar": "إعادة الفتح بترميز…",

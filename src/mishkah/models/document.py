@@ -49,6 +49,10 @@ class DocumentModel:
     #: explicit conversion, otherwise the buffer would be written back
     #: in an encoding it was never read in.
     encoding_pending: bool = False
+    #: CD-01 per tab: autosave is a property of this document, not of
+    #: the application — enabling it on one file must not follow the
+    #: user to the next one.
+    autosave: bool = False
 
     # ------------------------------------------------------------- titles
     @property

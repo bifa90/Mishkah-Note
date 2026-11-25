@@ -61,32 +61,33 @@ def _typed_doc(controller, path, text="hello\n"):
 def test_autosave_is_off_until_asked(qapp, tmp_path):
     window, controller, settings = _controller(tmp_path)
     try:
-        assert settings.autosave is False
         assert window.act_autosave.isChecked() is False
+        assert window.autosave_switch.isChecked() is False
+        controller.new_document()
         assert controller.autosave_enabled() is False
     finally:
         window.close()
 
 
-def test_the_toolbar_switch_flips_the_setting_and_back(qapp, tmp_path):
+def test_the_switch_flips_the_switch_and_back(qapp, tmp_path):
     window, controller, settings = _controller(tmp_path)
     try:
+        _typed_doc(controller, tmp_path / "note.txt")
         window.act_autosave.setChecked(True)
-        assert settings.autosave is True
         assert controller.autosave_enabled() is True
         window.act_autosave.setChecked(False)
-        assert settings.autosave is False
+        assert controller.autosave_enabled() is False
     finally:
         window.close()
 
 
 def test_autosave_writes_an_idle_buffer(qapp, tmp_path):
     window, controller, _ = _controller(tmp_path)
-    window.act_autosave.setChecked(True)
     writes = []
     controller.files.save = lambda doc, tgt=None: writes.append((doc, tgt))
     try:
         editor, doc = _typed_doc(controller, tmp_path / "note.txt")
+        window.act_autosave.setChecked(True)
         editor.setPlainText("edited\n")
         assert doc.is_modified
 
@@ -112,11 +113,11 @@ def test_autosave_is_deaf_when_it_is_off(qapp, tmp_path):
 
 def test_autosave_is_silenced_by_an_unanswered_conflict(qapp, tmp_path):
     window, controller, _ = _controller(tmp_path)
-    window.act_autosave.setChecked(True)
     writes = []
     controller.files.save = lambda doc, tgt=None: writes.append((doc, tgt))
     try:
         editor, doc = _typed_doc(controller, tmp_path / "note.txt")
+        window.act_autosave.setChecked(True)
         editor.setPlainText("edited\n")
         (tmp_path / "note.txt").write_text("outside\n", encoding="utf-8")
 
@@ -207,6 +208,7 @@ def test_the_switch_is_reachable_twice(qapp, tmp_path):
     """The menu-bar switch and the View entry are the same state."""
     window, controller, settings = _controller(tmp_path)
     try:
+        _typed_doc(controller, tmp_path / "note.txt")
         assert window.autosave_switch.isChecked() is False
         assert window.act_autosave_menu.isCheckable()
 
@@ -214,11 +216,11 @@ def test_the_switch_is_reachable_twice(qapp, tmp_path):
         assert window.autosave_switch.isChecked() is True
         assert window.act_autosave.isChecked() is True
         assert window.act_autosave_menu.isChecked() is True
-        assert settings.autosave is True
+        assert controller.autosave_enabled() is True
 
         window.act_autosave_menu.setChecked(False)
         assert window.autosave_switch.isChecked() is False
-        assert settings.autosave is False
+        assert controller.autosave_enabled() is False
     finally:
         window.close()
 
@@ -270,10 +272,12 @@ def _has_colour(image, colour, tolerance=12):
 def test_the_banner_sits_below_the_tabs(qapp, tmp_path):
     window, controller, _ = _controller(tmp_path)
     try:
-        layout = window.centralWidget().layout()
-        tabs_index = layout.indexOf(window.tabs)
-        assert layout.indexOf(window.banner) > tabs_index
-        assert layout.indexOf(window.action_banner) > tabs_index
+        window.show()
+        window.show_file_changed("note.txt")
+        bar_height = window.tabs.tabBar().height()
+        assert window.action_banner.parent() is window.tabs
+        assert window.action_banner.y() >= bar_height, "under the tab strip"
+        assert window.action_banner.y() < window.tabs.height() // 2
     finally:
         window.close()
 
@@ -282,7 +286,8 @@ def test_the_dismiss_control_is_a_cross(qapp, tmp_path):
     window, controller, _ = _controller(tmp_path)
     try:
         window.show_file_changed("note.txt")
-        assert window.act_banner_dismiss.text() == "\u2715"
+        assert window.act_banner_dismiss.text() == ""
+        assert window.act_banner_dismiss.icon().isNull() is False
         assert window.act_banner_dismiss.toolTip()
         seen = []
         window.file_changed_action.connect(seen.append)
@@ -343,7 +348,7 @@ def test_asking_for_autosave_on_an_unsaved_file_asks_for_a_path(qapp, tmp_path):
         window.autosave_switch.toggle()
 
         assert window.autosave_switch.isChecked() is False, "stays off for now"
-        assert settings.autosave is False
+        assert controller.autosave_enabled() is False
         assert not window.action_banner.isHidden()
         assert window.act_banner_reload.text() == tr("action.save_file")
     finally:
@@ -373,7 +378,7 @@ def test_the_save_button_gives_the_document_a_path_and_then_turns_on(
 
         doc = controller.current_document()
         assert doc.path == target, "the dialog result reached the model"
-        assert settings.autosave is True, "autosave starts once the file exists"
+        assert doc.autosave is True, "autosave starts once the file exists"
         assert window.autosave_switch.isChecked() is True
         assert window.action_banner.isHidden()
     finally:
@@ -387,7 +392,7 @@ def test_cancelling_the_dialog_keeps_autosave_off(qapp, tmp_path):
         window.autosave_switch.toggle()
         window.save_file_dialog = lambda start="": ""        # cancelled
         window.act_banner_reload.click()
-        assert settings.autosave is False
+        assert controller.autosave_enabled() is False
         assert window.autosave_switch.isChecked() is False
     finally:
         window.close()
@@ -403,7 +408,47 @@ def test_the_cross_dismisses_the_save_notice_and_keeps_autosave_off(
 
         window.act_banner_dismiss.click()
         assert window.action_banner.isHidden()
-        assert settings.autosave is False
+        assert controller.autosave_enabled() is False
         assert window.autosave_switch.isChecked() is False
+    finally:
+        window.close()
+
+
+def test_each_tab_keeps_its_own_autosave(qapp, tmp_path):
+    """Turning it on for one file must not follow the user to the next."""
+    window, controller, _ = _controller(tmp_path)
+    try:
+        first, doc1 = _typed_doc(controller, tmp_path / "one.txt")
+        window.act_autosave.setChecked(True)
+        assert doc1.autosave is True
+
+        second, doc2 = _typed_doc(controller, tmp_path / "two.txt")
+        assert doc2.autosave is False, "a new tab starts with it off"
+        assert window.autosave_switch.isChecked() is False
+
+        window.tabs.setCurrentWidget(first)
+        controller._sync_ui(first)
+        assert window.autosave_switch.isChecked() is True, "the first tab remembers"
+        assert doc1.autosave is True
+        assert doc2.autosave is False
+    finally:
+        window.close()
+
+
+def test_ctrl_alt_s_toggles_the_switch(qapp, tmp_path):
+    from PySide6.QtGui import QKeySequence
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        _typed_doc(controller, tmp_path / "note.txt")
+        assert window.act_autosave_menu.shortcut() == QKeySequence("Ctrl+Alt+S")
+        assert "Ctrl+Alt+S" in window.autosave_switch.toolTip()
+
+        window.act_autosave_menu.trigger()
+        assert controller.autosave_enabled() is True
+        assert window.autosave_switch.isChecked() is True
+
+        window.act_autosave_menu.trigger()
+        assert controller.autosave_enabled() is False
     finally:
         window.close()

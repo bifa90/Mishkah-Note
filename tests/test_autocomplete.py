@@ -158,3 +158,15 @@ def test_outdent_block_removes_one_unit():
 def test_outdent_never_goes_negative():
     text, _ = ac.reindent_block("one\ntwo", outdent=True)
     assert text == "one\ntwo"
+
+
+def test_has_unclosed_opener_counts_nesting():
+    from mishkah.core.autocomplete import has_unclosed_opener
+
+    assert has_unclosed_opener("(", "(") is True
+    assert has_unclosed_opener("()", "(") is False
+    assert has_unclosed_opener("(()", "(") is True
+    assert has_unclosed_opener("([", "(") is True
+    assert has_unclosed_opener('"', '"') is True
+    assert has_unclosed_opener('""', '"') is False
+    assert has_unclosed_opener("text", "x") is False

@@ -597,6 +597,11 @@ class EditorView(QPlainTextEdit):
 
         if not autocomplete.should_pair(char, before, after, has_selection=selected):
             return False
+        if (not selected and autocomplete.has_unclosed_opener(
+                self.paragraph_prefix(), char)):
+            # CD-03: an opener of this kind is still open in this paragraph,
+            # so the user is typing around it — no second closing bracket.
+            return False
 
         closer = autocomplete.closing_for(char)
         if closer is None:

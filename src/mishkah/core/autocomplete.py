@@ -95,6 +95,31 @@ def should_pair(char: str, before: str, after: str, has_selection: bool = False)
     return True
 
 
+def has_unclosed_opener(before: str, char: str) -> bool:
+    """True when the text before the caret already has an unclosed *char*.
+
+    CD-03: typing a bracket right after an unclosed one of the same kind
+    almost always means the user is fixing a pair, not opening a new one, so
+    the closing character is not inserted.  Balancing counts nesting for
+    ``( [ {`` and parity for the quote-like characters.
+
+    The caller only ever passes the current paragraph (capped at 4096
+    characters), so the cost does not depend on the size of the document.
+    """
+    closer = PAIRS.get(char)
+    if closer is None:
+        return False
+    if char == closer:
+        return before.count(char) % 2 == 1
+    depth = 0
+    for candidate in before:
+        if candidate == char:
+            depth += 1
+        elif candidate == closer and depth:
+            depth -= 1
+    return depth > 0
+
+
 def should_skip_closer(char: str, after: str) -> bool:
     """Typing a closer that is already the next character should step over it."""
     return bool(after) and after[0] == char and char in CLOSERS

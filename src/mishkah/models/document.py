@@ -40,6 +40,8 @@ class DocumentModel:
     # Syntax highlighting: "auto" follows the file extension, or a language
     # code from mishkah.core.syntax, "plain" disables it for this tab.
     language: str = "auto"
+    #: CD-12: whether the "looks like X" note was already shown for this tab.
+    language_banner_shown: bool = False
     revision: int = 0
     #: ``(mtime_ns, size)`` of the file the last time we read or wrote it.
     #: ``None`` = unknown (a new, never-saved document).  CD-18 compares this

@@ -97,6 +97,9 @@ STATS_IDLE_MS = 150
 #: (CD-07).  Anything further away cannot be seen, so it is not parsed.
 MARKDOWN_WINDOW_LINES = 400
 
+#: How long typing has to pause before the content sniffs its own language.
+LANGUAGE_DETECT_MS = 400
+
 #: Longest paragraph prefix inspected when pairing a bracket (CD-03).
 PAIR_SCAN_LIMIT = 4096
 
@@ -120,7 +123,8 @@ class EditorView(QPlainTextEdit):
     zoom_changed = Signal(int)               # percent
     direction_changed = Signal(str)          # auto | rtl | ltr (mode changed)
     resolved_direction_changed = Signal(str)  # the caret moved to another direction
-    stats_changed = Signal(int, int)         # lines, chars
+    stats_changed = Signal(int, int)
+    language_detected = Signal(str)      # CD-12: guessed from the content         # lines, chars
 
     def __init__(self, document: DocumentModel, font: Optional[QFont] = None,
                  parent=None):
@@ -180,6 +184,13 @@ class EditorView(QPlainTextEdit):
         self._indent_unit = autocomplete.DEFAULT_INDENT
         self._highlighter: Optional[SyntaxHighlighter] = None
         self._language = "auto"
+        self._content_language = syntax.PLAIN.code
+        #: Guessing the language is debounced: a paste or a burst of typing
+        #: ends with one sniff, not one per character (CD-12).
+        self._detect_timer = QTimer(self)
+        self._detect_timer.setSingleShot(True)
+        self._detect_timer.setInterval(LANGUAGE_DETECT_MS)
+        self._detect_timer.timeout.connect(self.detect_language)
         self._completion: Optional[QListWidget] = None
 
         # --- live Markdown (view-only decoration) ---------------------------
@@ -200,6 +211,7 @@ class EditorView(QPlainTextEdit):
         self.verticalScrollBar().valueChanged.connect(self._update_markdown_window)
         self.selectionChanged.connect(self._emit_cursor)
         self.document().contentsChanged.connect(self._schedule_stats)
+        self.document().contentsChanged.connect(self._schedule_language_detection)
         self.document().contentsChanged.connect(self._schedule_alignment)
 
         self.apply_direction(self._direction_mode, announce=False)
@@ -851,11 +863,37 @@ class EditorView(QPlainTextEdit):
             self._markdown.set_theme(theme)
 
     def language_code(self) -> str:
-        """Concrete language: the override, or guessed from the file name."""
+        """Concrete language: override, file name, then the content itself.
+
+        The third step is what makes pasted code light up in an untitled
+        buffer: until it is saved, a file name says nothing (CD-12).
+        """
         if self._language and self._language != "auto":
             return self._language
         path = self._doc.path if self._doc is not None else None
-        return syntax.language_for_path(path)
+        by_path = syntax.language_for_path(path)
+        if by_path != syntax.PLAIN.code:
+            return by_path
+        return self._content_language or syntax.PLAIN.code
+
+    def detected_language(self) -> str:
+        """The language the content looks like, ``plain`` when unsure."""
+        return self._content_language
+
+    def _schedule_language_detection(self) -> None:
+        if not self._detect_timer.isActive():
+            self._detect_timer.start()
+
+    def detect_language(self) -> str:
+        """Sniff the buffer and report a newly guessed language (CD-12)."""
+        self._detect_timer.stop()
+        text = self._leading_text(limit=syntax.SNIFF_TEXT_LIMIT)
+        guess = syntax.language_for_text(text)
+        if guess == self._content_language:
+            return guess
+        self._content_language = guess
+        self.language_detected.emit(guess)
+        return guess
 
     def set_language(self, code: str) -> None:
         self._language = code

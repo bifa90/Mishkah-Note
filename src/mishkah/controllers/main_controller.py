@@ -205,6 +205,8 @@ class MainController(QObject):
         editor.resolved_direction_changed.connect(self._on_resolved_direction)
         editor.stats_changed.connect(self._on_stats)
         editor.textChanged.connect(lambda e=editor: self._on_text_changed(e))
+        editor.language_detected.connect(
+            lambda _code, e=editor: self._on_language_detected(e))
 
     @staticmethod
     def _resolve_theme(theme: str) -> str:
@@ -246,7 +248,12 @@ class MainController(QObject):
         chosen = doc.language if doc is not None else "auto"
         if chosen and chosen != "auto":
             return chosen
-        return syntax.language_for_path(doc.path if doc is not None else None)
+        by_path = syntax.language_for_path(doc.path if doc is not None else None)
+        if by_path != syntax.PLAIN.code:
+            return by_path
+        # Nothing in the name: ask the content (CD-12), so code pasted into an
+        # untitled tab is highlighted without saving and reopening it.
+        return editor.detected_language()
 
     def document_for(self, editor: Optional[EditorView]) -> Optional[DocumentModel]:
         if editor is None:
@@ -777,6 +784,9 @@ class MainController(QObject):
         self.window.set_autosave(bool(doc.autosave))
         status.set_encoding(doc.encoding)
         status.set_line_ending(doc.line_ending)
+        code = self._language_for(editor) if editor is not None else syntax.PLAIN.code
+        status.set_language("" if code == syntax.PLAIN.code
+                            else syntax.get_language(code).name)
         status.set_size(doc.size_label)
         status.set_lines(doc.line_count)
         self.window.set_tab_menu_state(doc.pinned, doc.color)
@@ -796,6 +806,25 @@ class MainController(QObject):
             status.set_zoom(editor.zoom_percent())
             status.set_direction(doc.direction_mode, editor.resolved_direction(),
                                  editor.document_side())
+
+    def _on_language_detected(self, editor: EditorView) -> None:
+        """The content revealed its language: recolour and say so (CD-12)."""
+        self._apply_highlighting(editor)
+        code = editor.language_code()
+        if code == syntax.PLAIN.code:
+            self.window.status.set_language("")
+            return
+        label = syntax.get_language(code).name
+        self.window.status.set_language(label)
+        doc = self._docs.get(editor)
+        # One note per document: telling the user again on every refinement
+        # would be noise, and the banner pushes the text down while they type.
+        if doc is None or doc.language_banner_shown:
+            return
+        doc.language_banner_shown = True
+        if self.document_for(self.window.current_editor()) is doc:
+            self.window.show_banner(
+                i18n.tr("banner.language_detected", language=label))
 
     def _on_text_changed(self, editor: EditorView) -> None:
         doc = self._docs.get(editor)

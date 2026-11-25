@@ -42,13 +42,15 @@ class StatusBarWidget(QFrame):
         self._lines = QLabel()
         self._size = QLabel()
         self._zoom = QLabel()
+        self._language = QLabel()
         self._line_ending = _Chip()
         self._encoding = _Chip()
         self._direction = _Chip()
         self._direction.setObjectName("DirectionChip")
         self._direction.setToolTip(tr("direction.hint"))
 
-        for widget in (self._position, self._selection, self._lines, self._size):
+        for widget in (self._position, self._selection, self._lines, self._size,
+                       self._language):
             widget.setObjectName("StatusText")
             widget.setProperty("divider", False)
             layout.addWidget(widget)
@@ -101,6 +103,11 @@ class StatusBarWidget(QFrame):
         style = label.style()
         style.unpolish(label)
         style.polish(label)
+
+    def set_language(self, label: str) -> None:
+        """Which grammar is colouring this tab (empty hides the segment)."""
+        self._language.setText(label or "")
+        self._set_segment_visible(self._language, bool(label))
 
     def set_zoom(self, percent: int) -> None:
         self._zoom.setText(f"{percent}%")

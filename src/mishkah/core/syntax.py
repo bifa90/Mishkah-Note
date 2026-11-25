@@ -357,6 +357,95 @@ def language_for_path(path: Optional[Path | str]) -> str:
     return _EXTENSION_INDEX.get(path.suffix.lower(), PLAIN.code)
 
 
+#: How much of a document the content sniffer looks at.
+SNIFF_TEXT_LIMIT = 8000
+
+#: Tie-break order when two languages score the same (more specific first).
+_ORDER = ("python", "typescript", "javascript", "rust", "go", "java", "cpp",
+          "c", "shell", "sql", "yaml", "css", "html", "markdown", "json",
+          "plain")
+
+#: Ordered (language, pattern, weight) markers.  The first language whose
+#: strong marker matches wins; weak markers only break ties between two
+#: candidates that are both plausible.
+_CONTENT_MARKERS: Tuple[Tuple[str, str, int], ...] = (
+    ("python", r"^#!.*\bpython[0-9.]*\b", 3),
+    ("shell", r"^#!.*\b(?:ba|z|k)?sh\b", 3),
+    ("javascript", r"^#!.*\bnode\b", 3),
+    ("python", r"^\s*(?:async\s+)?def\s+\w+\s*\(", 3),
+    ("python", r"^\s*class\s+\w+\s*[:(]", 2),
+    ("python", r"^\s*(?:from\s+[\w.]+\s+)?import\s+[\w.]+", 2),
+    ("python", r"^if\s+__name__\s*==", 3),
+    ("rust", r"^\s*fn\s+\w+\s*\(", 3),
+    ("rust", r"^\s*(?:let\s+mut|use\s+std::|impl\s+\w+|pub\s+fn)\b", 2),
+    ("go", r"^\s*package\s+\w+\s*$", 3),
+    ("go", r"^\s*func\s+\w+\s*\(", 2),
+    ("java", r"^\s*public\s+(?:final\s+)?class\s+\w+", 2),
+    ("java", r"^\s*public\s+static\s+void\s+main\s*\(", 3),
+    ("typescript", r"^\s*(?:export\s+)?interface\s+\w+\s*\{", 3),
+    ("typescript", r"^\s*(?:export\s+)?type\s+\w+\s*=", 2),
+    ("typescript", r"\w+\s*:\s*(?:string|number|boolean|void)\b", 2),
+    ("javascript", r"^\s*(?:export\s+)?(?:async\s+)?function\s+\w+\s*\(", 3),
+    ("javascript", r"^\s*(?:const|let|var)\s+\w+\s*=", 2),
+    ("javascript", r"=>|console\.log\(|document\.\w+", 2),
+    ("sql", r"(?i)^\s*(?:select\s+[\s\S]{0,200}?\bfrom|insert\s+into|update\s+\w+\s+set|"
+            r"create\s+(?:table|index|view)|delete\s+from)\b", 3),
+    ("cpp", r"^\s*#include\s*<(?:iostream|vector|string|map|memory)>", 3),
+    ("cpp", r"\bstd::\w+", 2),
+    ("c", r"^\s*#include\s*<\w+\.h>", 3),
+    ("c", r"^\s*(?:int|void)\s+main\s*\(", 2),
+    ("css", r"^\s*[.#]?[\w-]+(?:\s*[,>]\s*[.#]?[\w-]+)*\s*\{[\s\S]*?"
+            r"(?:color|margin|padding|display|font-size)\s*:", 3),
+    ("html", r"(?i)^\s*(?:<!doctype\s+html|<html|<head|<body|<!--)", 3),
+    ("html", r"(?i)</(?:div|p|span|a|ul|li|table|section|article)>", 2),
+    ("yaml", r"^---\s*$", 2),
+    ("yaml", r"^[\w.-]+:\s*(?:$|[^/{\[])", 1),
+    ("shell", r"^\s*(?:if\s+\[|fi\b|done\b|esac\b|export\s+\w+=)", 2),
+    ("markdown", r"^#{1,6}\s+\S", 3),
+    ("markdown", r"^```", 3),
+    ("markdown", r"^\s*(?:[-*+]\s+\S|\d+\.\s+\S)", 1),
+    ("json", r"^\s*[\[{]", 1),
+)
+
+
+def language_for_text(text: str) -> str:
+    """Guess the language of *text* from its content (CD-12 · paste).
+
+    Highlighting used to follow the file name only, so code pasted into an
+    untitled buffer stayed grey until the file was saved and opened again.
+    The rules are deliberately conservative: a language is reported only when
+    a *strong* marker is present, otherwise ``"plain"``.
+    """
+    if not text or not text.strip():
+        return PLAIN.code
+    head = text[:SNIFF_TEXT_LIMIT]
+    sample = head.replace("\r\n", "\n").replace("\r", "\n")
+
+    if sample.lstrip().startswith(("{", "[")):
+        try:
+            import json as _json
+            _json.loads(sample.strip())
+            return JSON_SPEC.code
+        except ValueError:
+            pass
+
+    scores: Dict[str, int] = {}
+    for code, pattern, weight in _CONTENT_MARKERS:
+        if re.search(pattern, sample, re.MULTILINE):
+            scores[code] = scores.get(code, 0) + weight
+    if not scores:
+        return PLAIN.code
+    best = max(scores, key=lambda code: (scores[code], -_ORDER.index(code)
+                                         if code in _ORDER else 0))
+    if scores[best] < 2:
+        return PLAIN.code
+    # A Markdown fence around the sample means the buffer is Markdown, even
+    # if the fenced body looks like another language.
+    if scores.get("markdown", 0) >= 3 and scores[best] <= scores["markdown"]:
+        return MARKDOWN_SPEC.code
+    return best
+
+
 def get_language(code: Optional[str]) -> LanguageSpec:
     return BY_CODE.get(code or "", PLAIN)
 

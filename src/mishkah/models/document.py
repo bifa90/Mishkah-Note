@@ -45,6 +45,10 @@ class DocumentModel:
     #: ``None`` = unknown (a new, never-saved document).  CD-18 compares this
     #: against the disk before every write.
     disk_signature: Optional[Tuple[int, int]] = None
+    #: CD-19/M1: opened with another encoding; a save must first be an
+    #: explicit conversion, otherwise the buffer would be written back
+    #: in an encoding it was never read in.
+    encoding_pending: bool = False
 
     # ------------------------------------------------------------- titles
     @property

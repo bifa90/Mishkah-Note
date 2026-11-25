@@ -54,6 +54,9 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
     #: How a whole document's alignment is decided (CD-20).  "first_strong"
     #: is the 1.0.01 behaviour and stays the default; "first_line" is opt-in.
     "document_side_source": (_ENUM, ("first_strong", "first_line")),
+    # data safety: autosave is off until the user asks for it (CD-01)
+    "autosave": (_BOOL, None),
+    "autosave_idle_ms": (_INT, (500, 60000)),
     # editing conveniences
     "auto_close_brackets": (_BOOL, None),
     "auto_indent": (_BOOL, None),
@@ -109,6 +112,11 @@ class Settings:
     #: reads in either direction, re-decided while the first line is the only
     #: line.  Neither touches Qt's per-paragraph ordering.
     document_side_source: str = "first_strong"
+
+    #: CD-01: off by default; the View toolbar has a one-click switch.
+    autosave: bool = False
+    #: How long the typing has to stop before an autosave fires.
+    autosave_idle_ms: int = 2000
 
     # editing conveniences
     auto_close_brackets: bool = True

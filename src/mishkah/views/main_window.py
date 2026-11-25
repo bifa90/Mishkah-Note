@@ -15,7 +15,7 @@ from __future__ import annotations
 
 from typing import List, Optional
 
-from PySide6.QtCore import QPointF, QRectF, Qt, QUrl, Signal
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import (
     QAction,
     QActionGroup,
@@ -26,6 +26,7 @@ from PySide6.QtGui import (
     QKeySequence,
     QPainter,
     QPalette,
+    QPen,
     QPixmap,
     QPolygonF,
 )
@@ -41,7 +42,6 @@ from PySide6.QtWidgets import (
     QStyleOptionTab,
     QTabBar,
     QTabWidget,
-    QToolBar,
     QVBoxLayout,
     QWidget,
 )
@@ -55,6 +55,7 @@ from mishkah.models.document import DocumentModel
 from mishkah.views.editor_view import EditorView
 from mishkah.views.status_bar_widget import StatusBarWidget
 from mishkah.widgets.find_dialog import FindReplaceBar
+from mishkah.widgets.toggle_switch import ToggleSwitch
 
 ENCODINGS = (
     "utf-8", "utf-8-sig", "utf-16-le", "utf-16-be", "utf-32",
@@ -129,7 +130,8 @@ class TabBar(QTabBar):
 
     def set_tab_pinned(self, index: int, pinned: bool) -> None:
         colour = tab_style.get(self.tab_color(index), self._theme)
-        ink = colour.ink if colour else ("#A0A0A0" if self._theme == "dark" else "#5C5C5C")
+        ink = (tab_style.readable_ink(colour.fill, colour.ink) if colour
+               else ("#A0A0A0" if self._theme == "dark" else "#5C5C5C"))
         self.setTabIcon(index, pin_icon(ink) if pinned else QIcon())
         self.update()
 
@@ -157,10 +159,29 @@ class TabBar(QTabBar):
             if colour is None:
                 style.drawControl(QStyle.ControlElement.CE_TabBarTabShape,
                                   option, painter, self)
+                style.drawControl(QStyle.ControlElement.CE_TabBarTabLabel,
+                                  option, painter, self)
             else:
                 self._paint_coloured_tab(painter, option, colour)
-            style.drawControl(QStyle.ControlElement.CE_TabBarTabLabel,
-                              option, painter, self)
+                # The label is drawn here, not by the style: the stylesheet
+                # fixes the text colour for every tab, and a pastel fill in a
+                # dark window left the name unreadable.
+                self._paint_coloured_label(painter, option, colour)
+
+    @staticmethod
+    def _paint_coloured_label(painter: QPainter, option: QStyleOptionTab,
+                              colour) -> None:
+        ink = tab_style.readable_ink(colour.fill, colour.ink)
+        rect = option.rect.adjusted(10, 0, -10, 0)
+        if rect.width() <= 0:
+            return
+        text = option.fontMetrics.elidedText(option.text,
+                                             Qt.TextElideMode.ElideRight,
+                                             rect.width())
+        painter.save()
+        painter.setPen(QColor(ink))
+        painter.drawText(rect, int(Qt.AlignmentFlag.AlignCenter), text)
+        painter.restore()
 
     @staticmethod
     def _paint_coloured_tab(painter: QPainter, option: QStyleOptionTab, colour) -> None:
@@ -296,15 +317,17 @@ class MainWindow(QMainWindow):
         root.addWidget(self.status, 0)
 
         # ---- banners -------------------------------------------------------
-        self.banner = QLabel(self)
+        # Children of the tab widget, pinned under the tab strip: the layout
+        # cannot put anything between a QTabWidget's bar and its pages, and a
+        # widget in the vertical layout ends up under the document instead.
+        self.banner = QLabel(self.tabs)
         self.banner.setObjectName("Banner")
         self.banner.setWordWrap(True)
         self.banner.hide()
-        root.insertWidget(0, self.banner)
 
         # A banner that asks a question: the file changed under our feet and
         # nothing may be written until the user decides (CD-18).
-        self.action_banner = QWidget(self)
+        self.action_banner = QWidget(self.tabs)
         self.action_banner.setObjectName("ActionBanner")
         action_row = QHBoxLayout(self.action_banner)
         action_row.setContentsMargins(8, 4, 8, 4)
@@ -314,38 +337,90 @@ class MainWindow(QMainWindow):
         self.act_banner_reload = QPushButton(self.action_banner)
         self.act_banner_overwrite = QPushButton(self.action_banner)
         self.act_banner_dismiss = QPushButton(self.action_banner)
-        for button, action in ((self.act_banner_reload, "reload"),
-                               (self.act_banner_overwrite, "overwrite"),
-                               (self.act_banner_dismiss, "dismiss")):
-            button.clicked.connect(lambda _=False, a=action: self.file_changed_action.emit(a))
+        self.act_banner_dismiss.setObjectName("BannerDismiss")
+        self.act_banner_dismiss.setFlat(True)
+        self.act_banner_dismiss.setText("")
+        self.act_banner_dismiss.setIcon(self._cross_icon())
+        self.act_banner_dismiss.setIconSize(QSize(10, 10))
+        self.act_banner_dismiss.setFixedSize(QSize(22, 22))
+        self.act_banner_dismiss.setCursor(Qt.CursorShape.PointingHandCursor)
+        # A round button: a glyph in the system font can arrive as tofu, so the
+        # cross is drawn, and the ring is a stylesheet of its own.
+        self.act_banner_dismiss.setStyleSheet(
+            "QPushButton#BannerDismiss { border: none; border-radius: 11px; }"
+            "QPushButton#BannerDismiss:hover { background: rgba(127,127,127,60); }"
+            "QPushButton#BannerDismiss:pressed { background: rgba(127,127,127,110); }")
+        # The primary button changes meaning per banner: reload a changed file,
+        # convert an encoding, or save a document that has no path yet.
+        self._primary_banner_action = "reload"
+        self.act_banner_reload.clicked.connect(
+            lambda: self.file_changed_action.emit(self._primary_banner_action))
+        self.act_banner_overwrite.clicked.connect(
+            lambda: self.file_changed_action.emit("overwrite"))
+        self.act_banner_dismiss.clicked.connect(
+            lambda: self.file_changed_action.emit("dismiss"))
+        for button in (self.act_banner_reload, self.act_banner_overwrite,
+                       self.act_banner_dismiss):
             action_row.addWidget(button)
         self.action_banner.hide()
-        root.insertWidget(0, self.action_banner)
 
         self._pinned_index: Optional[int] = None
         self._build_menus()
-        self._build_quick_bar()
-        self._add_autosave_menu_entry()
+        self._build_autosave_control()
 
     # ==================================================================
     # menus
     # ==================================================================
-    def _build_quick_bar(self) -> None:
-        """One switch the user asked for by name: autosave, top and visible."""
-        self.quick_bar = QToolBar(self)
-        self.quick_bar.setObjectName("QuickBar")
-        self.quick_bar.setMovable(False)
-        self.addToolBar(Qt.ToolBarArea.TopToolBarArea, self.quick_bar)
-        self.quick_bar.setToolButtonStyle(
-            Qt.ToolButtonStyle.ToolButtonTextBesideIcon)
+    def _build_autosave_control(self) -> None:
+        """The autosave switch lives in the menu bar row, before *File*.
+
+        One state holder (``act_autosave``) is shared by the switch and the
+        View menu entry, so the two can never disagree.
+        """
         self.act_autosave = QAction(tr("action.autosave"), self)
         self.act_autosave.setCheckable(True)
         self.act_autosave.setChecked(False)
-        self.act_autosave.setToolTip(tr("action.autosave_hint"))
-        self.act_autosave.setStatusTip(tr("action.autosave_hint"))
-        self.act_autosave.setIcon(self._autosave_icon())
+        self.act_autosave.setToolTip(self._autosave_tooltip())
         self.act_autosave.toggled.connect(self.autosave_toggled)
-        self.quick_bar.addAction(self.act_autosave)
+
+        # The user asked for the words before the switch, in the same row.
+        self.autosave_holder = QWidget(self)
+        holder_row = QHBoxLayout(self.autosave_holder)
+        holder_row.setContentsMargins(8, 0, 8, 0)
+        holder_row.setSpacing(6)
+        self.autosave_label = QLabel(tr("action.autosave_label"),
+                                     self.autosave_holder)
+        holder_row.addWidget(self.autosave_label)
+        self.autosave_switch = ToggleSwitch(self.autosave_holder)
+        self.autosave_switch.setToolTip(self._autosave_tooltip())
+        self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
+        self.autosave_switch.toggled.connect(self.act_autosave.setChecked)
+        holder_row.addWidget(self.autosave_switch)
+        # No reverse binding here on purpose: the switch is corrected only by
+        # ``set_autosave``, which the controller calls after it has decided.
+        # A direct feedback loop re-applied a stale "on" while the controller
+        # was still refusing (an unsaved document), leaving the switch green
+        # over an autosave that was not running.
+        self._place_autosave_switch()
+        self._add_autosave_menu_entry()
+
+    @staticmethod
+    def _autosave_tooltip() -> str:
+        return f"{tr('action.autosave_hint')} (Ctrl+Alt+S)"
+
+    def _place_autosave_switch(self) -> None:
+        """Pin the switch to the start of the menu row, once.
+
+        ``QMenuBar`` deletes whatever widget it replaces, so the switch is
+        created once, placed once, and never re-parented afterwards; a
+        language change only refreshes its texts.
+        """
+        rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        corner = (Qt.Corner.TopRightCorner if rtl else Qt.Corner.TopLeftCorner)
+        bar = self.menuBar()
+        if bar.cornerWidget(corner) is not self.autosave_holder:
+            bar.setCornerWidget(self.autosave_holder, corner)
+        self.autosave_holder.show()
 
     def _add_autosave_menu_entry(self) -> None:
         menu = getattr(self, "menu_view", None)
@@ -353,7 +428,20 @@ class MainWindow(QMainWindow):
             return
         self.act_autosave_menu = QAction(tr("action.autosave"), self)
         self.act_autosave_menu.setCheckable(True)
-        self.act_autosave_menu.setToolTip(tr("action.autosave_hint"))
+        self.act_autosave_menu.setToolTip(self._autosave_tooltip())
+        self.act_autosave_menu.setShortcut("Ctrl+Alt+S")
+        self.act_autosave_menu.toggled.connect(self.autosave_toggled)
+        menu.addSeparator()
+        menu.addAction(self.act_autosave_menu)
+
+    def _add_autosave_menu_entry(self) -> None:
+        menu = getattr(self, "menu_view", None)
+        if menu is None:                      # pragma: no cover - defensive
+            return
+        self.act_autosave_menu = QAction(tr("action.autosave"), self)
+        self.act_autosave_menu.setCheckable(True)
+        self.act_autosave_menu.setToolTip(self._autosave_tooltip())
+        self.act_autosave_menu.setShortcut("Ctrl+Alt+S")
         self.act_autosave_menu.toggled.connect(self.autosave_toggled)
         menu.addSeparator()
         menu.addAction(self.act_autosave_menu)
@@ -379,17 +467,18 @@ class MainWindow(QMainWindow):
         return QIcon(pixmap)
 
     def set_autosave(self, enabled: bool) -> None:
-        """Keep the quick switch in step with the saved setting (CD-01)."""
+        """Keep the switch, the menu entry and the tooltip in step (CD-01)."""
         blocked = self.act_autosave.blockSignals(True)
         self.act_autosave.setChecked(enabled)
         self.act_autosave.setText(tr("action.autosave") if enabled
                                   else tr("action.autosave_off"))
         self.act_autosave.blockSignals(blocked)
-        menu_action = getattr(self, "act_autosave_menu", None)
-        if menu_action is not None:
-            blocked = menu_action.blockSignals(True)
-            menu_action.setChecked(enabled)
-            menu_action.blockSignals(blocked)
+        self.autosave_switch.setChecked(enabled, emit=False)
+        self.autosave_switch.setToolTip(self._autosave_tooltip())
+        if hasattr(self, "act_autosave_menu"):
+            blocked = self.act_autosave_menu.blockSignals(True)
+            self.act_autosave_menu.setChecked(enabled)
+            self.act_autosave_menu.blockSignals(blocked)
 
     def _build_menus(self) -> None:
         bar = self.menuBar()
@@ -418,8 +507,9 @@ class MainWindow(QMainWindow):
         self.act_save_as = self._action(m_file, tr("menu.file.save_as"),
                                         self.file_save_as,
                                         QKeySequence.StandardKey.SaveAs)
+        # Ctrl+Alt+S belongs to the autosave switch now; save-all moves aside.
         self.act_save_all = self._action(m_file, tr("menu.file.save_all"),
-                                         self.file_save_all, "Ctrl+Alt+S")
+                                         self.file_save_all, "Ctrl+Alt+Shift+S")
         m_file.addSeparator()
         self.act_print = self._action(m_file, tr("menu.file.print"),
                                       self.file_print, QKeySequence.StandardKey.Print)
@@ -770,6 +860,9 @@ class MainWindow(QMainWindow):
 
     def _on_tab_changed(self, index: int) -> None:
         self._refresh_tab_menu(index)
+        # A banner follows the window, not the tab: hand its inset to the
+        # editor that just came to the front and clear the one that left.
+        self._relayout_banners()
         self.tab_changed.emit(index)
 
     def _refresh_tab_menu(self, index: int) -> None:
@@ -802,37 +895,114 @@ class MainWindow(QMainWindow):
                 action.setChecked(True)
                 return
 
+    def _cross_icon(self, size: int = 10) -> QIcon:
+        """Two strokes, drawn at twice the size for crisp high-DPI edges."""
+        pixmap = QPixmap(size * 2, size * 2)
+        pixmap.setDevicePixelRatio(2.0)
+        pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        pen = QPen(self.palette().color(QPalette.ColorRole.WindowText))
+        pen.setWidthF(1.6)
+        pen.setCapStyle(Qt.PenCapStyle.RoundCap)
+        painter.setPen(pen)
+        inset = 1.5
+        painter.drawLine(QPointF(inset, inset),
+                         QPointF(size - inset, size - inset))
+        painter.drawLine(QPointF(size - inset, inset),
+                         QPointF(inset, size - inset))
+        painter.end()
+        return QIcon(pixmap)
+
+    def _relayout_banners(self) -> None:
+        """Pin every visible banner right under the tab strip.
+
+        The editor on screen reserves the same height as a top inset, so the
+        banner pushes the text down instead of sitting on its first line.
+        """
+        bar = self.tabs.tabBar()
+        top = bar.height() if bar.isVisible() else 0
+        width = max(0, self.tabs.width())
+        reserved = 0
+        for widget in (self.banner, self.action_banner):
+            if widget.isHidden():
+                continue
+            height = widget.sizeHint().height()
+            if isinstance(widget, QLabel):
+                height = max(height, widget.heightForWidth(width))
+            widget.setGeometry(0, top, width, height)
+            widget.raise_()
+            top += height
+            reserved += height
+        self._apply_banner_inset(reserved)
+
+    def _apply_banner_inset(self, height: int) -> None:
+        """Reserve *height* on the editor on screen, and nowhere else.
+
+        Every other editor gets its inset cleared: a document that sat under a
+        banner must not stay pushed down once the banner is gone or another
+        tab is in front.
+        """
+        current = self.current_editor()
+        for editor in self.editors():
+            editor.set_top_inset(max(0, height) if editor is current else 0)
+
+    def resizeEvent(self, event) -> None:      # noqa: N802 - Qt naming
+        super().resizeEvent(event)
+        self._relayout_banners()
+
     def show_banner(self, text: str) -> None:
         self.banner.setText(text)
         self.banner.show()
+        self._relayout_banners()
 
     def hide_banner(self) -> None:
         self.banner.hide()
+        # Without this the text stays pushed down by a banner that is gone.
+        self._relayout_banners()
 
     def show_file_changed(self, name: str) -> None:
         """Ask what to do about a file that changed on disk (CD-18)."""
         self.action_banner_label.setText(tr("banner.file_changed", name=name))
+        self._primary_banner_action = "reload"
         self.act_banner_reload.setText(tr("action.reload_file"))
         self.act_banner_overwrite.setText(tr("action.overwrite_file"))
-        self.act_banner_dismiss.setText(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.show()
         self.act_banner_dismiss.show()
         self.action_banner.show()
+        self._relayout_banners()
 
     def show_encoding_pending(self, name: str, encoding: str) -> None:
         """The buffer came from another encoding: ask before writing it back."""
         self.action_banner_label.setText(
             tr("banner.encoding_pending", name=name, encoding=encoding))
+        self._primary_banner_action = "convert"
         self.act_banner_reload.setText(tr("action.convert_and_save"))
         self.act_banner_reload.show()
         self.act_banner_overwrite.hide()
-        self.act_banner_dismiss.setText(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
         self.act_banner_dismiss.show()
         self.action_banner.show()
+        self._relayout_banners()
+
+    def show_save_first(self, name: str) -> None:
+        """Autosave needs a path before it can mean anything (CD-01)."""
+        self.action_banner_label.setText(
+            tr("banner.autosave_needs_save", name=name))
+        self._primary_banner_action = "save_file"
+        self.act_banner_reload.setText(tr("action.save_file"))
+        self.act_banner_reload.show()
+        self.act_banner_overwrite.hide()
+        self.act_banner_dismiss.setToolTip(tr("action.dismiss_banner"))
+        self.act_banner_dismiss.show()
+        self.action_banner.show()
+        self._relayout_banners()
 
     def hide_file_changed(self) -> None:
         self.action_banner.hide()
+        self._relayout_banners()
 
     def set_word_wrap_enabled(self, enabled: bool) -> None:
         """Keep the View ▸ Word wrap check state in sync with settings."""
@@ -866,6 +1036,14 @@ class MainWindow(QMainWindow):
         """Rebuild every label after a UI-language switch."""
         self.menuBar().clear()
         self._build_menus()
+        self._add_autosave_menu_entry()
+        self.act_autosave.setText(tr("action.autosave")
+                                  if self.autosave_switch.isChecked()
+                                  else tr("action.autosave_off"))
+        self.autosave_label.setText(tr("action.autosave_label"))
+        self.autosave_switch.setToolTip(self._autosave_tooltip())
+        self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
+        self.autosave_holder.show()
         self.find_bar.retranslate()
         self.status.retranslate()
 

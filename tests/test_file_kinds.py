@@ -49,3 +49,32 @@ def test_policy_for_file_reads_the_disk(tmp_path):
     assert policy_for_file(bad) == READ_ONLY
 
     assert policy_for_file(tmp_path / "missing.txt") == TEXT   # unreadable: no verdict
+
+
+def test_a_bare_name_gets_an_extension():
+    from pathlib import Path
+
+    from mishkah.core.file_kinds import ensure_extension, guess_extension
+
+    assert guess_extension("hello", "txt") == "txt"
+    assert guess_extension("# Title\n- item", "md") == "md"
+    assert guess_extension("# Title\n- item", "auto") == "md"
+    assert guess_extension("def run():\n    pass", "auto") == "py"
+    assert guess_extension('{"a": 1}', "auto") == "json"
+    assert guess_extension("<!doctype html>", "auto") == "html"
+    assert guess_extension("just words", "auto") == "txt"
+    assert guess_extension("", "auto") == "txt"
+
+    assert ensure_extension(Path("/tmp/note"), "", "txt") == Path("/tmp/note.txt")
+    assert ensure_extension(Path("/tmp/note"), "# x", "auto") == Path("/tmp/note.md")
+    assert ensure_extension(Path("/tmp/note.md"), "x", "txt") == Path("/tmp/note.md")
+
+
+def test_every_note_colour_has_a_readable_ink():
+    from mishkah.core.tab_style import NOTE_COLOURS, contrast_ratio, readable_ink
+
+    for colour in NOTE_COLOURS:
+        for theme in ("light", "dark"):
+            shaded = colour.for_theme(theme)
+            ink = readable_ink(shaded.fill, shaded.ink)
+            assert contrast_ratio(ink, shaded.fill) >= 4.5, (colour.code, theme)

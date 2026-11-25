@@ -76,3 +76,41 @@ def next_code(code: Optional[str]) -> str:
     except ValueError:
         index = 0
     return order[(index + 1) % len(order)]
+
+
+# ---------------------------------------------------------------------------
+# contrast
+# ---------------------------------------------------------------------------
+def _channel(value: float) -> float:
+    value /= 255.0
+    return value / 12.92 if value <= 0.04045 else ((value + 0.055) / 1.055) ** 2.4
+
+
+def luminance(colour: str) -> float:
+    """Relative luminance of ``#RRGGBB`` (WCAG definition)."""
+    text = colour.lstrip("#")
+    if len(text) != 6:
+        return 0.0
+    red, green, blue = (int(text[i:i + 2], 16) for i in (0, 2, 4))
+    return (0.2126 * _channel(red) + 0.7152 * _channel(green)
+            + 0.0722 * _channel(blue))
+
+
+def contrast_ratio(first: str, second: str) -> float:
+    """WCAG contrast between two colours (1.0 … 21.0)."""
+    a, b = luminance(first), luminance(second)
+    lighter, darker = max(a, b), min(a, b)
+    return (lighter + 0.05) / (darker + 0.05)
+
+
+def readable_ink(fill: str, preferred: str = "") -> str:
+    """An ink that is actually readable on *fill*.
+
+    A tab label is painted by the style with the window's text colour, which
+    is why a pastel note colour in a dark window used to show a white name on
+    a near-white fill.  The editor now paints the label itself and asks here
+    for a colour that clears WCAG AA (4.5:1).
+    """
+    if preferred and contrast_ratio(preferred, fill) >= 4.5:
+        return preferred
+    return "#101010" if luminance(fill) > 0.5 else "#F5F5F5"

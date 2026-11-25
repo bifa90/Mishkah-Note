@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+import time
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
@@ -13,7 +14,11 @@ from PySide6.QtWidgets import QApplication, QMessageBox
 
 from mishkah.core import i18n, syntax, tab_style
 from mishkah.core.disk_state import changed_on_disk, stat_signature
-from mishkah.core.file_kinds import READ_ONLY, policy_for_file
+from mishkah.core.file_kinds import (
+    READ_ONLY,
+    ensure_extension,
+    policy_for_file,
+)
 from mishkah.core.languages import editor_font_families, get_language
 from mishkah.core.settings import Settings
 from mishkah.core.text_direction import (
@@ -50,6 +55,14 @@ class MainController(QObject):
         self._changed_docs: List[DocumentModel] = []
         #: CD-19/M1: reopened with another encoding, awaiting conversion.
         self._encoding_pending: List[DocumentModel] = []
+        #: Monotonic time of our own last write per path.  The file watcher
+        #: fires for that write too, and at that instant the recorded signature
+        #: is still the old one — which used to raise a banner claiming an
+        #: outside edit that never happened.
+        self._writes: Dict[str, float] = {}
+        #: The user asked for autosave on a document that has no path yet;
+        #: it turns on by itself once the save dialog has given it one.
+        self._autosave_after_save = False
         self._watcher: Optional[QFileSystemWatcher] = None
         #: CD-01: one idle timer, single shot, no background thread.
         self._autosave_timer: Optional[QTimer] = None
@@ -407,8 +420,11 @@ class MainController(QObject):
             chosen = self.window.save_file_dialog(start)
             if not chosen:
                 return False
-            target = Path(chosen)
-        self.files.save(doc, target)
+            # A bare name would be written without an extension; the dialog's
+            # filter is a hint, not something the file manager enforces.
+            target = ensure_extension(Path(chosen), doc.content,
+                                      self.settings.default_extension)
+        self._save_doc(doc, target)
         return True
 
     def save_all(self) -> None:
@@ -418,7 +434,7 @@ class MainController(QObject):
                 self._sync_content(editor, doc)
                 if self._file_changed(doc):
                     continue
-                self.files.save(doc, doc.path)
+                self._save_doc(doc, doc.path)
 
     # ==================================================================
     # CD-01 · autosave
@@ -427,11 +443,29 @@ class MainController(QObject):
         self._autosave_timer = QTimer(self)
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self._autosave_now)
-        self.window.set_autosave(self.settings.autosave)
+        self.window.set_autosave(False)      # per document, off until asked
 
     def set_autosave(self, enabled: bool) -> None:
-        """The quick switch in the toolbar, persisted like any other setting."""
-        self.settings.autosave = bool(enabled)
+        """The switch above the menus, for *this* document only (CD-01).
+
+        Autosave is a property of the tab: turning it on for one file must not
+        follow the user to the next one.  Autosave without a path is a promise
+        the editor cannot keep, so asking for it on an unsaved document opens
+        the save dialog instead of turning green: the switch only flips once
+        the file exists.
+        """
+        editor = self.window.current_editor()
+        doc = self.document_for(editor)
+        if doc is None:
+            self.window.set_autosave(False)
+            return
+        if enabled and doc.path is None:
+            doc.autosave = False
+            self.window.set_autosave(False)
+            self._autosave_after_save = True
+            self.window.show_save_first(self._doc_title(doc))
+            return
+        doc.autosave = bool(enabled)
         self.window.set_autosave(bool(enabled))
         if not enabled and self._autosave_timer is not None:
             self._autosave_timer.stop()
@@ -439,17 +473,17 @@ class MainController(QObject):
             self._arm_autosave()
 
     def _arm_autosave(self) -> None:
-        if not self.settings.autosave or self._autosave_timer is None:
+        doc = self.current_document()
+        if (self._autosave_timer is None or doc is None
+                or not doc.autosave):
             return
         self._autosave_timer.start(max(500, int(self.settings.autosave_idle_ms)))
 
     def _autosave_now(self, editor: Optional[EditorView] = None) -> None:
         """Write the buffer if — and only if — nothing else is in the way."""
-        if not self.settings.autosave:
-            return
         editor = editor or self.window.current_editor()
         doc = self.document_for(editor)
-        if editor is None or doc is None:
+        if editor is None or doc is None or not doc.autosave:
             return
         if (doc.path is None or doc.read_only or doc.truncated
                 or doc.encoding_pending or not doc.is_modified):
@@ -459,10 +493,12 @@ class MainController(QObject):
         self._sync_content(editor, doc)
         if self._file_changed(doc):
             return
-        self.files.save(doc, doc.path)
+        self._save_doc(doc, doc.path)
 
     def autosave_enabled(self) -> bool:
-        return bool(self.settings.autosave)
+        """True when the document on screen has autosave on."""
+        doc = self.current_document()
+        return bool(doc is not None and doc.autosave)
 
     # ==================================================================
     # CD-18 · the file changed on disk
@@ -512,7 +548,27 @@ class MainController(QObject):
         if path in self._watcher.files():
             self._watcher.removePath(path)
 
+    #: How long after our own write the watcher is ignored.  Long enough for
+    #: the worker to finish and the signature to be refreshed, short enough
+    #: that a genuine outside edit right afterwards is still noticed.
+    WRITE_QUIET_SECONDS = 2.0
+
+    def _note_write(self, doc: DocumentModel) -> None:
+        if doc is not None and doc.path is not None:
+            self._writes[str(doc.path)] = time.monotonic()
+
+    def _watcher_is_hearing_itself(self, path: str) -> bool:
+        stamp = self._writes.get(path)
+        return stamp is not None and (time.monotonic() - stamp) < self.WRITE_QUIET_SECONDS
+
+    def _save_doc(self, doc: DocumentModel, target) -> None:
+        """The one place that starts a write: notes it, then asks the service."""
+        self._note_write(doc)
+        self.files.save(doc, target)
+
     def _on_watched_file_changed(self, path: str) -> None:
+        if self._watcher_is_hearing_itself(path):
+            return                       # our own write, not an outside edit
         for doc in list(self._docs.values()):
             if doc.path is not None and str(doc.path) == path:
                 if changed_on_disk(doc.path, doc.disk_signature):
@@ -523,7 +579,7 @@ class MainController(QObject):
                 break
 
     def on_file_changed_action(self, action: str) -> None:
-        """Answer the CD-18 banner: reload, overwrite, or dismiss."""
+        """Answer a banner: reload, overwrite, convert, save file, or dismiss."""
         doc = self._changed_docs[-1] if self._changed_docs else self.current_document()
         if doc is None:
             self.window.hide_file_changed()
@@ -532,6 +588,12 @@ class MainController(QObject):
         self.window.hide_file_changed()
         if doc in self._changed_docs:
             self._changed_docs.remove(doc)
+        if action == "save_file":
+            self.window.hide_file_changed()
+            editor = self.window.current_editor()
+            if editor is None or not self.save_current():
+                self._autosave_after_save = False     # cancelled: stay off
+            return
         if action == "convert":
             if editor is not None:
                 self._convert_encoding(doc, editor)
@@ -541,7 +603,7 @@ class MainController(QObject):
         if action == "overwrite":
             doc.disk_signature = stat_signature(doc.path)
             self._sync_content(editor, doc)
-            self.files.save(doc, doc.path)
+            self._save_doc(doc, doc.path)
             return
         if action == "reload":
             self._reload_from_disk(doc, editor)
@@ -557,7 +619,7 @@ class MainController(QObject):
         if self._file_changed(doc):
             return
         if doc.path is not None:
-            self.files.save(doc, doc.path)
+            self._save_doc(doc, doc.path)
 
     def _reload_from_disk(self, doc: DocumentModel, editor: EditorView) -> None:
         """Replace the buffer with what is on disk, dropping undo history."""
@@ -598,8 +660,17 @@ class MainController(QObject):
 
     def _on_saved(self, doc: DocumentModel, written: int) -> None:
         self._watch(doc)
+        self._note_write(doc)
+        if self._autosave_after_save and doc.path is not None:
+            self._autosave_after_save = False
+            doc.autosave = True
+            if self.document_for(self.window.current_editor()) is doc:
+                self.window.set_autosave(True)
+            self._arm_autosave()
         if doc in self._changed_docs:
             self._changed_docs.remove(doc)
+        if not self._changed_docs:
+            self.window.hide_file_changed()
         editor = self._editor_for_document(doc)
         if editor is not None:
             self.window.set_tab_title(editor, self._doc_title(doc), doc.is_modified)
@@ -683,6 +754,7 @@ class MainController(QObject):
         if doc is None:
             return
         self.refresh_invisible_banner()
+        self.window.set_autosave(bool(doc.autosave))
         status.set_encoding(doc.encoding)
         status.set_line_ending(doc.line_ending)
         status.set_size(doc.size_label)
@@ -1161,7 +1233,8 @@ class MainController(QObject):
         self.window.set_show_invisible_chars(self.settings.show_invisible_chars)
         self.window.set_document_side_first_line(
             self.settings.document_side_source == FIRST_LINE)
-        self.window.set_autosave(self.settings.autosave)
+        doc_now = self.current_document()
+        self.window.set_autosave(bool(doc_now and doc_now.autosave))
         if self._autosave_timer is not None:
             self._autosave_timer.setInterval(
                 max(500, int(self.settings.autosave_idle_ms)))

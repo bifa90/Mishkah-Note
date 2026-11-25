@@ -54,8 +54,11 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
     #: How a whole document's alignment is decided (CD-20).  "first_strong"
     #: is the 1.0.01 behaviour and stays the default; "first_line" is opt-in.
     "document_side_source": (_ENUM, ("first_strong", "first_line")),
-    # data safety: autosave is off until the user asks for it (CD-01)
-    "autosave": (_BOOL, None),
+    # data safety
+    #: The extension a first save adds when the name has none (CD-05).
+    "default_extension": (_ENUM, ("txt", "md", "auto")),
+    # how long typing has to stop before an autosave fires.
+    # Whether autosave is on is a per-document fact (CD-01), not a setting.
     "autosave_idle_ms": (_INT, (500, 60000)),
     # editing conveniences
     "auto_close_brackets": (_BOOL, None),
@@ -113,9 +116,12 @@ class Settings:
     #: line.  Neither touches Qt's per-paragraph ordering.
     document_side_source: str = "first_strong"
 
-    #: CD-01: off by default; the View toolbar has a one-click switch.
-    autosave: bool = False
-    #: How long the typing has to stop before an autosave fires.
+    #: The extension a first save adds when the user types a bare name
+    #: (CD-05): "txt", "md", or "auto" to read the opening lines.
+    default_extension: str = "txt"
+    #: How long the typing has to stop before an autosave fires.  Autosave
+    #: itself is per document (``DocumentModel.autosave``), so a switch turned
+    #: on for one file does not follow the user to the next one.
     autosave_idle_ms: int = 2000
 
     # editing conveniences

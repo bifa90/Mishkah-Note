@@ -127,12 +127,12 @@ def test_closing_the_pinned_tab_releases_on_top(controller):
     assert controller.window.pinned_index() is None
 
 
-def test_pin_shows_a_glyph_on_the_tab(controller):
+def test_pin_is_state_not_an_icon(controller):
     editor = controller.new_document()
     controller.toggle_tab_pin(0)
-    assert controller.window.tab_bar.tabIcon(0).availableSizes()
+    assert controller.window.tab_bar.is_pinned(0) is True
     controller.window.set_tab_pinned(editor, False)
-    assert not controller.window.tab_bar.tabIcon(0).availableSizes()
+    assert controller.window.tab_bar.is_pinned(0) is False
 
 
 # ---------------------------------------------------------------------
@@ -214,8 +214,34 @@ def test_untitled_tab_follows_the_ui_language(controller, qapp):
         i18n.set_language("en")
 
 
-def test_modified_marker_is_added_once(controller):
+def test_modified_marker_is_a_dot_not_a_character(controller):
+    """CD-04: the name stays clean; the dot is painted by the tab bar."""
     editor = controller.new_document()
     editor.setPlainText("changed")
     text = controller.window.tabs.tabText(0)
-    assert text.count("●") == 1
+    assert "●" not in text
+    assert controller.window.tab_bar.tab_modified(0) is True
+
+    controller.current_document().mark_saved(None, 0)
+    controller.window.set_tab_title(editor, controller._doc_title(
+        controller.current_document()), False)
+    assert controller.window.tab_bar.tab_modified(0) is False
+
+
+def test_every_tab_shows_a_document_icon(controller):
+    editor = controller.new_document()
+    icon = controller.window.tab_bar.tabIcon(0)
+    assert icon.isNull() is False
+    assert icon.availableSizes()
+    assert controller.window.tab_bar.is_pinned(0) is False, "an icon is not a pin"
+    assert editor is not None
+
+
+def test_pinning_keeps_the_document_icon(controller):
+    controller.new_document()
+    controller.toggle_tab_pin(0)
+    bar = controller.window.tab_bar
+    assert bar.is_pinned(0) is True
+    assert bar.tabIcon(0).isNull() is False, "the document icon stays"
+    controller.toggle_tab_pin(0)
+    assert bar.is_pinned(0) is False

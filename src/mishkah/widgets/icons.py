@@ -65,3 +65,58 @@ def close_button_stylesheet(radius: int, rest: str = "transparent") -> str:
 
 def icon_size(size: int) -> QSize:  # pragma: no cover - convenience wrapper
     return QSize(size, size)
+
+
+def document_pixmap(size: int = 14, colour: str = "#5C5C5C",
+                    ratio: float = 2.0) -> QPixmap:
+    """A page with a folded corner and two ruled lines.
+
+    Drawn rather than shipped as an SVG: it must look identical in light and
+    dark themes and at 14 px, which is exactly where a bitmap asset fails.
+    """
+    from PySide6.QtCore import QPointF
+    from PySide6.QtGui import QPainterPath, QPolygonF
+
+    size = max(8, int(size))
+    canvas = int(round(size * ratio))
+    pixmap = QPixmap(canvas, canvas)
+    pixmap.setDevicePixelRatio(ratio)
+    pixmap.fill(Qt.GlobalColor.transparent)
+
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+    stroke = QColor(colour)
+    pen = QPen(stroke)
+    pen.setWidthF(1.25 * ratio)
+    pen.setJoinStyle(Qt.PenJoinStyle.RoundJoin)
+    painter.setPen(pen)
+    painter.setBrush(Qt.BrushStyle.NoBrush)
+
+    margin = canvas * 0.16
+    fold = canvas * 0.30
+    left = margin
+    right = canvas - margin
+    top = margin
+    bottom = canvas - margin
+    path = QPainterPath()
+    path.moveTo(left, top)
+    path.lineTo(right - fold, top)
+    path.lineTo(right, top + fold)
+    path.lineTo(right, bottom)
+    path.lineTo(left, bottom)
+    path.closeSubpath()
+    painter.drawPath(path)
+    painter.drawPolyline(QPolygonF([QPointF(right - fold, top),
+                                    QPointF(right - fold, top + fold),
+                                    QPointF(right, top + fold)]))
+    painter.drawLine(QPointF(left + canvas * 0.14, canvas * 0.58),
+                     QPointF(right - canvas * 0.14, canvas * 0.58))
+    painter.drawLine(QPointF(left + canvas * 0.14, canvas * 0.74),
+                     QPointF(right - canvas * 0.30, canvas * 0.74))
+    painter.end()
+    return pixmap
+
+
+def document_icon(colour: str = "#5C5C5C", size: int = 14) -> QIcon:
+    """The tab's document icon (CD-04)."""
+    return QIcon(document_pixmap(size, colour))

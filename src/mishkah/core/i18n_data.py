@@ -68,6 +68,18 @@ STRINGS: Dict[str, S] = {
         "es": "&Archivo", "fr": "&Fichier", "bn": "&ফাইল", "pt": "&Ficheiro",
         "ru": "&Файл", "ur": "&فائل",
     },
+    "menu.file.new_tab": {
+        "en": "New tab", "ar": "تبويب جديد", "zh-Hans": "新建标签页",
+        "hi": "नया टैब", "es": "Pestaña nueva", "fr": "Nouvel onglet",
+        "bn": "নতুন ট্যাব", "pt": "Novo separador", "ru": "Новая вкладка",
+        "ur": "نیا ٹیب",
+    },
+    "status.words": {
+        "en": "{count} words", "ar": "{count} كلمة", "zh-Hans": "{count} 词",
+        "hi": "{count} शब्द", "es": "{count} palabras", "fr": "{count} mots",
+        "bn": "{count} শব্দ", "pt": "{count} palavras", "ru": "{count} слов",
+        "ur": "{count} الفاظ",
+    },
     "menu.file.new": {
         "en": "New", "ar": "جديد", "zh-Hans": "新建", "hi": "नया",
         "es": "Nuevo", "fr": "Nouveau", "bn": "নতুন", "pt": "Novo",

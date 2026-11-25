@@ -43,6 +43,7 @@ class StatusBarWidget(QFrame):
         self._size = QLabel()
         self._zoom = QLabel()
         self._language = QLabel()
+        self._words = QLabel()
         self._line_ending = _Chip()
         self._encoding = _Chip()
         self._direction = _Chip()
@@ -50,7 +51,7 @@ class StatusBarWidget(QFrame):
         self._direction.setToolTip(tr("direction.hint"))
 
         for widget in (self._position, self._selection, self._lines, self._size,
-                       self._language):
+                       self._words, self._language):
             widget.setObjectName("StatusText")
             widget.setProperty("divider", False)
             layout.addWidget(widget)
@@ -68,6 +69,7 @@ class StatusBarWidget(QFrame):
         self.set_position(1, 1, 0)
         self.set_lines(0)
         self.set_size("")
+        self.set_words(0)
         self.set_zoom(100)
         self.set_line_ending("\n")
         self.set_encoding("utf-8")
@@ -103,6 +105,11 @@ class StatusBarWidget(QFrame):
         style = label.style()
         style.unpolish(label)
         style.polish(label)
+
+    def set_words(self, count: int) -> None:
+        """Word count of the document (CD-23); hidden while it is zero."""
+        self._words.setText(tr("status.words", count=count) if count else "")
+        self._set_segment_visible(self._words, bool(count))
 
     def set_language(self, label: str) -> None:
         """Which grammar is colouring this tab (empty hides the segment)."""

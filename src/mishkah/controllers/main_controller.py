@@ -12,7 +12,7 @@ from PySide6.QtCore import QFileSystemWatcher, QObject, Qt, QTimer
 from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from mishkah.core import i18n, syntax, tab_style
+from mishkah.core import i18n, syntax, tab_style, text_stats
 from mishkah.core.disk_state import changed_on_disk, stat_signature
 from mishkah.core.file_kinds import (
     READ_ONLY,
@@ -119,6 +119,8 @@ class MainController(QObject):
         w.recent_chosen.connect(self.open_path)
         w.recent_cleared.connect(self._clear_recent)
 
+        w.new_tab_requested.connect(self.new_document)
+        w.paths_dropped.connect(self._open_dropped_paths)
         w.act_undo.triggered.connect(lambda: self._editor_op("undo"))
         w.act_redo.triggered.connect(lambda: self._editor_op("redo"))
         w.act_cut.triggered.connect(lambda: self._editor_op("cut"))
@@ -262,6 +264,15 @@ class MainController(QObject):
 
     def current_document(self) -> Optional[DocumentModel]:
         return self.document_for(self.window.current_editor())
+
+    def _open_dropped_paths(self, paths) -> None:
+        """Open files dropped on the window, each in its own tab (CD-22).
+
+        A refused file (binary, unreadable) is reported by the loader and
+        leaves no empty tab behind, which is exactly the CD-05 rule.
+        """
+        for path in paths or []:
+            self.open_path(str(path))
 
     def open_document_dialog(self) -> None:
         start = ""
@@ -853,7 +864,9 @@ class MainController(QObject):
         editor = self.window.current_editor()
         if doc is None or editor is None or doc.truncated:
             return
-        self.window.status.set_size(doc.live_size_label(editor.toPlainText()))
+        text = editor.toPlainText()
+        self.window.status.set_size(doc.live_size_label(text))
+        self.window.status.set_words(text_stats.count_words(text))
 
     # ==================================================================
     # direction

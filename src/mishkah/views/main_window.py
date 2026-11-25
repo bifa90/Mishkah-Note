@@ -54,7 +54,7 @@ from mishkah.models.document import DocumentModel
 from mishkah.views.editor_view import EditorView
 from mishkah.views.status_bar_widget import StatusBarWidget
 from mishkah.widgets.find_dialog import FindReplaceBar
-from mishkah.widgets.icons import themed_cross_icon
+from mishkah.widgets.icons import document_icon, themed_cross_icon
 from mishkah.widgets.toggle_switch import ToggleSwitch
 
 ENCODINGS = (
@@ -99,6 +99,7 @@ class TabBar(QTabBar):
     """Fluent-style tab bar with sticky-note colours and pinned tabs."""
 
     new_tab_requested = Signal()
+    paths_dropped = Signal(list)      # CD-22: files dropped on the window
     pin_toggled = Signal(int)
     colour_chosen = Signal(int, str)
     close_requested = Signal(int)
@@ -119,24 +120,60 @@ class TabBar(QTabBar):
         self.customContextMenuRequested.connect(self._show_context_menu)
         self._theme = "light"
 
-    # -- colours / pins -------------------------------------------------
-    def tab_color(self, index: int) -> str:
+    # -- per-tab state --------------------------------------------------
+    # Everything about a tab lives in its ``tabData`` dict: the note colour,
+    # whether it is pinned, and whether it needs saving.  The tab *icon* is
+    # therefore free to show the document itself — the old code treated "any
+    # icon" as "pinned", so the moment a document icon appeared every tab
+    # would have claimed to be pinned (CD-04).
+    def tab_state(self, index: int) -> dict:
         value = self.tabData(index)
-        return value if isinstance(value, str) else ""
+        return dict(value) if isinstance(value, dict) else {}
 
-    def set_tab_color(self, index: int, code: str) -> None:
-        self.setTabData(index, code or "")
+    def _update_state(self, index: int, **changes) -> None:
+        if index < 0:
+            return
+        state = self.tab_state(index)
+        state.update(changes)
+        self.setTabData(index, state)
+        self.refresh_document_icon(index)
         self.update()
 
+    def tab_color(self, index: int) -> str:
+        return str(self.tab_state(index).get("color", ""))
+
+    def set_tab_color(self, index: int, code: str) -> None:
+        self._update_state(index, color=code or "")
+
     def set_tab_pinned(self, index: int, pinned: bool) -> None:
+        self._update_state(index, pinned=bool(pinned))
+        if index >= 0:
+            tooltip = self.tabToolTip(index)
+            base = tooltip.split(" · ")[0]
+            self.setTabToolTip(index, f"{base} · {tr('tab.pinned')}"
+                               if pinned else base)
+
+    def is_pinned(self, index: int) -> bool:
+        return bool(self.tab_state(index).get("pinned"))
+
+    def set_tab_modified(self, index: int, modified: bool) -> None:
+        """The unsaved dot on a tab (CD-04)."""
+        if index < 0:
+            return
+        if bool(self.tab_state(index).get("modified")) == bool(modified):
+            return
+        self._update_state(index, modified=bool(modified))
+
+    def tab_modified(self, index: int) -> bool:
+        return bool(self.tab_state(index).get("modified"))
+
+    def refresh_document_icon(self, index: int) -> None:
+        if index < 0:
+            return
         colour = tab_style.get(self.tab_color(index), self._theme)
         ink = (tab_style.readable_ink(colour.fill, colour.ink) if colour
                else ("#A0A0A0" if self._theme == "dark" else "#5C5C5C"))
-        self.setTabIcon(index, pin_icon(ink) if pinned else QIcon())
-        self.update()
-
-    def is_pinned(self, index: int) -> bool:
-        return bool(self.tabIcon(index).availableSizes())
+        self.setTabIcon(index, document_icon(ink))
 
     def set_theme_name(self, theme: str) -> None:
         """Repaint note colours in the shade that matches the window theme."""
@@ -161,12 +198,36 @@ class TabBar(QTabBar):
                                   option, painter, self)
                 style.drawControl(QStyle.ControlElement.CE_TabBarTabLabel,
                                   option, painter, self)
+                self._paint_tab_marks(painter, option, index)
             else:
                 self._paint_coloured_tab(painter, option, colour)
                 # The label is drawn here, not by the style: the stylesheet
                 # fixes the text colour for every tab, and a pastel fill in a
                 # dark window left the name unreadable.
                 self._paint_coloured_label(painter, option, colour)
+                self._paint_tab_marks(painter, option, index)
+
+    def _paint_tab_marks(self, painter: QPainter, option: QStyleOptionTab,
+                         index: int) -> None:
+        """The pin tick and the unsaved dot (CD-04)."""
+        state = self.tab_state(index)
+        painter.save()
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+        if state.get("pinned"):
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor("#E3A33B" if self._theme == "light"
+                                    else "#F0BE5E"))
+            y = option.rect.top() + 5
+            painter.drawEllipse(QPointF(option.rect.left() + 5, y), 2.3, 2.3)
+        if state.get("modified"):
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.setBrush(QColor("#E07A2F" if self._theme == "light"
+                                    else "#F2A15A"))
+            radius = 3.2
+            painter.drawEllipse(
+                QPointF(option.rect.right() - 8, option.rect.center().y()),
+                radius, radius)
+        painter.restore()
 
     @staticmethod
     def _paint_coloured_label(painter: QPainter, option: QStyleOptionTab,
@@ -211,7 +272,7 @@ class TabBar(QTabBar):
         menu = QMenu(self)
         pin = menu.addAction(tr("tab.pin"))
         pin.setCheckable(True)
-        pin.setChecked(bool(self.tabIcon(index).availableSizes()))
+        pin.setChecked(self.is_pinned(index))
         menu.addSeparator()
         colours = menu.addMenu(tr("tab.color"))
         none = colours.addAction(tr("tab.color.none"))
@@ -242,6 +303,8 @@ class TabBar(QTabBar):
 class MainWindow(QMainWindow):
     # ------------------------------------------------------------- signals
     file_new = Signal()
+    new_tab_requested = Signal()
+    paths_dropped = Signal(list)      # CD-22: files dropped on the window
     file_open = Signal()
     file_save = Signal()
     file_save_as = Signal()
@@ -299,6 +362,7 @@ class MainWindow(QMainWindow):
         self.tabs.setMovable(True)
         self.tabs.setDocumentMode(True)
         self.tabs.tabCloseRequested.connect(self.tab_close_requested)
+        self.setAcceptDrops(True)
         self.tabs.currentChanged.connect(self._on_tab_changed)
         self.tab_bar = self.tabs.tabBar()
         self.tab_bar.pin_toggled.connect(self.tab_pin_requested)
@@ -514,6 +578,8 @@ class MainWindow(QMainWindow):
         self.act_print = self._action(m_file, tr("menu.file.print"),
                                       self.file_print, QKeySequence.StandardKey.Print)
         m_file.addSeparator()
+        self.act_new_tab = self._action(m_file, tr("menu.file.new_tab"),
+                                        self.new_tab_requested.emit, "Ctrl+T")
         self.act_close_tab = self._action(m_file, tr("menu.file.close_tab"),
                                           lambda: self.tab_close_requested.emit(
                                               self.tabs.currentIndex()),
@@ -524,8 +590,10 @@ class MainWindow(QMainWindow):
         m_edit = bar.addMenu(tr("menu.edit"))
         self.act_undo = self._action(m_edit, tr("action.undo"), None,
                                      QKeySequence.StandardKey.Undo)
-        self.act_redo = self._action(m_edit, tr("action.redo"), None,
-                                     QKeySequence.StandardKey.Redo)
+        self.act_redo = self._action(m_edit, tr("action.redo"), None, "Ctrl+Y")
+        # Ctrl+Shift+Z stays available as a second path to the same action.
+        self.act_redo.setShortcuts([QKeySequence("Ctrl+Y"),
+                                    QKeySequence("Ctrl+Shift+Z")])
         m_edit.addSeparator()
         self.act_cut = self._action(m_edit, tr("action.cut"), None,
                                     QKeySequence.StandardKey.Cut)
@@ -537,8 +605,7 @@ class MainWindow(QMainWindow):
         m_edit.addSeparator()
         self.act_find = self._action(m_edit, tr("action.find"), None,
                                      QKeySequence.StandardKey.Find)
-        self.act_replace = self._action(m_edit, tr("action.replace"), None,
-                                        QKeySequence.StandardKey.Replace)
+        self.act_replace = self._action(m_edit, tr("action.replace"), None, "Ctrl+H")
         self.act_goto = self._action(m_edit, tr("action.goto"), None, "Ctrl+G")
         self.act_select_all = self._action(m_edit, tr("action.select_all"), None,
                                            QKeySequence.StandardKey.SelectAll)
@@ -608,7 +675,7 @@ class MainWindow(QMainWindow):
         self.act_auto_indent.toggled.connect(self.auto_indent_toggled)
         m_view.addSeparator()
         self.act_on_top = self._action(m_view, tr("action.always_on_top"),
-                                       None, "Ctrl+T", checkable=True, checked=False)
+                                       None, "Alt+T", checkable=True, checked=False)
         self.act_on_top.toggled.connect(self.always_on_top_toggled)
         m_view.addSeparator()
         self.act_settings = self._action(m_view, tr("settings.title"),
@@ -668,7 +735,8 @@ class MainWindow(QMainWindow):
     def _build_tab_menu(self, bar) -> None:
         m_tab = bar.addMenu(tr("menu.tab"))
         self.act_tab_pin = self._action(
-            m_tab, tr("tab.pin_current"), self._toggle_current_pin, "Ctrl+P")
+            m_tab, tr("tab.pin_current"), self._toggle_current_pin,
+            "Ctrl+Shift+P")
         self.act_tab_pin.setCheckable(True)
         self.act_tab_color = self._action(
             m_tab, tr("tab.cycle_color"), self.tab_cycle_color_requested,
@@ -776,6 +844,10 @@ class MainWindow(QMainWindow):
 
     def add_editor(self, editor: EditorView, document: DocumentModel) -> int:
         index = self.tabs.addTab(editor, self._tab_title(document))
+        # Every tab carries its own document icon from the first moment
+        # (CD-04); the unsaved dot and the pin are drawn on top of it.
+        self.tab_bar.refresh_document_icon(index)
+        self.tab_bar.set_tab_modified(index, bool(document.is_modified))
         self.tabs.setCurrentIndex(index)
         editor.setFocus()
         return index
@@ -820,11 +892,9 @@ class MainWindow(QMainWindow):
         return self._pinned_index
 
     def _refresh_pin_icons(self) -> None:
+        """Pinning is stored state now, not "this tab has an icon" (CD-04)."""
         for index in range(self.tabs.count()):
-            pinned = index == self._pinned_index
-            colour = tab_style.get(self.tab_bar.tab_color(index))
-            ink = colour.ink if colour else "#5C5C5C"
-            self.tab_bar.setTabIcon(index, pin_icon(ink) if pinned else QIcon())
+            self.tab_bar.set_tab_pinned(index, index == self._pinned_index)
 
     # ------------------------------------------------------------- on top
     def set_always_on_top(self, enabled: bool) -> None:
@@ -847,10 +917,12 @@ class MainWindow(QMainWindow):
         return bool(self.windowFlags() & Qt.WindowType.WindowStaysOnTopHint)
 
     def set_tab_title(self, editor: EditorView, title: str, modified: bool) -> None:
+        """The name stays clean; the unsaved state is a painted dot (CD-04)."""
         index = self.tabs.indexOf(editor)
         if index >= 0:
-            self.tabs.setTabText(index, f"● {title}" if modified else title)
+            self.tabs.setTabText(index, title)
             self.tabs.setTabToolTip(index, title)
+            self.tab_bar.set_tab_modified(index, modified)
 
     def close_editor(self, editor: EditorView) -> None:
         index = self.tabs.indexOf(editor)
@@ -866,9 +938,8 @@ class MainWindow(QMainWindow):
         self.tab_changed.emit(index)
 
     def _refresh_tab_menu(self, index: int) -> None:
-        data = self.tab_bar.tabData(index)
-        self.set_tab_menu_state(bool(self.tab_bar.tabIcon(index).availableSizes()),
-                                data if isinstance(data, str) else "")
+        self.set_tab_menu_state(self.tab_bar.is_pinned(index),
+                                self.tab_bar.tab_color(index))
 
     # ==================================================================
     # state helpers used by the controller
@@ -931,6 +1002,47 @@ class MainWindow(QMainWindow):
         current = self.current_editor()
         for editor in self.editors():
             editor.set_top_inset(max(0, height) if editor is current else 0)
+
+    # ------------------------------------------------------------- drag/drop
+    @staticmethod
+    def _dropped_paths(event) -> list:
+        if not event.mimeData().hasUrls():
+            return []
+        paths = []
+        for url in event.mimeData().urls():
+            local = url.toLocalFile()
+            if local:
+                paths.append(local)
+        return paths
+
+    def dragEnterEvent(self, event) -> None:      # noqa: N802 - Qt naming
+        if self._dropped_paths(event):
+            event.acceptProposedAction()
+        else:
+            super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event) -> None:       # noqa: N802 - Qt naming
+        if self._dropped_paths(event):
+            event.acceptProposedAction()
+        else:
+            super().dragMoveEvent(event)
+
+    def dropEvent(self, event) -> None:           # noqa: N802 - Qt naming
+        paths = self._dropped_paths(event)
+        if not paths:
+            # Dropped text belongs to the editor underneath, not to the window.
+            super().dropEvent(event)
+            return
+        event.acceptProposedAction()
+        from pathlib import Path as _Path
+        folders = [_Path(p) for p in paths if _Path(p).is_dir()]
+        files = [p for p in paths if not _Path(p).is_dir()]
+        for folder in folders:
+            for child in sorted(folder.iterdir()):
+                if child.is_file():
+                    files.append(str(child))
+        if files:
+            self.paths_dropped.emit(files)
 
     def resizeEvent(self, event) -> None:      # noqa: N802 - Qt naming
         super().resizeEvent(event)

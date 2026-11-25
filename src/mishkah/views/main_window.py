@@ -360,8 +360,11 @@ class MainWindow(QMainWindow):
         self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
         self.autosave_switch.toggled.connect(self.act_autosave.setChecked)
         holder_row.addWidget(self.autosave_switch)
-        self.act_autosave.toggled.connect(
-            lambda checked: self.autosave_switch.setChecked(checked, emit=False))
+        # No reverse binding here on purpose: the switch is corrected only by
+        # ``set_autosave``, which the controller calls after it has decided.
+        # A direct feedback loop re-applied a stale "on" while the controller
+        # was still refusing (an unsaved document), leaving the switch green
+        # over an autosave that was not running.
         self._place_autosave_switch()
         self._add_autosave_menu_entry()
 

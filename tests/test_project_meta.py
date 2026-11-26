@@ -52,22 +52,44 @@ def _require_qt():
         pytest.skip(f"Qt GUI libraries unavailable: {exc}")
 
 
-def test_about_dialog_credits_author_and_assistants():
+def test_about_dialog_credits_author_and_general_ai_assistance():
     # The About text lives in a Qt module; skip where Qt cannot load.
     _require_qt()
-    from mishkah.widgets.about_dialog import AI_ASSISTANTS, AUTHOR, about_html
+    from mishkah.core.i18n import tr
+    from mishkah.widgets.about_dialog import AUTHOR, about_html
 
     assert "بلال" in AUTHOR
     html = about_html()
     # the name is wrapped in bidi isolates, so compare the two halves
     assert "بلال فضل" in html
     assert "Bilal Fadl" in html
-    for name in AI_ASSISTANTS:
-        assert name in html
-    assert "DeepSeek-V4.1-Flash" in html
-    # assistants are named by model, never by the platform they run on
-    assert "arena" not in html.lower()
-    assert "agent mode" not in html.lower()
+    assert tr("about.assistants") in html
+    # individual model and platform names no longer appear in the About box
+    lowered = html.lower()
+    for forbidden in ("deepseek", "claude", "gpt-5", "gemini", "arena", "agent mode"):
+        assert forbidden not in lowered, forbidden
+
+
+def test_about_source_has_no_individual_model_list():
+    """The About box credits AI in general rather than naming specific models."""
+    from mishkah.core.i18n_data import STRINGS
+    from mishkah.core.languages import all_languages
+
+    source = (REPO / "src/mishkah/widgets/about_dialog.py").read_text(encoding="utf-8")
+    for forbidden in ("DeepSeek", "Claude", "GPT-5", "Gemini", "AI_ASSISTANTS"):
+        assert forbidden not in source, forbidden
+    table = STRINGS["about.assistants"]
+    for lang in all_languages():
+        assert table.get(lang.code, "").strip(), lang.code
+
+
+def test_stylesheets_define_compact_menu_rules_for_tall_scripts():
+    """Both themes shrink QMenu padding when a tall-metric script sets compact."""
+    for name in ("light.qss", "dark.qss"):
+        qss = (REPO / "src/mishkah/resources/styles" / name).read_text(encoding="utf-8")
+        assert 'QMenu[compact="true"]::item' in qss, name
+        assert 'QMenu[compact="true"]::separator' in qss, name
+        assert "QFrame#HomeRecentPane" in qss, name
 
 
 def test_about_dialog_has_no_rtl_explanation():

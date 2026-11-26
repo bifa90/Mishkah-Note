@@ -20,23 +20,14 @@ from mishkah.core.i18n import tr
 
 # Credits shown in the About box only.
 AUTHOR = "م. بلال فضل (Bilal Fadl)"
-#: The models that took part in development, named as models.  No product or
-#: platform name belongs in this list.
-AI_ASSISTANTS = (
-    "DeepSeek-V4.1-Flash",
-    "Claude Sonnet 4.5",
-    "GPT-5",
-    "Gemini 2.5 Pro",
-)
 
 
 def about_html() -> str:
     """Rich text for the About box.
 
     The direction of the text is deliberately *not* explained here: the box
-    credits the people and tools behind the project and nothing else.
+    credits the developer, notes general AI assistance, and nothing else.
     """
-    assistants = "<br>".join(f"• {name}" for name in AI_ASSISTANTS)
     # ``AUTHOR`` is already the exact string to show; the label lays it out
     # correctly because the Arabic run starts the line.
     arabic, latin = AUTHOR.split(" (")
@@ -45,7 +36,7 @@ def about_html() -> str:
     <div style="line-height:150%">
       <p style="margin:0; color:#5A5A5A">{tr("about.tagline")}</p>
       <p style="margin:10px 0 0 0"><b>{tr("about.author")}:</b> {author}</p>
-      <p style="margin:10px 0 0 0"><b>{tr("about.assistants")}:</b><br>{assistants}</p>
+      <p style="margin:10px 0 0 0">{tr("about.assistants")}</p>
       <p style="margin:10px 0 0 0"><b>{tr("about.license")}:</b> MIT</p>
       <p style="margin:10px 0 0 0"><b>{tr("about.source")}:</b>
          <a href="{PROJECT_URL}">{PROJECT_URL}</a></p>

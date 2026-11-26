@@ -735,6 +735,9 @@ class EditorView(QPlainTextEdit):
         outlive the tab, and PySide trips over them at shutdown.
         """
         menu = QMenu(self)
+        top = self.window()
+        if hasattr(top, "style_menu"):
+            top.style_menu(menu)
         cursor = self.textCursor()
         has_selection = cursor.hasSelection()
         clipboard_text = QApplication.clipboard().text()

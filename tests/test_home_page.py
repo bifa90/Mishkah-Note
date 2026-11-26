@@ -366,3 +366,56 @@ def test_the_arabic_chrome_uses_ibm_plex_and_keeps_it_on_the_page(qapp, tmp_path
         assert QFontInfo(page.font()).family() == "IBM Plex Sans Arabic"
     finally:
         window.close()
+
+
+def test_recent_files_sit_opposite_the_brand_in_rtl_and_ltr(qapp, tmp_path):
+    """Arabic/Urdu: brand right, recent files left; English/LTR: the opposite."""
+    from PySide6.QtCore import Qt
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        page = controller.show_home()
+        page.resize(960, 620)
+        page.show()
+
+        page.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        qapp.processEvents()
+        brand_x = page.brand_pane.mapTo(page, page.brand_pane.rect().center()).x()
+        recent_x = page.recent_pane.mapTo(page, page.recent_pane.rect().center()).x()
+        assert brand_x > recent_x, f"RTL: brand ({brand_x}) should be right of recent ({recent_x})"
+
+        page.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        qapp.processEvents()
+        brand_x = page.brand_pane.mapTo(page, page.brand_pane.rect().center()).x()
+        recent_x = page.recent_pane.mapTo(page, page.recent_pane.rect().center()).x()
+        assert brand_x < recent_x, f"LTR: brand ({brand_x}) should be left of recent ({recent_x})"
+    finally:
+        window.close()
+
+
+def test_urdu_dropdown_menus_are_compact_and_fit_on_a_laptop_screen(qapp, tmp_path):
+    """Noto Sans Arabic's 2.11× metrics must not push View off a 768 px screen."""
+    from PySide6.QtWidgets import QMenu
+
+    from mishkah.app import apply_theme, install_bundled_fonts
+    from mishkah.core import i18n
+
+    previous_qss = qapp.styleSheet()
+    previous_theme = qapp.property("mishkah_theme")
+    previous_lang = i18n.current_language()
+    install_bundled_fonts()
+    apply_theme(qapp, "light")
+    window, controller, _ = _controller(tmp_path, ui_language="ur")
+    try:
+        for menu in window.menuBar().findChildren(QMenu):
+            assert menu.property("compact") is True
+            assert menu.font().pointSizeF() <= 10.0
+        # Even the longest menu (View / نظارہ) must fit inside a 768 px laptop
+        # display after the title bar, menu bar and taskbar take their share.
+        view_height = window.menu_view.sizeHint().height()
+        assert view_height < 640, f"Urdu View menu too tall for a laptop screen: {view_height}px"
+    finally:
+        window.close()
+        qapp.setStyleSheet(previous_qss)
+        qapp.setProperty("mishkah_theme", previous_theme)
+        i18n.set_language(previous_lang)

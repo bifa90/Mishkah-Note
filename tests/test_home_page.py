@@ -394,7 +394,7 @@ def test_recent_files_sit_opposite_the_brand_in_rtl_and_ltr(qapp, tmp_path):
 
 
 def test_urdu_dropdown_menus_are_compact_and_fit_on_a_laptop_screen(qapp, tmp_path):
-    """Noto Sans Arabic's 2.11× metrics must not push View off a 768 px screen."""
+    """Per-language dropdown menu sizing and density stay balanced and on screen."""
     from PySide6.QtWidgets import QMenu
 
     from mishkah.app import apply_theme, install_bundled_fonts
@@ -407,13 +407,35 @@ def test_urdu_dropdown_menus_are_compact_and_fit_on_a_laptop_screen(qapp, tmp_pa
     apply_theme(qapp, "light")
     window, controller, _ = _controller(tmp_path, ui_language="ur")
     try:
+        # Urdu: tight frame, ~10.5-11.5 pt font (~10-15% above the 9.5 pt floor)
         for menu in window.menuBar().findChildren(QMenu):
-            assert menu.property("compact") is True
-            assert menu.font().pointSizeF() <= 10.0
-        # Even the longest menu (View / نظارہ) must fit inside a 768 px laptop
-        # display after the title bar, menu bar and taskbar take their share.
+            assert menu.property("menuDensity") == "tight"
+            assert 10.5 <= menu.font().pointSizeF() <= 11.5
         view_height = window.menu_view.sizeHint().height()
         assert view_height < 640, f"Urdu View menu too tall for a laptop screen: {view_height}px"
+
+        # Arabic: keep font size untouched (== ui_font), tighten padding only
+        controller.set_ui_language("ar")
+        ar_ui_pt = window.ui_font().pointSizeF()
+        for menu in window.menuBar().findChildren(QMenu):
+            assert menu.property("menuDensity") == "snug"
+            assert menu.font().pointSizeF() == ar_ui_pt
+
+        # Hindi & Bengali: untouched font size and default padding
+        for code in ("hi", "bn"):
+            controller.set_ui_language(code)
+            ui_pt = window.ui_font().pointSizeF()
+            for menu in window.menuBar().findChildren(QMenu):
+                assert (menu.property("menuDensity") or "") == ""
+                assert menu.font().pointSizeF() == ui_pt
+
+        # Remaining languages: slightly smaller font and tighter padding
+        for code in ("en", "zh-Hans", "es", "fr", "pt", "ru"):
+            controller.set_ui_language(code)
+            ui_pt = window.ui_font().pointSizeF()
+            for menu in window.menuBar().findChildren(QMenu):
+                assert menu.property("menuDensity") == "compact"
+                assert menu.font().pointSizeF() < ui_pt
     finally:
         window.close()
         qapp.setStyleSheet(previous_qss)

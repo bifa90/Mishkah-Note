@@ -187,7 +187,7 @@ class MainController(QObject):
         ui_font = QFont()
         ui_font.setFamilies(list(language.ui_fonts))
         ui_font.setPointSize(max(8, s.font_size - 1))
-        self.window.set_ui_font(ui_font)
+        self.window.set_ui_font(ui_font, language.code)
 
         self.window.set_language_menu(s.ui_language)
         self.window.act_word_wrap.setChecked(s.word_wrap)

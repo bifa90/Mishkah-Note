@@ -1208,56 +1208,68 @@ class MainWindow(QMainWindow):
         self.act_show_invisible.blockSignals(blocked)
 
     @staticmethod
-    def _menu_font_for(font: QFont) -> Tuple[QFont, bool]:
-        """Compute popup-menu font and compact flag for tall-metric faces.
+    def _menu_style_for(font: QFont, language_code: str) -> Tuple[QFont, str]:
+        """Compute popup-menu font and QSS density per interface language.
 
-        Noto Sans Arabic (the bundled Urdu chrome face) carries a 2.11× em
-        ascent+descent box — over 40% taller than IBM Plex Sans Arabic (1.50×)
-        and Latin sans (~1.36×) — so standard menu padding inflates long menus
-        such as View until they overflow a laptop screen.  Trimming the popup
-        size slightly and switching the menu to compact padding keeps every
-        Urdu dropdown comfortably on screen without clipping glyphs.
+        * ``ur`` (Urdu): Noto Sans Arabic carries a 2.11× em line box, so keep
+          the tightest item frame (``tight``) while sizing the font ~15% larger
+          than the earlier 9.5 pt floor (~11 pt at default 12 pt UI font).
+        * ``ar`` (Arabic): IBM Plex Sans Arabic is already sized well at 12 pt;
+          keep the font size untouched and only trim the item padding (``snug``).
+        * ``hi``, ``bn`` (Hindi, Bengali): keep both font and padding untouched.
+        * All other languages: trim both font size and padding slightly
+          (``compact``).
         """
-        info = QFontInfo(font)
-        em_px = info.pixelSize()
-        metrics_h = QFontMetrics(font).height()
-        ratio = (metrics_h / em_px) if em_px > 0 else 1.0
-        families = font.families()
-        primary = families[0] if families else ""
-        tall = (ratio > 1.75
-                or info.family() == "Noto Sans Arabic"
-                or primary == "Noto Sans Arabic")
+        code = (language_code or "").split("-")[0].lower()
         menu_font = QFont(font)
-        if tall:
-            pt = font.pointSizeF()
-            if pt <= 0:
-                pt = float(info.pointSize()) if info.pointSize() > 0 else 10.0
-            scale = min(0.84, 1.65 / ratio) if ratio > 1.75 else 0.84
-            target_pt = max(8.5, min(10.0, round(pt * scale * 2) / 2))
+        pt = font.pointSizeF()
+        if pt <= 0:
+            info_pt = QFontInfo(font).pointSize()
+            pt = float(info_pt) if info_pt > 0 else 10.0
+
+        if code == "ur":
+            info = QFontInfo(font)
+            em_px = info.pixelSize()
+            metrics_h = QFontMetrics(font).height()
+            ratio = (metrics_h / em_px) if em_px > 0 else 1.0
+            scale = min(0.92, 1.92 / ratio) if ratio > 1.75 else 0.92
+            target_pt = max(9.5, min(11.5, round(pt * scale * 2) / 2))
             menu_font.setPointSizeF(target_pt)
-        return menu_font, tall
+            return menu_font, "tight"
+
+        if code == "ar":
+            return menu_font, "snug"
+
+        if code in ("hi", "bn"):
+            return menu_font, ""
+
+        target_pt = max(8.5, round(pt * 0.88 * 2) / 2)
+        menu_font.setPointSizeF(target_pt)
+        return menu_font, "compact"
 
     def style_menu(self, menu: QMenu) -> None:
-        """Apply the active dropdown font and compact flag to *menu*."""
+        """Apply the active dropdown font and QSS density to *menu*."""
         menu_font = getattr(self, "_menu_font", None)
-        compact = bool(getattr(self, "_compact_menus", False))
+        density = str(getattr(self, "_menu_density", ""))
         if menu_font is not None:
             menu.setFont(menu_font)
-        if bool(menu.property("compact")) != compact:
-            menu.setProperty("compact", compact)
+        if (menu.property("menuDensity") or "") != density:
+            menu.setProperty("menuDensity", density)
             style = menu.style()
             style.unpolish(menu)
             style.polish(menu)
 
-    def set_ui_font(self, font: QFont) -> None:
+    def set_ui_font(self, font: QFont,
+                    language_code: Optional[str] = None) -> None:
         """Apply the interface face to the chrome *and* to the welcome page.
 
         Urdu asks for a different face in the chrome than in the editor (see
         ``Language.ui_faces``), so the menus, their popups and the welcome page
         all take the same resolved font; the editor keeps its own.
         """
+        code = language_code if language_code is not None else i18n.current_language()
         self._ui_font = QFont(font)
-        self._menu_font, self._compact_menus = self._menu_font_for(font)
+        self._menu_font, self._menu_density = self._menu_style_for(font, code)
         self.menuBar().setFont(font)
         self.status.setFont(font)
         self.find_bar.setFont(font)

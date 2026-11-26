@@ -84,11 +84,12 @@ def test_about_source_has_no_individual_model_list():
 
 
 def test_stylesheets_define_compact_menu_rules_for_tall_scripts():
-    """Both themes shrink QMenu padding when a tall-metric script sets compact."""
+    """Both themes define per-language menu density rules and the Home recent card."""
     for name in ("light.qss", "dark.qss"):
         qss = (REPO / "src/mishkah/resources/styles" / name).read_text(encoding="utf-8")
-        assert 'QMenu[compact="true"]::item' in qss, name
-        assert 'QMenu[compact="true"]::separator' in qss, name
+        for density in ("tight", "snug", "compact"):
+            assert f'QMenu[menuDensity="{density}"]::item' in qss, (name, density)
+            assert f'QMenu[menuDensity="{density}"]::separator' in qss, (name, density)
         assert "QFrame#HomeRecentPane" in qss, name
 
 

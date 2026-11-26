@@ -49,6 +49,7 @@ QT_ONLY_MODULES = (
     "test_tabs.py",
     "test_widgets.py",
     "test_review_tools.py",
+    "test_g3b_checklist.py",
 )
 if not qt_available:
     collect_ignore = list(QT_ONLY_MODULES)

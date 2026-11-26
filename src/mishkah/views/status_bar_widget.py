@@ -140,11 +140,15 @@ class StatusBarWidget(QFrame):
         self._set_segment_visible(self._words, bool(count))
 
     def set_language(self, label: str) -> None:
-        """Which grammar is colouring this tab (empty hides the segment)."""
+        """Which grammar is colouring this tab, as a finished label.
+
+        The code is dropped on purpose: a literal label cannot be re-named for a
+        new interface language, so ``retranslate`` must leave it alone rather
+        than overwrite it with a stale name.
+        """
         self._language_code = ""
         self._language_label = label or ""
-        self._language.setText(label or "")
-        self._set_segment_visible(self._language, bool(label))
+        self._render_language()
 
     def set_language_code(self, code: str) -> None:
         """Name the grammar by its *code*, so a language switch can re-name it.
@@ -156,7 +160,8 @@ class StatusBarWidget(QFrame):
         language.
         """
         self._language_code = code or ""
-        self.set_language(self._language_name())
+        self._language_label = ""
+        self._render_language()
 
     def language_code(self) -> str:
         """The stored code (empty when no grammar is named)."""
@@ -167,6 +172,12 @@ class StatusBarWidget(QFrame):
         if not code:
             return ""
         return display_name(code, current_language())
+
+    def _render_language(self) -> None:
+        """Paint the segment from whichever of the two forms is stored."""
+        text = self._language_name() if self._language_code else self._language_label
+        self._language.setText(text)
+        self._set_segment_visible(self._language, bool(text))
 
     def language_text(self) -> str:
         """The language segment as shown (empty when there is nothing to say)."""
@@ -234,10 +245,7 @@ class StatusBarWidget(QFrame):
         self.set_lines(self._line_count)
         self.set_size(self._size_label)
         self.set_words(self._word_count)
-        if self._language_code:
-            self.set_language(self._language_name())
-        else:
-            self.set_language(self._language_label)
+        self._render_language()
         self.set_zoom(self._zoom_percent)
         self.set_line_ending(self._line_ending_mode)
         self.set_encoding(self._encoding_name)

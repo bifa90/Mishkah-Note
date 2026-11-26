@@ -79,22 +79,33 @@ def tmp_arabic(tmp_path: Path) -> Path:
     return path
 
 
+_exit_status = {"status": 0}
+
+
 def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
-    """Leave without running interpreter finalisation when asked to.
+    """Remember the verdict; the exit itself happens in ``pytest_unconfigure``.
 
     PySide6 6.12 aborts inside CPython's final GC on some hosts (the traceback
-    is ``Fatal Python error: bool_dealloc``) *after* every test has run.  The
-    crash is in the Qt binding's teardown, not in the application, so CI can
-    opt into a clean, deterministic exit with ``MISHKAH_CLEAN_EXIT=1``.
+    is ``Fatal Python error: bool_dealloc`` / ``none_dealloc``) *after* every
+    test has run.  The crash is in the Qt binding's teardown, not in the
+    application, so CI can opt into a clean, deterministic exit with
+    ``MISHKAH_CLEAN_EXIT=1``.
 
-    The exit is deliberately dumb: flush and go.  Pumping the Qt event loop here
-    was the one part that could still segfault (SIGSEGV, exit 139, seen on
-    Python 3.9 in CI) because the widgets the loop wakes up have already been
-    closed and are half-destroyed by then.  Nothing is waiting on those events —
-    the process is about to disappear.
+    Leaving from ``pytest_sessionfinish`` itself was wrong: the terminal
+    reporter prints the passed/failed summary in the same hook, so a red run
+    went silent.  Unconfigure runs after the report and before interpreter
+    finalisation, which is exactly the window between the two problems.
     """
+    _exit_status["status"] = int(exitstatus)
+
+
+def pytest_unconfigure(config):  # noqa: ARG001
     if os.environ.get("MISHKAH_CLEAN_EXIT") != "1":
         return
+    # Deliberately dumb: flush and go.  Pumping the Qt event loop here was the
+    # one part that could still segfault (SIGSEGV, exit 139, seen on Python 3.9
+    # in CI) because the widgets the loop wakes up have already been closed and
+    # are half-destroyed by then.  Nothing is waiting on those events.
     sys.stdout.flush()
     sys.stderr.flush()
-    os._exit(int(exitstatus))
+    os._exit(_exit_status["status"])

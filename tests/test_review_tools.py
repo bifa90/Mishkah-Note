@@ -110,3 +110,30 @@ def test_translation_sheet_refuses_an_unknown_language():
     done = _run("translation_sheet.py", "--lang", "xx")
     assert done.returncode == 2
     assert "unknown language" in done.stderr
+
+
+# ------------------------------------------------------- file diagnostics
+def test_detect_file_reports_what_the_app_will_think(tmp_path):
+    """G3b #14 arrived as "it only opens after I pick the encoding by hand"."""
+    target = tmp_path / "legacy.txt"
+    target.write_bytes("السيد المدير المحترم\nتحية طيبة وبعد.\n".encode("cp1256"))
+
+    done = _run("detect_file.py", str(target), "--json")
+    assert done.returncode == 0, done.stderr
+    [report] = json.loads(done.stdout)
+    assert report["encoding"] == "cp1256"
+    assert report["confident"] is True
+    assert report["has_bom"] is False
+    assert report["decodes_as_detected"] is True
+    assert report["high_bytes"] > 0
+
+
+def test_detect_file_marks_a_guess_as_a_guess(tmp_path):
+    """One high byte is not evidence; the report must say so, not pretend."""
+    target = tmp_path / "maybe.txt"
+    target.write_bytes(b"hello world\n")
+    done = _run("detect_file.py", str(target), "--json")
+    assert done.returncode == 0, done.stderr
+    [report] = json.loads(done.stdout)
+    assert report["encoding"] in ("utf-8", "ascii", "utf-8-sig")
+    assert report["high_bytes"] == 0

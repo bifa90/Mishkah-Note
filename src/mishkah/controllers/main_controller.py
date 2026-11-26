@@ -126,20 +126,11 @@ class MainController(QObject):
         w.new_tab_requested.connect(self.new_document)
         w.paths_dropped.connect(self._open_dropped_paths)
         w.paste_plain_requested.connect(self._paste_plain)
-        w.act_undo.triggered.connect(lambda: self._editor_op("undo"))
-        w.act_redo.triggered.connect(lambda: self._editor_op("redo"))
-        w.act_cut.triggered.connect(lambda: self._editor_op("cut"))
-        w.act_copy.triggered.connect(lambda: self._editor_op("copy"))
-        w.act_paste.triggered.connect(lambda: self._editor_op("paste"))
-        w.act_delete.triggered.connect(self._delete_selection)
-        w.act_select_all.triggered.connect(lambda: self._editor_op("selectAll"))
-        w.act_find.triggered.connect(lambda: self.show_find(False))
-        w.act_replace.triggered.connect(lambda: self.show_find(True))
-        w.act_goto.triggered.connect(self.goto_line)
-        w.act_date_time.triggered.connect(self.insert_date_time)
-        w.act_zoom_in.triggered.connect(lambda: self._zoom(+1))
-        w.act_zoom_out.triggered.connect(lambda: self._zoom(-1))
-        w.act_zoom_reset.triggered.connect(self._zoom_reset)
+        # Every menu entry that is wired to an *action object* lives in
+        # ``_bind_actions``: a language switch rebuilds the menu bar, so those
+        # bindings have to be made again (see ``_bind_actions``).
+        self._bind_actions()
+        w.menus_rebuilt.connect(self._bind_actions)
 
         w.find_bar.find_requested.connect(self._on_find)
         w.find_bar.incremental_requested.connect(self._on_incremental_find)
@@ -156,6 +147,35 @@ class MainController(QObject):
         self.files.save_finished.connect(self._on_saved)
         self.files.save_failed.connect(self._on_save_failed)
         self.files.load_progress.connect(self._on_progress)
+
+    def _bind_actions(self) -> None:
+        """Wire the menu actions, now and after every menu rebuild.
+
+        A language switch calls ``menuBar().clear()`` and builds the menus again,
+        which means fresh ``QAction`` objects while the controller still pointed
+        at the old ones — deleted silently, with no error.  The user met it as
+        "Ctrl+F does nothing after I changed the language": Find, Replace, Undo,
+        Redo, Cut, Copy, Paste, Delete, Select all, Go to line, Date/time and
+        the three zoom actions were all dead, and only those, because everything
+        else is wired through the window's own signals, which survive.
+
+        Safe to call repeatedly: each call binds the actions that exist *now*.
+        """
+        w = self.window
+        w.act_undo.triggered.connect(lambda: self._editor_op("undo"))
+        w.act_redo.triggered.connect(lambda: self._editor_op("redo"))
+        w.act_cut.triggered.connect(lambda: self._editor_op("cut"))
+        w.act_copy.triggered.connect(lambda: self._editor_op("copy"))
+        w.act_paste.triggered.connect(lambda: self._editor_op("paste"))
+        w.act_delete.triggered.connect(self._delete_selection)
+        w.act_select_all.triggered.connect(lambda: self._editor_op("selectAll"))
+        w.act_find.triggered.connect(lambda: self.show_find(False))
+        w.act_replace.triggered.connect(lambda: self.show_find(True))
+        w.act_goto.triggered.connect(self.goto_line)
+        w.act_date_time.triggered.connect(self.insert_date_time)
+        w.act_zoom_in.triggered.connect(lambda: self._zoom(+1))
+        w.act_zoom_out.triggered.connect(lambda: self._zoom(-1))
+        w.act_zoom_reset.triggered.connect(self._zoom_reset)
 
     # ==================================================================
     # appearance
@@ -408,9 +428,45 @@ class MainController(QObject):
         # would ask to save it.  (Blocking the widget's signals while clearing
         # corrupts QPlainTextEdit's state — it crashed a later paint.)
         self.window.set_tab_title(editor, path.name, False)
+        self._start_load_progress(path)
         self.files.load(path, encoding=encoding, limit_mb=limit_mb)
 
+    #: Files above this size get a progress dialog, not just a percentage in
+    #: the window title (which is invisible on a maximised window).
+    BIG_LOAD_BYTES = 4 * 1024 * 1024
+
+    def _start_load_progress(self, path: Path) -> None:
+        """Open the cancellable dialog before a large read starts (G3b #13).
+
+        A 98 MB file froze the window for twenty seconds with nothing on screen
+        but a title-bar percentage the user never saw.  The dialog is shown
+        *before* the worker starts, so the wait is acknowledged instead of
+        looking like a hang.
+        """
+        self._close_load_progress()
+        try:
+            if path.stat().st_size < self.BIG_LOAD_BYTES:
+                return
+        except OSError:
+            return
+        from mishkah.widgets.progress_dialog import ProgressDialog
+
+        dialog = ProgressDialog(i18n.tr("progress.loading", name=path.name),
+                                self.window, minimum_duration=0)
+        dialog.report(0, 1000)
+        dialog.cancelled.connect(self.files.cancel_all)
+        dialog.show()
+        self._load_dialog = dialog
+
+    def _close_load_progress(self) -> None:
+        dialog = getattr(self, "_load_dialog", None)
+        self._load_dialog = None
+        if dialog is not None:
+            dialog.close()
+            dialog.deleteLater()
+
     def _on_loaded(self, doc: DocumentModel) -> None:
+        self._close_load_progress()
         editor = self._editor_for_path(doc.path)
         if editor is None:
             editor = self.new_document()
@@ -476,6 +532,7 @@ class MainController(QObject):
         return None
 
     def _on_load_failed(self, path: str, title: str, detail: str) -> None:
+        self._close_load_progress()
         if title == "cancelled":
             return
         editor = self._editor_for_path(Path(path)) if path else None
@@ -495,6 +552,9 @@ class MainController(QObject):
             return
         self.window.setWindowTitle(
             f"{i18n.tr('app.name')} — {done * 100 // max(1, total)}%")
+        dialog = getattr(self, "_load_dialog", None)
+        if dialog is not None:
+            dialog.report_bytes(done, total)
 
     # ==================================================================
     # saving
@@ -1367,6 +1427,31 @@ class MainController(QObject):
         dialog = QPrintDialog(printer, self.window)
         if dialog.exec():
             self.print_to(editor, printer)
+            self.open_print_output(printer)
+
+    @staticmethod
+    def open_print_output(printer) -> Optional[str]:
+        """Show the PDF that was just written, if the user printed to a file.
+
+        "Print to File" is how everyone makes a PDF here — there is no export
+        command — and until now the dialog closed on a file the user had to go
+        hunting for.  Only a *file* is opened: a real printer has no path, and
+        opening a shell on it would be nonsense.
+        """
+        try:
+            from PySide6.QtCore import QUrl
+            from PySide6.QtGui import QDesktopServices
+            from PySide6.QtPrintSupport import QPrinter
+
+            if printer.outputFormat() != QPrinter.OutputFormat.PdfFormat:
+                return None
+            path = printer.outputFileName()
+            if not path or not Path(path).is_file():
+                return None
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
+            return str(Path(path).resolve())
+        except Exception:      # pragma: no cover - desktop integration is optional
+            return None
 
     @staticmethod
     def print_to(editor, printer) -> None:

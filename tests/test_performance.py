@@ -97,14 +97,10 @@ def test_markdown_decorates_only_the_visible_window(qapp):
     assert end - start < 2000, "the window stayed bounded"
     assert start == 0
 
-    decorated = 0
-    plain = 0
-    for number in range(0, 6000):
-        data = editor.document().findBlockByNumber(number).userData()
-        if data is None:
-            plain += 1
-        else:
-            decorated += 1
+    # Parse results live in the decorator's own dict now, not in Qt-owned block
+    # user data (that ownership mismatch was the crash).
+    decorated = sum(1 for number in range(0, 6000)
+                    if decorator.parsed_line(number) is not None)
     assert decorated > 0
     assert decorator.window()[1] < 5999, "the far end of the file is not parsed"
 

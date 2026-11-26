@@ -304,6 +304,10 @@ class TabBar(QTabBar):
 
 class MainWindow(QMainWindow):
     # ------------------------------------------------------------- signals
+    #: Emitted after the menus are rebuilt (a language switch recreates every
+    #: ``QAction``).  Anything the controller wired to an *action object* has to
+    #: re-wire here: the window's own signals survive a rebuild, the actions do not.
+    menus_rebuilt = Signal()
     file_new = Signal()
     new_tab_requested = Signal()
     paths_dropped = Signal(list)      # CD-22: files dropped on the window
@@ -563,6 +567,10 @@ class MainWindow(QMainWindow):
         self._build_format_menu(bar)
         self._build_tab_menu(bar)
         self._build_help_menu(bar)
+
+        # A language switch reaches here.  The actions the controller bound are
+        # gone, and the ones standing in their place are strangers to it.
+        self.menus_rebuilt.emit()
 
     def _build_file_menu(self, bar) -> None:
         m_file = bar.addMenu(tr("menu.file"))

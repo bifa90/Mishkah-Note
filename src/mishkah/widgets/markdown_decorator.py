@@ -42,7 +42,6 @@ from PySide6.QtGui import (
     QPen,
     QSyntaxHighlighter,
     QTextBlock,
-    QTextBlockUserData,
     QTextCharFormat,
     QTextDocument,
 )
@@ -99,16 +98,6 @@ def _is_block_marker(line: markdown.Line, span: markdown.Span) -> bool:
             and span.hidden)
 
 
-class MarkdownBlockData(QTextBlockUserData):
-    """Parse result for one block, cached for the painter."""
-
-    __slots__ = ("line",)
-
-    def __init__(self, line: markdown.Line):
-        super().__init__()
-        self.line = line
-
-
 class MarkdownDecorator(QSyntaxHighlighter):
     """Applies the visual Markdown layer to one document."""
 
@@ -125,6 +114,18 @@ class MarkdownDecorator(QSyntaxHighlighter):
         #: a sequential pass carries the state forward instead of replaying
         #: the 400 lines above every single paragraph (CD-07).
         self._state_cache = None
+        #: block number → parsed line, rebuilt on every change (see highlightBlock).
+        self._parsed: dict = {}
+        document.contentsChange.connect(self._forget_parsed)
+
+    def _forget_parsed(self, *_args) -> None:
+        """Any edit invalidates the block numbers, so drop the cache wholesale.
+
+        Cheap (a dict clear) and safe: the entries are only read by the painter
+        between a highlight pass and the next edit.
+        """
+        if self._parsed:
+            self._parsed.clear()
 
     # ------------------------------------------------------------------
     # configuration
@@ -158,6 +159,10 @@ class MarkdownDecorator(QSyntaxHighlighter):
         self._window_start, self._window_end = start, end
         return True
 
+    def parsed_line(self, number: int):
+        """The parse result for block *number* (``None`` when out of window)."""
+        return self._parsed.get(number)
+
     def window(self):
         return self._window_start, self._window_end
 
@@ -182,12 +187,16 @@ class MarkdownDecorator(QSyntaxHighlighter):
     # ------------------------------------------------------------------
     def highlightBlock(self, text: str) -> None:  # noqa: N802 (Qt naming)
         block = self.currentBlock()
-        if (block.blockNumber() > MAX_MARKDOWN_BLOCKS
-                or not self._in_window(block.blockNumber())):
-            self.setCurrentBlockUserData(None)
+        number = block.blockNumber()
+        if number > MAX_MARKDOWN_BLOCKS or not self._in_window(number):
+            self._parsed.pop(number, None)
             return
         line, _ = self._parse(block)
-        self.setCurrentBlockUserData(MarkdownBlockData(line))
+        # Kept in a plain dict, keyed by block number, instead of being handed
+        # to Qt as a QTextBlockUserData: Qt deletes those in C++, and the
+        # Python wrapper died during that deletion.  The dict is dropped on any
+        # change, so a stale block number can never be painted.
+        self._parsed[number] = line
 
         active = block.blockNumber() == self._active_block
         for span in line.spans:
@@ -305,8 +314,12 @@ class MarkdownDecorator(QSyntaxHighlighter):
             carry.setPointSizeF(_HIDDEN_POINT_SIZE)
             fmt.setFontPointSize(_HIDDEN_POINT_SIZE)
             fmt.setFontLetterSpacingType(QFont.SpacingType.AbsoluteSpacing)
-            fmt.setFontLetterSpacing(-QFontMetricsF(carry).horizontalAdvance(
-                line.text) / max(1, len(line.text)))
+            # Bound to a name, not used inline: measuring through a temporary
+            # QFontMetricsF aborts the interpreter ("deallocating None") once
+            # the wrapper of the temporary is collected.
+            metrics = QFontMetricsF(carry)
+            fmt.setFontLetterSpacing(-metrics.horizontalAdvance(line.text)
+                                     / max(1, len(line.text)))
             return fmt
         if line.kind == markdown.TABLE_DELIMITER:
             # The |---|---| row is layout, not content: empty it out.
@@ -322,7 +335,8 @@ class MarkdownDecorator(QSyntaxHighlighter):
         run = line.text[span.start:span.end]
         tiny = QFont(self._base_font)
         tiny.setPointSizeF(_HIDDEN_POINT_SIZE)
-        advance = QFontMetricsF(tiny).horizontalAdvance(run)
+        metrics = QFontMetricsF(tiny)
+        advance = metrics.horizontalAdvance(run)
         fmt.setFontPointSize(_HIDDEN_POINT_SIZE)
         fmt.setFontLetterSpacingType(QFont.SpacingType.AbsoluteSpacing)
         fmt.setFontLetterSpacing(-advance / max(1, len(run)))
@@ -338,11 +352,11 @@ class MarkdownDecorator(QSyntaxHighlighter):
         top = editor.blockBoundingGeometry(block).translated(offset).top()
         height = editor.blockBoundingRect(block).height()
         while block.isValid() and top <= viewport.bottom():
-            data = block.userData()
-            if (block.isVisible() and isinstance(data, MarkdownBlockData)
+            line = self._parsed.get(block.blockNumber())
+            if (line is not None and block.isVisible()
                     and not (block.blockNumber() == self._active_block
-                             and data.line.kind == markdown.RULE)):
-                self._paint_block(painter, editor, block, data.line,
+                             and line.kind == markdown.RULE)):
+                self._paint_block(painter, editor, block, line,
                                   top, height, offset)
             block = block.next()
             top += height

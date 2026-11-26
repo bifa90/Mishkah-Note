@@ -58,8 +58,6 @@ install -Dm644 packaging/common/mishkah.desktop \
     "$STAGE$APPDIR/${PKG}.desktop"
 install -Dm644 packaging/common/org.mishkahnote.Mishkah.metainfo.xml \
     "$STAGE$METAINFO/org.mishkahnote.Mishkah.metainfo.xml"
-install -Dm644 packaging/common/mishkah.1 \
-    "$STAGE$MANDIR/mishkah.1"
 
 cat > "$STAGE/usr/bin/mishkah" <<'LAUNCHER'
 #!/bin/sh
@@ -79,6 +77,15 @@ install -Dm644 THIRD-PARTY-NOTICES.md \
     "$STAGE/usr/share/doc/$PKG/THIRD-PARTY-NOTICES.md"
 install -Dm644 README.md "$STAGE/usr/share/doc/$PKG/README.md"
 install -Dm644 CHANGELOG.md "$STAGE/usr/share/doc/$PKG/CHANGELOG.md"
+CHANGELOG_DATE="$(date -u -R)"
+cat <<EOF | gzip -9n > "$STAGE/usr/share/doc/$PKG/changelog.gz"
+$PKG ($VERSION) unstable; urgency=medium
+
+  * Release $VERSION. See /usr/share/doc/$PKG/CHANGELOG.md.
+
+ -- Mishkah-Note contributors <noreply@github.com>  $CHANGELOG_DATE
+EOF
+chmod 0644 "$STAGE/usr/share/doc/$PKG/changelog.gz"
 gzip -9n -c packaging/common/mishkah.1 > "$STAGE$MANDIR/mishkah.1.gz"
 chmod 0644 "$STAGE$MANDIR/mishkah.1.gz"
 
@@ -141,6 +148,7 @@ EOF
 
 chmod 0755 "$STAGE/DEBIAN/postinst" "$STAGE/DEBIAN/prerm" "$STAGE/DEBIAN/postrm"
 (cd "$STAGE" && find usr -type f -print0 | sort -z | xargs -0 md5sum > DEBIAN/md5sums)
+chmod 0644 "$STAGE/DEBIAN/control" "$STAGE/DEBIAN/md5sums"
 
 # ----------------------------------------------------------------- build ---
 DEB="$OUT/${PKG}_${VERSION}_${ARCH}.deb"

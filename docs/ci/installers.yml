@@ -48,7 +48,12 @@ jobs:
             }
       - name: Check the packaged application runtime
         run: |
-          flatpak build --env=QT_QPA_PLATFORM=offscreen build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert mishkah.__version__ == os.environ["RELEASE_VERSION"]; os._exit(0)'
+          mkdir -p build
+          flatpak build --env=QT_QPA_PLATFORM=offscreen --env=RELEASE_VERSION="${{ env.RELEASE_VERSION }}" build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert mishkah.__version__ == os.environ["RELEASE_VERSION"]; os._exit(0)' > build/flatpak-runtime.log 2>&1 || {
+            cat build/flatpak-runtime.log
+            python3 tools/report_build_failure.py build/flatpak-runtime.log
+            exit 1
+          }
       - name: Export a single-file bundle
         run: |
           mkdir -p dist

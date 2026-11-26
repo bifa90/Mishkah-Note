@@ -13,7 +13,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from PySide6.QtCore import QPointF, QRectF, QSize, Qt, QUrl, Signal
 from PySide6.QtGui import (
@@ -22,6 +22,8 @@ from PySide6.QtGui import (
     QColor,
     QDesktopServices,
     QFont,
+    QFontInfo,
+    QFontMetrics,
     QIcon,
     QKeySequence,
     QPainter,
@@ -289,6 +291,10 @@ class TabBar(QTabBar):
             chosen[action] = note.code
         menu.addSeparator()
         others = menu.addAction(tr("tab.close_others"))
+        top = self.window()
+        if hasattr(top, "style_menu"):
+            top.style_menu(menu)
+            top.style_menu(colours)
         chosen_action = menu.exec(self.mapToGlobal(position))
         if chosen_action is None:
             return
@@ -499,18 +505,6 @@ class MainWindow(QMainWindow):
         if bar.cornerWidget(corner) is not self.autosave_holder:
             bar.setCornerWidget(self.autosave_holder, corner)
         self.autosave_holder.show()
-
-    def _add_autosave_menu_entry(self) -> None:
-        menu = getattr(self, "menu_view", None)
-        if menu is None:                      # pragma: no cover - defensive
-            return
-        self.act_autosave_menu = QAction(tr("action.autosave"), self)
-        self.act_autosave_menu.setCheckable(True)
-        self.act_autosave_menu.setToolTip(self._autosave_tooltip())
-        self.act_autosave_menu.setShortcut("Ctrl+Alt+S")
-        self.act_autosave_menu.toggled.connect(self.autosave_toggled)
-        menu.addSeparator()
-        menu.addAction(self.act_autosave_menu)
 
     def _add_autosave_menu_entry(self) -> None:
         menu = getattr(self, "menu_view", None)
@@ -1213,19 +1207,74 @@ class MainWindow(QMainWindow):
         self.act_show_invisible.setChecked(visible)
         self.act_show_invisible.blockSignals(blocked)
 
-    def set_ui_font(self, font: QFont) -> None:
+    @staticmethod
+    def _menu_style_for(font: QFont, language_code: str) -> Tuple[QFont, str]:
+        """Compute popup-menu font and QSS density per interface language.
+
+        * ``ur`` (Urdu): Noto Sans Arabic carries a 2.11× em line box, so keep
+          the tight item frame (``tight``) with ~11.5 pt font at default 12 pt
+          UI font so every dropdown stays legible and inside a laptop screen.
+        * ``ar`` (Arabic): IBM Plex Sans Arabic is already sized well at 12 pt;
+          keep the font size untouched and only trim the item padding (``snug``).
+        * ``hi``, ``bn`` (Hindi, Bengali): keep both font and padding untouched.
+        * All other languages: trim both font size and padding slightly
+          (``compact``).
+        """
+        code = (language_code or "").split("-")[0].lower()
+        menu_font = QFont(font)
+        pt = font.pointSizeF()
+        if pt <= 0:
+            info_pt = QFontInfo(font).pointSize()
+            pt = float(info_pt) if info_pt > 0 else 10.0
+
+        if code == "ur":
+            info = QFontInfo(font)
+            em_px = info.pixelSize()
+            metrics_h = QFontMetrics(font).height()
+            ratio = (metrics_h / em_px) if em_px > 0 else 1.0
+            scale = min(0.96, 2.02 / ratio) if ratio > 1.75 else 0.96
+            target_pt = max(10.0, min(12.0, round(pt * scale * 2) / 2))
+            menu_font.setPointSizeF(target_pt)
+            return menu_font, "tight"
+
+        if code == "ar":
+            return menu_font, "snug"
+
+        if code in ("hi", "bn"):
+            return menu_font, ""
+
+        target_pt = max(8.5, round(pt * 0.88 * 2) / 2)
+        menu_font.setPointSizeF(target_pt)
+        return menu_font, "compact"
+
+    def style_menu(self, menu: QMenu) -> None:
+        """Apply the active dropdown font and QSS density to *menu*."""
+        menu_font = getattr(self, "_menu_font", None)
+        density = str(getattr(self, "_menu_density", ""))
+        if menu_font is not None:
+            menu.setFont(menu_font)
+        if (menu.property("menuDensity") or "") != density:
+            menu.setProperty("menuDensity", density)
+            style = menu.style()
+            style.unpolish(menu)
+            style.polish(menu)
+
+    def set_ui_font(self, font: QFont,
+                    language_code: Optional[str] = None) -> None:
         """Apply the interface face to the chrome *and* to the welcome page.
 
         Urdu asks for a different face in the chrome than in the editor (see
         ``Language.ui_faces``), so the menus, their popups and the welcome page
         all take the same resolved font; the editor keeps its own.
         """
+        code = language_code if language_code is not None else i18n.current_language()
         self._ui_font = QFont(font)
+        self._menu_font, self._menu_density = self._menu_style_for(font, code)
         self.menuBar().setFont(font)
         self.status.setFont(font)
         self.find_bar.setFont(font)
         for menu in self.menuBar().findChildren(QMenu):
-            menu.setFont(font)
+            self.style_menu(menu)
         for page in self.findChildren(HomePage):
             page.setFont(font)
 
@@ -1253,6 +1302,8 @@ class MainWindow(QMainWindow):
         self.menuBar().clear()
         self._build_menus()
         self._add_autosave_menu_entry()
+        if hasattr(self, "_ui_font"):
+            self.set_ui_font(self._ui_font)
         self.act_autosave.setText(tr("action.autosave")
                                   if self.autosave_switch.isChecked()
                                   else tr("action.autosave_off"))

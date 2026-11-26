@@ -57,9 +57,18 @@ class HomePage(QWidget):
         super().__init__(parent)
         self.setObjectName("HomePage")
 
-        outer = QVBoxLayout(self)
+        # Two-column layout that mirrors automatically with layoutDirection:
+        # in Arabic/Urdu (RTL) the brand & actions sit on the right and recent
+        # files sit on the left; in English/LTR the two sides swap.
+        # ``brand_layout`` is added directly (not wrapped in an extra QWidget)
+        # so its labels lay out synchronously with the page itself.
+        outer = QHBoxLayout(self)
         outer.setContentsMargins(48, 36, 48, 32)
-        outer.setSpacing(12)
+        outer.setSpacing(36)
+
+        brand_layout = QVBoxLayout()
+        brand_layout.setContentsMargins(0, 0, 0, 0)
+        brand_layout.setSpacing(12)
 
         # --- the brand: logo, Arabic name, English name, version -----------
         # Deliberately untranslated; only its alignment follows the language.
@@ -67,8 +76,8 @@ class HomePage(QWidget):
         self.lbl_logo.setObjectName("HomeLogo")
         pixmap = resources.logo_pixmap(72)
         if not pixmap.isNull():
-            # No fixed size: the label spans the page and its alignment puts the
-            # mark on the reading edge, together with the names under it.
+            # No fixed size: the label spans the column and its alignment puts
+            # the mark on the reading edge, together with the names under it.
             self.lbl_logo.setPixmap(pixmap)
             self.lbl_logo.setMinimumHeight(pixmap.height())
         self.lbl_logo.setAccessibleName(APP_NAME_AR)
@@ -94,14 +103,14 @@ class HomePage(QWidget):
 
         for widget in (self.lbl_logo, self.lbl_name_ar, self.lbl_name_en,
                        self.lbl_version):
-            outer.addWidget(widget)
-        outer.addSpacing(6)
+            brand_layout.addWidget(widget)
+        brand_layout.addSpacing(6)
 
         self.lbl_tagline = QLabel()
         self.lbl_tagline.setObjectName("HomeTagline")
         self.lbl_tagline.setWordWrap(True)
-        outer.addWidget(self.lbl_tagline)
-        outer.addSpacing(10)
+        brand_layout.addWidget(self.lbl_tagline)
+        brand_layout.addSpacing(10)
 
         # --- the two first steps --------------------------------------
         row = QHBoxLayout()
@@ -121,29 +130,8 @@ class HomePage(QWidget):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             row.addWidget(button)
         row.addStretch(1)
-        outer.addLayout(row)
-        outer.addSpacing(12)
-
-        # --- recent files ---------------------------------------------
-        self.lbl_recent = QLabel()
-        self.lbl_recent.setObjectName("HomeRecentLabel")
-        recent_font = QFont(self.font())
-        recent_font.setBold(True)
-        self.lbl_recent.setFont(recent_font)
-        outer.addWidget(self.lbl_recent)
-
-        self.list_recent = QListWidget()
-        self.list_recent.setObjectName("HomeRecent")
-        self.list_recent.setFrameShape(QFrame.Shape.NoFrame)
-        self.list_recent.setAlternatingRowColors(False)
-        self.list_recent.itemActivated.connect(self._open_item)
-        self.list_recent.itemClicked.connect(self._open_item)
-        outer.addWidget(self.list_recent, 1)
-
-        self.lbl_empty = QLabel()
-        self.lbl_empty.setObjectName("HomeEmptyNote")
-        self.lbl_empty.setWordWrap(True)
-        outer.addWidget(self.lbl_empty)
+        brand_layout.addLayout(row)
+        brand_layout.addStretch(1)
 
         # --- quick actions --------------------------------------------
         quick = QHBoxLayout()
@@ -163,7 +151,38 @@ class HomePage(QWidget):
             button.setCursor(Qt.CursorShape.PointingHandCursor)
             quick.addWidget(button)
         quick.addStretch(1)
-        outer.addLayout(quick)
+        brand_layout.addLayout(quick)
+
+        # --- recent files (opposite side of the page) -----------------
+        self.recent_pane = QFrame(self)
+        self.recent_pane.setObjectName("HomeRecentPane")
+        self.recent_pane.setFrameShape(QFrame.Shape.NoFrame)
+        recent_layout = QVBoxLayout(self.recent_pane)
+        recent_layout.setContentsMargins(20, 18, 20, 18)
+        recent_layout.setSpacing(10)
+
+        self.lbl_recent = QLabel()
+        self.lbl_recent.setObjectName("HomeRecentLabel")
+        recent_font = QFont(self.font())
+        recent_font.setBold(True)
+        self.lbl_recent.setFont(recent_font)
+        recent_layout.addWidget(self.lbl_recent)
+
+        self.list_recent = QListWidget()
+        self.list_recent.setObjectName("HomeRecent")
+        self.list_recent.setFrameShape(QFrame.Shape.NoFrame)
+        self.list_recent.setAlternatingRowColors(False)
+        self.list_recent.itemActivated.connect(self._open_item)
+        self.list_recent.itemClicked.connect(self._open_item)
+        recent_layout.addWidget(self.list_recent, 1)
+
+        self.lbl_empty = QLabel()
+        self.lbl_empty.setObjectName("HomeEmptyNote")
+        self.lbl_empty.setWordWrap(True)
+        recent_layout.addWidget(self.lbl_empty, 1)
+
+        outer.addLayout(brand_layout, 5)
+        outer.addWidget(self.recent_pane, 4)
 
         self.set_recent_files([])
         self.retranslate()
@@ -190,6 +209,7 @@ class HomePage(QWidget):
         """Show the recent files that still exist, newest first."""
         seen: List[str] = []
         self.list_recent.clear()
+        alignment = self._reading_alignment()
         for raw in paths:
             path = Path(raw)
             if not path.exists() or str(path) in seen:
@@ -198,6 +218,7 @@ class HomePage(QWidget):
             item = QListWidgetItem(path.name)
             item.setToolTip(str(path))
             item.setData(Qt.ItemDataRole.UserRole, str(path))
+            item.setTextAlignment(alignment)
             self.list_recent.addItem(item)
         has_any = bool(seen)
         self.list_recent.setVisible(has_any)
@@ -212,6 +233,12 @@ class HomePage(QWidget):
                 for i in range(self.list_recent.count())]
 
     # ------------------------------------------------------------ private
+    def _reading_alignment(self, *, top: bool = False) -> Qt.AlignmentFlag:
+        rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
+        edge = Qt.AlignmentFlag.AlignRight if rtl else Qt.AlignmentFlag.AlignLeft
+        vertical = Qt.AlignmentFlag.AlignTop if top else Qt.AlignmentFlag.AlignVCenter
+        return edge | Qt.AlignmentFlag.AlignAbsolute | vertical
+
     def _align_to_direction(self) -> None:
         """Pin the text to the reading edge, physically.
 
@@ -220,14 +247,16 @@ class HomePage(QWidget):
         labelled "right" was drawn on the left while the English name beside it
         stayed on the right.  Asking for an absolute edge removes the guesswork.
         """
-        rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
-        edge = Qt.AlignmentFlag.AlignRight if rtl else Qt.AlignmentFlag.AlignLeft
-        alignment = (edge | Qt.AlignmentFlag.AlignAbsolute
-                     | Qt.AlignmentFlag.AlignVCenter)
+        alignment = self._reading_alignment()
+        top_alignment = self._reading_alignment(top=True)
         for widget in (self.lbl_logo, self.lbl_name_ar, self.lbl_name_en,
-                       self.lbl_version, self.lbl_tagline, self.lbl_recent,
-                       self.lbl_empty):
+                       self.lbl_version, self.lbl_tagline, self.lbl_recent):
             widget.setAlignment(alignment)
+        self.lbl_empty.setAlignment(top_alignment)
+        for index in range(self.list_recent.count()):
+            item = self.list_recent.item(index)
+            if item is not None:
+                item.setTextAlignment(alignment)
 
     def changeEvent(self, event: QEvent) -> None:  # noqa: N802 (Qt naming)
         # The window flips direction when the interface language changes; the

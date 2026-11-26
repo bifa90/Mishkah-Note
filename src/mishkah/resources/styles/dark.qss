@@ -30,6 +30,15 @@ QMenu::item:selected { background-color: rgba(255, 255, 255, 0.08); }
 QMenu::item:disabled { color: #7A7A7A; }
 QMenu::separator { height: 1px; background: #3A3A3A; margin: 4px 8px; }
 QMenu::indicator { width: 14px; height: 14px; }
+QMenu[menuDensity="tight"] { padding: 3px; }
+QMenu[menuDensity="tight"]::item { padding: 1px 24px 1px 24px; border-radius: 4px; }
+QMenu[menuDensity="tight"]::separator { margin: 2px 8px; }
+QMenu[menuDensity="snug"] { padding: 3px; }
+QMenu[menuDensity="snug"]::item { padding: 3px 22px 3px 22px; border-radius: 4px; }
+QMenu[menuDensity="snug"]::separator { margin: 2px 8px; }
+QMenu[menuDensity="compact"] { padding: 3px; }
+QMenu[menuDensity="compact"]::item { padding: 4px 22px 4px 22px; border-radius: 4px; }
+QMenu[menuDensity="compact"]::separator { margin: 3px 8px; }
 
 /* ------------------------------------------------------------- tabs */
 QTabWidget::pane { border: none; background: transparent; }
@@ -162,6 +171,26 @@ QLabel#Banner {
 /* ---------------------------------------------------------- dialogs */
 QDialog { background-color: #202020; }
 QLabel#AboutTitle { font-size: 18px; font-weight: 600; }
+
+/* ----------------------------------------------------- welcome page */
+QFrame#HomeRecentPane {
+    background-color: #2B2B2B;
+    border: 1px solid #3A3A3A;
+    border-radius: 10px;
+}
+QFrame#HomeRecentPane QLabel,
+QListWidget#HomeRecent {
+    background: transparent;
+}
+QListWidget#HomeRecent::item {
+    padding: 6px 8px;
+    border-radius: 5px;
+}
+QListWidget#HomeRecent::item:hover { background-color: rgba(255, 255, 255, 0.06); }
+QListWidget#HomeRecent::item:selected {
+    background-color: rgba(76, 194, 255, 0.16);
+    color: #FFFFFF;
+}
 
 QScrollArea, QScrollBar:vertical { background: transparent; width: 12px; margin: 0; }
 QScrollBar::handle:vertical { background: #4A4A4A; border-radius: 5px; min-height: 32px; }

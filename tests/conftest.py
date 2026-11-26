@@ -86,17 +86,15 @@ def pytest_sessionfinish(session, exitstatus):  # noqa: ARG001
     is ``Fatal Python error: bool_dealloc``) *after* every test has run.  The
     crash is in the Qt binding's teardown, not in the application, so CI can
     opt into a clean, deterministic exit with ``MISHKAH_CLEAN_EXIT=1``.
+
+    The exit is deliberately dumb: flush and go.  Pumping the Qt event loop here
+    was the one part that could still segfault (SIGSEGV, exit 139, seen on
+    Python 3.9 in CI) because the widgets the loop wakes up have already been
+    closed and are half-destroyed by then.  Nothing is waiting on those events —
+    the process is about to disappear.
     """
     if os.environ.get("MISHKAH_CLEAN_EXIT") != "1":
         return
-    try:
-        from PySide6.QtCore import QCoreApplication
-
-        app = QCoreApplication.instance()
-        if app is not None:
-            app.processEvents()
-    except Exception:  # pragma: no cover - Qt optional at this point
-        pass
     sys.stdout.flush()
     sys.stderr.flush()
     os._exit(int(exitstatus))

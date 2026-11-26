@@ -107,6 +107,16 @@ def test_version_gate_passes():
     assert result.returncode == 0, result.stdout + result.stderr
 
 
+def test_gate_reads_untracked_files_too():
+    """A brand-new file is invisible to ``git ls-files`` until it is added.
+
+    A stale version string there used to pass locally and fail only in CI, which
+    is the worst place to learn about it.
+    """
+    source = (REPO / "tools/check_version.py").read_text(encoding="utf-8")
+    assert '"--others"' in source and '"--exclude-standard"' in source
+
+
 def test_gate_keeps_release_history():
     """An older <release> entry or changelog line is history, not a mistake."""
     sys.path.insert(0, str(REPO / "tools"))
@@ -123,7 +133,8 @@ def test_gate_allows_prose_about_a_different_version():
 
     assert check_version.ALLOW_MARKER == "version-gate: allow"
     text = (REPO / "docs/PRE_W4_ORDER.ar.md").read_text(encoding="utf-8")
-    quoted = [line for line in text.splitlines() if "`1.0.2`" in line]
+    # The marker below keeps the *gate* from flagging this line's own token.
+    quoted = [ln for ln in text.splitlines() if "`1.0.2`" in ln]  # version-gate: allow
     assert quoted, "the D3 decision should still quote the rejected spelling"
     assert all(check_version.ALLOW_MARKER in line for line in quoted)
 
@@ -133,5 +144,6 @@ def test_bump_moves_the_rpm_default_without_touching_the_changelog():
     import bump_version
 
     before = (REPO / bump_version.SPEC).read_text(encoding="utf-8")
-    assert bump_version.update_spec_version("0.0.1", "9.9.9", dry_run=True) is True
+    sentinel, target = "0.0.1", "9.9.9"  # version-gate: allow
+    assert bump_version.update_spec_version(sentinel, target, dry_run=True) is True
     assert (REPO / bump_version.SPEC).read_text(encoding="utf-8") == before

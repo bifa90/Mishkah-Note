@@ -93,10 +93,16 @@ def code_version() -> str:
 
 
 def tracked_text_files() -> Iterable[Path]:
-    """Tracked files (or a directory walk when git is unavailable)."""
+    """Tracked files, plus untracked ones git would commit (a directory walk
+    when git is unavailable).
+
+    ``--others`` matters: a brand-new file is invisible to ``git ls-files`` until
+    it is added, which is exactly when a stale version string slips through a
+    green local run and only CI notices.
+    """
     try:
         out = subprocess.run(
-            ["git", "ls-files", "-z"],
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
             cwd=ROOT, capture_output=True, check=True,
         ).stdout
         names = [n for n in out.decode("utf-8", "replace").split("\0") if n]

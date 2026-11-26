@@ -2,7 +2,7 @@
 # Build the Arch package (.pkg.tar.zst) from packaging/arch/PKGBUILD.
 #
 #   scripts/build-arch.sh                 → dist/mishkah-note-<version>-1-any.pkg.tar.zst
-#   VERSION=1.0.01 scripts/build-arch.sh
+#   VERSION=1.0.02 scripts/build-arch.sh
 #
 # Needs `makepkg` (base-devel) on an Arch host.  On Debian/Ubuntu run it inside
 # the official image instead:

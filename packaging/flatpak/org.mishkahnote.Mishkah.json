@@ -46,6 +46,8 @@
         "install -Dm644 packaging/common/org.mishkahnote.Mishkah.metainfo.xml /app/share/metainfo/org.mishkahnote.Mishkah.metainfo.xml",
         "install -Dm644 src/mishkah/resources/icons/app.svg /app/share/icons/hicolor/scalable/apps/mishkah-note.svg",
         "install -Dm644 packaging/common/mishkah.1 /app/share/man/man1/mishkah.1",
+        "install -Dm644 THIRD-PARTY-NOTICES.md /app/share/doc/mishkah-note/THIRD-PARTY-NOTICES.md",
+        "install -Dm644 LICENSE /app/share/doc/mishkah-note/LICENSE",
         "for s in 16 24 32 48 64 128 256 512; do install -Dm644 src/mishkah/resources/icons/app-$s.png /app/share/icons/hicolor/${s}x${s}/apps/mishkah-note.png; done"
       ],
       "sources": [

@@ -100,27 +100,27 @@ Mishkah Note is an Arabic-first text editor for Linux, built with Python 3.9+ an
 
 ## التثبيت · Installation
 
-الإصدار الحالي **1.0.01**. تنزيل الصيغ الجاهزة من صفحة
+الإصدار الحالي **1.0.02**. تنزيل الصيغ الجاهزة من صفحة
 [Releases](https://github.com/bifa90/Mishkah-Note/releases).
 
 ### Debian / Ubuntu · `.deb`
 
 ```bash
-sudo apt install ./mishkah-note_1.0.01_all.deb
+sudo apt install ./mishkah-note_1.0.02_all.deb
 mishkah
 ```
 
 ### Fedora / RHEL / openSUSE · `.rpm`
 
 ```bash
-sudo rpm -i mishkah-note-1.0.01-*.rpm
-# أو: sudo dnf install ./mishkah-note-1.0.01-1.noarch.rpm
+sudo rpm -i mishkah-note-1.0.02-*.rpm
+# أو: sudo dnf install ./mishkah-note-1.0.02-1.noarch.rpm
 ```
 
 ### Arch / Manjaro · `.pkg.tar.zst`
 
 ```bash
-sudo pacman -U mishkah-note-1.0.01-1-any.pkg.tar.zst
+sudo pacman -U mishkah-note-1.0.02-1-any.pkg.tar.zst
 ```
 
 أو من `PKGBUILD` مباشرة:
@@ -132,8 +132,8 @@ cd packaging/arch && makepkg -si
 ### AppImage — محمول بلا تثبيت · portable
 
 ```bash
-chmod +x Mishkah_Note-1.0.01-x86_64.AppImage
-./Mishkah_Note-1.0.01-x86_64.AppImage
+chmod +x Mishkah_Note-1.0.02-x86_64.AppImage
+./Mishkah_Note-1.0.02-x86_64.AppImage
 ```
 
 ### Flatpak
@@ -149,7 +149,7 @@ flatpak run org.mishkahnote.Mishkah
 ### Windows · `.msi`
 
 ```powershell
-msiexec /i Mishkah_Note_1.0.01_x64.msi
+msiexec /i Mishkah_Note_1.0.02_x64.msi
 ```
 
 ### من المصدر · From source
@@ -211,7 +211,7 @@ bash scripts/build-arch.sh                    # Arch   (makepkg)
 bash packaging/appimage/build-appimage.sh     # AppImage (appimagetool)
 flatpak-builder --user --install-deps-from=flathub build/flatpak-build \
     packaging/flatpak/org.mishkahnote.Mishkah.json
-pwsh scripts/build-msi.ps1 -Version 1.0.01    # MSI على Windows فقط
+pwsh scripts/build-msi.ps1 -Version 1.0.02    # MSI على Windows فقط
 ```
 
 للتحقق من كل ما تسمح به أدوات جهازك:
@@ -254,9 +254,10 @@ src/mishkah/
 نعم، على دفعات مع شريط تقدّم وإلغاء، ووضع أداء تلقائي فوق مليوني سطر.
 
 **هل يحتاج Python؟**
-`MSI` لا يحتاج Python إطلاقًا. `.deb` و`.rpm` و`.pkg.tar.zst` تطلب
-`python3` و`python3-pyside6` من مستودع التوزيعة، و`AppImage` يستخدم `python3`
-الموجود على النظام، وFlatpak يوفّره من بيئة التشغيل `org.kde.Platform`.
+`MSI` و`AppImage` **لا يحتاجان Python** على جهازك: كلٌّ منهما يحمل مفسّره
+ومكتبات PySide6 (لذلك حجمهما أكبر بنحو 40 م.ب). `.deb` و`.rpm` و`.pkg.tar.zst`
+تطلب `python3` و`python3-pyside6` من مستودع التوزيعة، وFlatpak يوفّره من بيئة
+التشغيل `org.kde.Platform`.
 
 **هل توجد نسخة Windows أصلية؟**
 نعم، عبر MSI مبني بـWiX فوق نسخة مجمّدة بـPyInstaller — دون Python على الجهاز.
@@ -273,3 +274,8 @@ src/mishkah/
 
 MIT — راجع [LICENSE](LICENSE). خط IBM Plex Sans Arabic المضمَّن تحت
 SIL OFL 1.1، وتفاصيله في [docs/FONTS.md](docs/FONTS.md).
+
+Mishkah Note يعمل على **Qt 6 / PySide6** تحت **LGPL v3**، ويستخدم
+**charset-normalizer** (MIT)، ويحزم في AppImage وMSI مفسّر **CPython** (رخصة PSF).
+المواضع الدقيقة داخل كل حزمة، وكيفية استبدال مكتبات Qt المضمَّنة، في
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

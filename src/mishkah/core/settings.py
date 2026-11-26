@@ -52,7 +52,7 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
     # direction
     "default_direction": (_ENUM, (AUTO, RTL, LTR)),
     #: How a whole document's alignment is decided (CD-20).  "first_strong"
-    #: is the 1.0.01 behaviour and stays the default; "first_line" is opt-in.
+    #: is the 1.0.02 behaviour and stays the default; "first_line" is opt-in.
     "document_side_source": (_ENUM, ("first_strong", "first_line")),
     # data safety
     #: The extension a first save adds when the name has none (CD-05).

@@ -8,9 +8,9 @@
 
       wix build packaging\windows\mishkah.wxs ^
           -d SourceDir=build\pyinstaller\mishkah ^
-          -d Version=1.0.01 ^
+          -d Version=1.0.02 ^
           -ext WixToolset.UI.wixext ^
-          -o dist\Mishkah_Note_1.0.01_x64.msi
+          -o dist\Mishkah_Note_1.0.02_x64.msi
 
   The build script also converts LICENSE into the RTF the licence page needs.
 -->
@@ -18,7 +18,7 @@
      xmlns:ui="http://wixtoolset.org/schemas/v4/wxs/ui">
 
   <?ifndef Version?>
-  <?define Version="1.0.01" ?>
+  <?define Version="1.0.02" ?>
   <?endif?>
 
   <Package

@@ -3,7 +3,7 @@
 # Check:        namcap PKGBUILD  ·  makepkg --printsrcinfo > .SRCINFO
 
 pkgname=mishkah-note
-pkgver=1.0.01
+pkgver=1.0.02
 pkgrel=1
 pkgdesc="Windows 11-style text editor with first-class Arabic, RTL and Markdown support"
 arch=('any')
@@ -51,4 +51,6 @@ package() {
     install -Dm644 packaging/common/mishkah.1 \
         "$pkgdir/usr/share/man/man1/mishkah.1"
     install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+    install -Dm644 THIRD-PARTY-NOTICES.md \
+        "$pkgdir/usr/share/licenses/$pkgname/THIRD-PARTY-NOTICES.md"
 }

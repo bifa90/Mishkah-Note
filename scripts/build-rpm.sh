@@ -2,7 +2,7 @@
 # Build the RPM package (Fedora / RHEL / openSUSE) without polluting ~/rpmbuild.
 #
 #   scripts/build-rpm.sh                 → dist/mishkah-note-<version>-1.*.noarch.rpm
-#   VERSION=1.0.01 scripts/build-rpm.sh
+#   VERSION=1.0.02 scripts/build-rpm.sh
 #
 # Needs rpmbuild (`dnf install rpm-build` / `apt install rpm`).  The spec builds
 # from a source tarball created here with `git archive`, so no network access

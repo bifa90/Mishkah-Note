@@ -197,7 +197,18 @@ python tools/make_icon.py
 scripts/build-all.sh             # كل صيغة تتوفر أداتها
 scripts/build-deb.sh             # .deb فقط
 scripts/verify-packaging.sh      # بناء + فحص كل ما يمكن فحصه
+scripts/smoke-test.sh --build    # يفتح الحزمة ويشغّلها من الداخل
 ```
+
+`verify-packaging.sh` يجيب: «هل تُبنى الحزمة وفيها ما يجب؟» — و`smoke-test.sh`
+يجيب: «هل تعمل فعلًا؟»: `--version` من داخل الحزمة، دورة كتابة/قراءة عربية،
+ثم Qt والخطوط والنافذة بلا شاشة. الأدوات الغائبة تُعلَن «متخطّاة» لا «فاشلة».
+
+### الإشعارات · Notices
+
+`THIRD-PARTY-NOTICES.md` في جذر المستودع، ومضمَّن في كل حزمة. **لا تُبنى حزمة
+بلا هذا الملف**: `verify-packaging.sh` و`tests/test_third_party_notices.py`
+يفشلان إن غاب من أي وصفة بناء. راجع [PACKAGING.md](PACKAGING.md).
 
 ## نافذة حول التطبيق
 

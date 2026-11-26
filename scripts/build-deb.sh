@@ -3,7 +3,7 @@
 # no fakeroot, no root):
 #
 #   scripts/build-deb.sh                 → dist/mishkah-note_<version>_all.deb
-#   VERSION=1.0.01 scripts/build-deb.sh   → override the version
+#   VERSION=1.0.02 scripts/build-deb.sh   → override the version
 #
 # The package is architecture-independent: the Python sources live in
 # /usr/lib/mishkah-note, /usr/bin/mishkah is a two-line launcher, and the
@@ -73,6 +73,10 @@ LAUNCHER
 chmod 0755 "$STAGE/usr/bin/mishkah"
 
 install -Dm644 LICENSE "$STAGE/usr/share/doc/$PKG/copyright"
+# Qt/PySide6 are LGPL v3: every package we ship says so, and says how to
+# replace them (see THIRD-PARTY-NOTICES.md at the repository root).
+install -Dm644 THIRD-PARTY-NOTICES.md \
+    "$STAGE/usr/share/doc/$PKG/THIRD-PARTY-NOTICES.md"
 install -Dm644 README.md "$STAGE/usr/share/doc/$PKG/README.md"
 install -Dm644 CHANGELOG.md "$STAGE/usr/share/doc/$PKG/CHANGELOG.md"
 gzip -9n -c packaging/common/mishkah.1 > "$STAGE$MANDIR/mishkah.1.gz"

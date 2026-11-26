@@ -1,6 +1,6 @@
 %global debug_package %{nil}
 
-%{!?version_override:%global version_override 1.0.01}
+%{!?version_override:%global version_override 1.0.02}
 Name:           mishkah-note
 Version:        %{version_override}
 Release:        1%{?dist}
@@ -66,7 +66,7 @@ install -m644 packaging/common/mishkah.1 %{buildroot}%{_mandir}/man1/mishkah.1
 
 %files
 %license LICENSE
-%doc README.md CHANGELOG.md
+%doc README.md CHANGELOG.md THIRD-PARTY-NOTICES.md
 %{_bindir}/mishkah
 %{_libexecdir}/mishkah-note
 %{_datadir}/applications/mishkah-note.desktop
@@ -76,6 +76,8 @@ install -m644 packaging/common/mishkah.1 %{buildroot}%{_mandir}/man1/mishkah.1
 %{_mandir}/man1/mishkah.1*
 
 %changelog
+* Thu Nov 26 2026 Mishkah-Note contributors <noreply@github.com> - 1.0.02-1
+- Mishkah Note 1.0.02.
 * Thu Oct 22 2026 Mishkah-Note contributors <noreply@github.com> - 1.0.01-1
 - First release of Mishkah Note.
 - Live Markdown view (opt-in) that never changes the file.

@@ -32,8 +32,8 @@ print(re.search(r'^version = "([^"]+)"',
       pathlib.Path("pyproject.toml").read_text(encoding="utf-8"), re.M).group(1))
 EOF
 )"
-# PEP 440 normalises "1.0.01" to "1.0.1" in wheel/sdist file names, while the
-# application (and the .deb, .rpm, PKGBUILD and MSI) keep the literal "1.0.01".
+# PEP 440 normalises "1.0.02" to "1.0.1" in wheel/sdist file names, while the
+# application (and the .deb, .rpm, PKGBUILD and MSI) keep the literal "1.0.02".
 NORMALIZED="$($PYTHON - <<EOF
 try:
     from packaging.version import Version
@@ -103,6 +103,7 @@ if [ "$QUICK" = 0 ]; then
         for entry in usr/bin/mishkah usr/share/applications/mishkah-note.desktop \
                      usr/share/man/man1/mishkah.1.gz \
                      usr/share/metainfo/org.mishkahnote.Mishkah.metainfo.xml \
+                     usr/share/doc/mishkah-note/THIRD-PARTY-NOTICES.md \
                      usr/lib/mishkah-note/mishkah/app.py; do
             if grep -q "\./$entry\$" /tmp/verify-deb-contents.txt; then ok "contains $entry"
             else bad "missing $entry"; fi
@@ -128,6 +129,50 @@ if [ "$QUICK" = 0 ]; then
     fi
 else
     skip "build skipped (--quick)"
+fi
+
+# ----------------------------------------------------- third-party notices ---
+# Qt and PySide6 are LGPL v3: the notices must (a) exist, (b) say what they have
+# to say, and (c) travel inside every package.  A recipe that stops shipping the
+# file breaks licensing, so this section fails loudly instead of warning.
+head2 "third-party notices"
+NOTICE=THIRD-PARTY-NOTICES.md
+if [ -s "$NOTICE" ]; then ok "$NOTICE exists"; else bad "$NOTICE is missing"; fi
+for needle in "LGPL v3" "OFL" "MIT" "PSF License"; do
+    if grep -qi "$needle" "$NOTICE"; then ok "notices mention $needle"
+    else bad "notices do not mention $needle"; fi
+done
+# The LGPL asks for a way to swap the library out; the file must explain it.
+if grep -q "appimage-extract" "$NOTICE" && grep -qi "replace" "$NOTICE"; then
+    ok "notices explain how to replace the bundled Qt libraries"
+else
+    bad "notices do not explain how to replace the bundled Qt libraries"
+fi
+
+# Each packaging recipe has to reference the file by name.
+notice_recipes_check() {
+    local file="$1" label="$2"
+    if [ ! -f "$file" ]; then bad "$label: $file is missing"; return; fi
+    if grep -q "THIRD-PARTY-NOTICES" "$file"; then ok "$label ships $NOTICE"
+    else bad "$label does not ship $NOTICE"; fi
+}
+notice_recipes_check scripts/build-deb.sh         ".deb recipe"
+notice_recipes_check packaging/rpm/mishkah-note.spec ".rpm spec"
+notice_recipes_check packaging/arch/PKGBUILD      "Arch PKGBUILD"
+notice_recipes_check packaging/appimage/build-appimage.sh "AppImage recipe"
+notice_recipes_check packaging/flatpak/org.mishkahnote.Mishkah.json "Flatpak manifest"
+notice_recipes_check scripts/build-msi.ps1        "MSI recipe"
+if grep -q "include THIRD-PARTY-NOTICES.md" MANIFEST.in; then
+    ok "sdist includes $NOTICE"
+else
+    bad "sdist does not include $NOTICE"
+fi
+# The AppImage must not go back to borrowing the host interpreter by default.
+if grep -q "MISHKAH_APPIMAGE_SYSTEM_PYTHON" packaging/appimage/build-appimage.sh \
+   && ! grep -q '^exec python3 -m mishkah' packaging/appimage/build-appimage.sh; then
+    ok "AppImage bundles its own CPython (host python only as an explicit opt-in)"
+else
+    bad "AppImage still relies on the host python3"
 fi
 
 # --------------------------------------------------------------------- rpm ---
@@ -260,6 +305,20 @@ if [ "$QUICK" = 0 ]; then
             ok "wheel built: $(basename "$WHEEL") (PEP 440 name for $VERSION)"
         else
             bad "wheel name"
+        fi
+        SDIST="dist/mishkah_note-${NORMALIZED}.tar.gz"
+        if [ -f "$SDIST" ]; then
+            # List first, then grep: ``grep -q`` closes the pipe, and under
+            # ``pipefail`` tar's SIGPIPE would report the opposite of the truth.
+            tar -tzf "$SDIST" > /tmp/verify-sdist.txt 2>/dev/null
+            if grep -qx "mishkah_note-${NORMALIZED}/THIRD-PARTY-NOTICES.md" \
+                    /tmp/verify-sdist.txt; then
+                ok "sdist carries THIRD-PARTY-NOTICES.md"
+            else
+                bad "sdist is missing THIRD-PARTY-NOTICES.md"
+            fi
+        else
+            bad "no sdist at $SDIST"
         fi
         VENV=/tmp/verify-venv
         rm -rf "$VENV"

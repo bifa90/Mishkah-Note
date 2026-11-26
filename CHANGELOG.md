@@ -1,6 +1,26 @@
 # سجل الإصدارات · Changelog
 
-## [قيد الإعداد · Unreleased] — 1.0.02
+## [1.0.02] — 2026-11-26
+
+### الترخيص والحزم · Licensing and packages (round 1)
+
+- **`THIRD-PARTY-NOTICES.md`** جديد: MIT للبرنامج، و**LGPL v3** لـ Qt/PySide6،
+  و**OFL-1.1** لخط IBM Plex Sans Arabic، و**MIT** لـ charset-normalizer،
+  و**PSF** لمفسّر CPython — مع الموضع الدقيق لكل مكوّن داخل كل حزمة وكيفية
+  استبدال مكتبات Qt (حق تفرضه LGPL v3).
+- الملف **مضمَّن في الحزم الست كلها** (deb · rpm · Arch · AppImage · Flatpak · MSI)
+  وفي `sdist`، و`verify-packaging.sh` **يفشل** إن غاب من أي وصفة.
+- **AppImage يحمل مفسّره**: CPython 3.11.18 المحمول (python-build-standalone،
+  إصدار `20261124`، مثبَّت في السكربت) في `usr/python`، فلا يحتاج `python3` على
+  النظام (~+40 م.ب). فإن بُني بلا مفسّر (`MISHKAH_APPIMAGE_SYSTEM_PYTHON=1`)
+  قال `AppRun` ذلك بالعربية والإنجليزية بدل الفشل الغامض.
+- **`scripts/smoke-test.sh`**: يفتح الحزمة المبنية ويشغّل `--version` من داخلها،
+  ثم دورة كتابة/قراءة عربية، ثم Qt والخطوط والنافذة بلا شاشة. يعمل في CI على
+  `.deb`، ويعلن ما لا يستطيع فحصه «متخطّى» لا «ناجحًا».
+- **بوابة النسخة** أُصلحت قبل الإصدار: كانت `tools/bump_version.py` تُبقي
+  `version_override` في spec ورقم `1.0.01` في اختبار الأصول، وكانت البوابة ترفض
+  إدخالات الإصدار السابقة في metainfo و`%changelog`. الآن: المصدر واحد،
+  والتاريخ مسموح بنصّه، و`1.0.02` في كل مكان.
 
 ### المحرّر والأداء · Editor and performance (W3a)
 

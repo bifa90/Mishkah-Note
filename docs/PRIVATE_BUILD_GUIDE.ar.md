@@ -1,4 +1,4 @@
-# دليل خاص لصاحب المستودع: بناء ورفع Mishkah Note 1.0.01
+# دليل خاص لصاحب المستودع: بناء ورفع Mishkah Note 1.0.02
 
 هذا دليل تشغيل شخصي يمكنك حذفه بعد إتمام العمل. ليس إعلانًا بأن الحزم مبنية
 أو منشورة. لا تحتاج إلى إرسال كلمة مرور أو token لأي شخص.
@@ -8,7 +8,7 @@
 ملفات GitHub Actions الفعلية في `.github/workflows/`، ونسخها المرجعية في
 `docs/ci/`. سير CI يفحص التطبيق، وسير Release يبني كل الصيغ بعد نجاح اختبارات
 المصدر. دفعات فرع الجلسة تبني مرشح إصدار **دون نشره**؛ النشر مخصص لتشغيل الوسم
-أو التشغيل اليدوي أو دفعة معتمدة بعلامة `[publish 1.0.01]` بعد تفويض النشر.
+أو التشغيل اليدوي أو دفعة معتمدة بعلامة `[publish 1.0.02]` بعد تفويض النشر.
 يمكنك متابعة حالة كل وظيفة من تبويب Actions.
 
 التشغيل اليدوي عبر API يحتاج صلاحية **Actions: write**، وهي مختلفة عن صلاحية
@@ -101,12 +101,12 @@ python -m ruff check src tests tools
 python scripts/build_release.py --formats python,deb
 ```
 
-المتوقع: `dist/mishkah-note_1.0.01_all.deb` مع wheel وsdist. Debian هنا
+المتوقع: `dist/mishkah-note_1.0.02_all.deb` مع wheel وsdist. Debian هنا
 `all` لأن كود التطبيق Python مستقل عن المعمارية؛ لا تغيّر الاسم إلى amd64.
 اختبر التثبيت على جهاز/آلة افتراضية منفصلة:
 
 ```bash
-sudo apt install ./dist/mishkah-note_1.0.01_all.deb
+sudo apt install ./dist/mishkah-note_1.0.02_all.deb
 mishkah --version
 mishkah
 ```
@@ -124,7 +124,7 @@ python -m pip install build wheel 'setuptools>=68'
 python scripts/build_release.py --formats rpm
 ```
 
-الناتج: `dist/mishkah-note-1.0.01-*.noarch.rpm`.
+الناتج: `dist/mishkah-note-1.0.02-*.noarch.rpm`.
 الفحص: `rpm -qip dist/*.rpm` و`rpm -qlp dist/*.rpm`؛ ثم التثبيت والتشغيل
 في آلة افتراضية. ملفات `.src.rpm` ليست حزمة التثبيت المطلوب إرفاقها.
 
@@ -138,7 +138,7 @@ sudo pacman -Syu --needed base-devel git python pyside6 python-charset-normalize
 python scripts/build_release.py --formats arch
 ```
 
-الناتج: `dist/mishkah-note-1.0.01-1-any.pkg.tar.zst`.
+الناتج: `dist/mishkah-note-1.0.02-1-any.pkg.tar.zst`.
 اختبره باستخدام `sudo pacman -U dist/*.pkg.tar.zst` داخل آلة افتراضية.
 
 ## 8. AppImage
@@ -158,9 +158,18 @@ export APPIMAGE_EXTRACT_AND_RUN=1
 python scripts/build_release.py --formats appimage
 ```
 
-الناتج: `dist/Mishkah_Note-1.0.01-x86_64.AppImage`. يحتاج هذا التغليف Python3
-على جهاز المستخدم ومكتبات النظام المتوافقة؛ ليس ضمانًا للعمل على كل توزيعة.
-اختبره على توزيعة الهدف، لا بأمر `--version` وحده.
+الناتج: `dist/Mishkah_Note-1.0.02-x86_64.AppImage`. يحمل هذا التغليف مفسّره
+الخاص (CPython 3.11.18 المحمول، يُنزَّل من `python-build-standalone` إصدار
+`20261124` ويوضع في `usr/python`)، فلا يحتاج `python3` على جهاز المستخدم.
+لبناء بلا شبكة:
+
+```bash
+MISHKAH_PYTHON_STANDALONE_ARCHIVE=/path/to/cpython-3.11.18+20261124-x86_64-unknown-linux-gnu-install_only.tar.gz \
+    python scripts/build_release.py --formats appimage
+```
+
+يبقى التغليف محتاجًا إلى مكتبات النظام المتوافقة (glibc، X11/Wayland)، فليس
+ضمانًا للعمل على كل توزيعة: اختبره على توزيعة الهدف، لا بأمر `--version` وحده.
 
 ## 9. Flatpak
 
@@ -198,12 +207,12 @@ py -3.11 -m venv .venv
 ```
 
 السكربت الفرعي يثبّت متطلبات PyInstaller وWiX المحددة ويبني التطبيق ثم MSI.
-الناتج: `dist/Mishkah_Note_1.0.01_x64.msi`.
+الناتج: `dist/Mishkah_Note_1.0.02_x64.msi`.
 
 اختبر التثبيت والإزالة في Windows Sandbox/آلة افتراضية نظيفة لا تحتوي Python:
 
 ```powershell
-msiexec /i .\dist\Mishkah_Note_1.0.01_x64.msi
+msiexec /i .\dist\Mishkah_Note_1.0.02_x64.msi
 ```
 
 افتح البرنامج من Start، واختبر العربية والخط المضمّن والفتح والحفظ والتبويبات
@@ -224,15 +233,15 @@ python scripts/build_release.py --verify-bundle /path/to/release-bundle
 لكي تستطيع تكرار فحص المجلد دون تعارض. ارفع ملف checksum أيضًا بعد نجاح الفحص.
 
 1. افتح https://github.com/bifa90/Mishkah-Note/releases.
-2. اختر تحرير Release الخاص بـ`v1.0.01` (ولا تنشئ إصدارًا برقم مختلف).
+2. اختر تحرير Release الخاص بـ`v1.0.02` (ولا تنشئ إصدارًا برقم مختلف).
 3. تأكد أن الوسم يشير إلى **نفس commit الذي بنيت منه**. لا ترفق حزمًا لا تطابق
    المصدر الموجود تحت الوسم. نقل الوسم قرار نشر مستقل، وليس موافقة أو دمجًا
    تلقائيًا للـPR؛ افحص SHA قبل تنفيذ القرار.
-4. اجعل العنوان `Mishkah Note 1.0.01`، وانسخ الملاحظات من `docs/RELEASE_NOTES.md`.
+4. اجعل العنوان `Mishkah Note 1.0.02`، وانسخ الملاحظات من `docs/RELEASE_NOTES.md`.
 5. اسحب ملفات الحزم الثمانية الفعلية و`SHA256SUMS.txt` إلى منطقة Attach binaries.
 6. انتظر اكتمال الرفع، ثم احفظ الإصدار وافتح الصفحة للتحقق من كل الأسماء.
 7. لا ترفع الحزم إلى شجرة ملفات المستودع ولا تستخدم `git add dist/`.
-8. أبقِ `v1.0.01` والإصدار المرتبط به فقط وفق سياسة المشروع، بعد التأكد من
+8. أبقِ `v1.0.02` والإصدار المرتبط به فقط وفق سياسة المشروع، بعد التأكد من
    اكتمال النشر. لا تحذف الوسم الصحيح أو أصولًا صالحة أثناء المحاولة.
 
 ## 12. قبل أن تعتبر العمل منتهيًا

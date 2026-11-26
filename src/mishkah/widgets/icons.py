@@ -8,16 +8,8 @@ never typed.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QPointF, QSize, Qt
-from PySide6.QtGui import (
-    QColor,
-    QIcon,
-    QPainter,
-    QPen,
-    QPixmap,
-    QPolygonF,
-    QRectF,
-)
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtGui import QColor, QIcon, QPainter, QPen, QPixmap, QPolygonF
 
 
 def cross_pixmap(size: int = 22, colour: str = "#B4B4B4",

@@ -134,6 +134,9 @@ def build_app() -> QApplication:
     return app
 
 
+_KEEP_ALIVE: list = []
+
+
 def make_window(theme: str, language: str = "ar") -> MainController:
     settings = Settings(theme=theme, ui_language=language, font_size=13,
                         word_wrap=True, restore_session=False,
@@ -145,6 +148,9 @@ def make_window(theme: str, language: str = "ar") -> MainController:
     for editor in window.editors():
         editor.set_theme_name(controller.active_theme)
     window.resize(WIDTH, HEIGHT)
+    # Keep shot windows alive until process exit so PySide6 6.12 does not GC
+    # QSyntaxHighlighter instances mid-run between shots.
+    _KEEP_ALIVE.append((window, controller))
     return controller
 
 
@@ -324,15 +330,23 @@ def main(argv: List[str] | None = None) -> None:
     }
     if only:
         shots[only]()
-        return
-    shot_home(app, "ar", "light", "home-arabic.png")
-    shot_home(app, "ur", "dark", "home-urdu.png")
-    shot_light(app)
-    shot_dark_arabic(app)
-    shot_markdown(app)
-    shot_tabs(app)
-    shot_settings(app)
-    shot_about(app)
+    else:
+        shot_home(app, "ar", "light", "home-arabic.png")
+        shot_home(app, "ur", "dark", "home-urdu.png")
+        shot_light(app)
+        shot_dark_arabic(app)
+        shot_markdown(app)
+        shot_tabs(app)
+        shot_settings(app)
+        shot_about(app)
+
+    if os.environ.get("MISHKAH_CLEAN_EXIT") == "1":
+        # PySide6 6.12 can abort (SIGABRT, exit 134) during CPython finalisation
+        # after QSyntaxHighlighter widgets are torn down.  Every PNG is already
+        # flushed to disk, so exit cleanly before interpreter teardown.
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(0)
 
 
 if __name__ == "__main__":

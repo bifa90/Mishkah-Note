@@ -375,18 +375,18 @@ def test_recent_files_sit_opposite_the_brand_in_rtl_and_ltr(qapp, tmp_path):
     window, controller, _ = _controller(tmp_path)
     try:
         page = controller.show_home()
-        page.resize(960, 620)
-        page.show()
+        window.resize(960, 620)
+        window.show()
 
-        page.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        window.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
         qapp.processEvents()
-        brand_x = page.brand_pane.mapTo(page, page.brand_pane.rect().center()).x()
+        brand_x = page.lbl_name_ar.mapTo(page, page.lbl_name_ar.rect().center()).x()
         recent_x = page.recent_pane.mapTo(page, page.recent_pane.rect().center()).x()
         assert brand_x > recent_x, f"RTL: brand ({brand_x}) should be right of recent ({recent_x})"
 
-        page.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        window.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
         qapp.processEvents()
-        brand_x = page.brand_pane.mapTo(page, page.brand_pane.rect().center()).x()
+        brand_x = page.lbl_name_ar.mapTo(page, page.lbl_name_ar.rect().center()).x()
         recent_x = page.recent_pane.mapTo(page, page.recent_pane.rect().center()).x()
         assert brand_x < recent_x, f"LTR: brand ({brand_x}) should be left of recent ({recent_x})"
     finally:

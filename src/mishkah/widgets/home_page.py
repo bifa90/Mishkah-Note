@@ -60,13 +60,13 @@ class HomePage(QWidget):
         # Two-column layout that mirrors automatically with layoutDirection:
         # in Arabic/Urdu (RTL) the brand & actions sit on the right and recent
         # files sit on the left; in English/LTR the two sides swap.
+        # ``brand_layout`` is added directly (not wrapped in an extra QWidget)
+        # so its labels lay out synchronously with the page itself.
         outer = QHBoxLayout(self)
         outer.setContentsMargins(48, 36, 48, 32)
         outer.setSpacing(36)
 
-        self.brand_pane = QWidget(self)
-        self.brand_pane.setObjectName("HomeBrandPane")
-        brand_layout = QVBoxLayout(self.brand_pane)
+        brand_layout = QVBoxLayout()
         brand_layout.setContentsMargins(0, 0, 0, 0)
         brand_layout.setSpacing(12)
 
@@ -181,7 +181,7 @@ class HomePage(QWidget):
         self.lbl_empty.setWordWrap(True)
         recent_layout.addWidget(self.lbl_empty, 1)
 
-        outer.addWidget(self.brand_pane, 5)
+        outer.addLayout(brand_layout, 5)
         outer.addWidget(self.recent_pane, 4)
 
         self.set_recent_files([])

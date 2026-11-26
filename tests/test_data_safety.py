@@ -576,3 +576,31 @@ def test_a_banner_belongs_to_its_tab(qapp, tmp_path):
         assert window.action_banner.isHidden() is False
     finally:
         window.close()
+
+
+def test_the_placeholder_of_a_loading_file_is_not_an_edit(tmp_path):
+    """A freshly opened file must never ask to be saved when it is closed.
+
+    The loader itself is stubbed: what is tested here is the tab that appears
+    while the file is still being read.  Clearing it used to count as an edit,
+    so the document was born modified.
+    """
+    window, controller, _ = _controller(tmp_path)
+    try:
+        target = tmp_path / "fresh.txt"
+        target.write_text("line one\nline two\n", encoding="utf-8")
+        controller.files.load = lambda *a, **k: None       # no worker
+
+        controller._begin_load(target)                      # noqa: SLF001
+        editor = window.current_editor()
+        doc = controller.document_for(editor)
+
+        assert doc is not None and doc.path == target
+        assert doc.is_modified is False, "the placeholder was an edit"
+        assert window.tab_bar.tab_modified(0) is False
+        assert controller.has_unsaved() is False
+        # A real keystroke still counts, so the guard did not disable the dot.
+        editor.insertPlainText("x")
+        assert doc.is_modified is True
+    finally:
+        window.close()

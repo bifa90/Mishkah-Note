@@ -54,6 +54,7 @@ from mishkah.models.document import DocumentModel
 from mishkah.views.editor_view import EditorView
 from mishkah.views.status_bar_widget import StatusBarWidget
 from mishkah.widgets.find_dialog import FindReplaceBar
+from mishkah.widgets.home_page import HomePage
 from mishkah.widgets.icons import document_icon, themed_cross_icon
 from mishkah.widgets.toggle_switch import ToggleSwitch
 
@@ -313,6 +314,9 @@ class MainWindow(QMainWindow):
     file_save_all = Signal()
     file_print = Signal()
     tab_close_requested = Signal(int)
+    #: CD-29/B2: "New window" must open a window, not a tab.  ``app.py``
+    #: installs a factory; without one the controller falls back to a tab.
+    new_window_requested = Signal()
     tab_changed = Signal(int)
     direction_changed = Signal(str)
     language_changed = Signal(str)
@@ -561,7 +565,8 @@ class MainWindow(QMainWindow):
         self.act_new = self._action(m_file, tr("menu.file.new"), self.file_new,
                                     QKeySequence.StandardKey.New)
         self.act_new_window = self._action(m_file, tr("menu.file.new_window"),
-                                           self.file_new, "Ctrl+Shift+N")
+                                           self.new_window_requested.emit,
+                                           "Ctrl+Shift+N")
         m_file.addSeparator()
         self.act_open = self._action(m_file, tr("menu.file.open"), self.file_open,
                                      QKeySequence.StandardKey.Open)
@@ -856,6 +861,43 @@ class MainWindow(QMainWindow):
         self.tabs.setCurrentIndex(index)
         editor.setFocus()
         return index
+
+    def apply_shortcut_settings(self, redo: str, replace: str) -> None:
+        """Redo and replace follow the user's choice (CD-08, CD-10).
+
+        ``default`` keeps this build's keys; ``platform`` takes the desktop's
+        habit (KDE: Ctrl+Shift+Z and Ctrl+R).  Ctrl+Shift+Z stays available in
+        both, because a shortcut people already know must not stop working.
+        """
+        if redo == "platform":
+            self.act_redo.setShortcuts([QKeySequence("Ctrl+Shift+Z")])
+        else:
+            self.act_redo.setShortcuts([QKeySequence("Ctrl+Y"),
+                                        QKeySequence("Ctrl+Shift+Z")])
+        self.act_replace.setShortcut(
+            QKeySequence("Ctrl+R" if replace == "platform" else "Ctrl+H"))
+
+    def add_home_page(self, page) -> int:
+        """Put the welcome page in a tab of its own (CD-06)."""
+        index = self.tabs.addTab(page, tr("tab.home"))
+        self.tabs.setTabToolTip(index, tr("home.tagline"))
+        self.tabs.setCurrentIndex(index)
+        return index
+
+    def home_page(self):
+        """The welcome page if it is in the strip, else ``None``."""
+        for index in range(self.tabs.count()):
+            widget = self.tabs.widget(index)
+            if isinstance(widget, HomePage):
+                return widget
+        return None
+
+    def close_widget(self, widget) -> None:
+        """Remove any tab page (editor or welcome page) and free it."""
+        index = self.tabs.indexOf(widget)
+        if index >= 0:
+            self.tabs.removeTab(index)
+            widget.deleteLater()
 
     def tab_count(self) -> int:
         return self.tabs.count()

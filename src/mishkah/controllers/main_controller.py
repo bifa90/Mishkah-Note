@@ -33,6 +33,7 @@ from mishkah.services.file_service import FileService
 from mishkah.views.editor_view import EditorView
 from mishkah.views.main_window import MainWindow
 from mishkah.widgets.about_dialog import AboutDialog
+from mishkah.widgets.home_page import HomePage
 from mishkah.widgets.settings_dialog import SettingsDialog
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,8 @@ class MainController(QObject):
         self.settings = settings
         self.files = file_service or FileService(self)
         self._docs: Dict[EditorView, DocumentModel] = {}
+        #: True for the first window only (see app.build_window).
+        self.owns_session = True
         self._invisible_banner = False
         #: CD-18: documents whose file changed on disk, waiting for a decision.
         #: A list, not a set: DocumentModel is a dataclass and unhashable.
@@ -84,6 +87,7 @@ class MainController(QObject):
     def _wire(self) -> None:
         w = self.window
         w.file_new.connect(self.new_document)
+        w.new_window_requested.connect(self.open_new_window)
         w.file_open.connect(self.open_document_dialog)
         w.file_save.connect(self.save_current)
         w.file_save_as.connect(lambda: self.save_current(as_copy=True))
@@ -170,6 +174,8 @@ class MainController(QObject):
         self.window.act_line_numbers.setChecked(s.line_numbers)
         self.window.status.setVisible(s.show_status_bar)
         self.window.set_recent_files(s.recent_files)
+        self.window.apply_shortcut_settings(s.redo_shortcut,
+                                           s.replace_shortcut)
 
         direction = Qt.LayoutDirection.RightToLeft if language.rtl \
             else Qt.LayoutDirection.LeftToRight
@@ -193,6 +199,79 @@ class MainController(QObject):
         self.window.add_editor(editor, doc)
         self._sync_ui(editor)
         return editor
+
+    # ==================================================================
+    # welcome page (CD-06)
+    # ==================================================================
+    def show_home(self) -> HomePage:
+        """Show the welcome page, creating it the first time (CD-06)."""
+        page = self.window.home_page()
+        if page is None:
+            page = HomePage(self.window)
+            page.new_requested.connect(self._new_from_home)
+            page.open_requested.connect(self._open_from_home)
+            page.recent_requested.connect(self._open_recent_from_home)
+            page.settings_requested.connect(self.show_settings)
+            page.help_requested.connect(self.show_about)
+            page.restore_requested.connect(self._restore_from_home)
+            self.window.add_home_page(page)
+        self._refresh_home(page)
+        self.window.tabs.setCurrentWidget(page)
+        self.window.hide_file_changed()
+        self.window.hide_banner()
+        self.window.setWindowTitle(i18n.tr("app.name"))
+        return page
+
+    def _drop_home(self) -> None:
+        """The page did its job: a document is beside it, so it steps aside."""
+        page = self.window.home_page()
+        if page is not None and self.window.tabs.count() > 1:
+            self.window.close_widget(page)
+            self._sync_ui(self.window.current_editor())
+
+    def _new_from_home(self) -> None:
+        self.new_document()
+        self._drop_home()
+
+    def _open_from_home(self) -> None:
+        self.open_document_dialog()
+        self._drop_home()
+
+    def _open_recent_from_home(self, path: str) -> None:
+        self.open_path(path)
+        self._drop_home()
+
+    def _refresh_home(self, page: HomePage) -> None:
+        page.set_recent_files(self.settings.recent_files)
+        previous = [p for p in self.settings.open_files if Path(p).exists()]
+        page.set_restore_available(bool(previous))
+
+    def _restore_from_home(self) -> None:
+        """Open the files the last session left behind, then drop the page."""
+        opened = self.restore_session(list(self.settings.open_files)) or 0
+        if opened and self.window.home_page() is not None:
+            page = self.window.home_page()
+            if self.window.tabs.count() > 1:
+                self.window.close_widget(page)
+
+    def _last_tab_closed(self) -> None:
+        """Closing the last tab: the welcome page or the end (CD-06)."""
+        if self.settings.last_tab_action == "quit":
+            self.window.close()
+            return
+        self.show_home()
+
+    def open_new_window(self) -> None:
+        """CD-29/B2: ask the application for a second window.
+
+        Without a factory (tests, embedding) the request becomes a new tab, so
+        the menu item is never dead and never pretends to have opened a window.
+        """
+        factory = getattr(self.window, "new_window_factory", None)
+        if callable(factory):
+            factory()
+            return
+        self.new_document()
 
     def _bind_editor(self, editor: EditorView, doc: DocumentModel) -> None:
         self._docs[editor] = doc
@@ -322,7 +401,11 @@ class MainController(QObject):
         self._bind_editor(editor, doc)
         index = self.window.add_editor(editor, doc)
         self._pending_paths[index] = str(path)
-        editor.setPlainText("")
+        # No placeholder text is written here.  A new editor is already empty,
+        # and clearing it would count as an edit: the document would be marked
+        # modified before its content arrived, so closing a freshly opened file
+        # would ask to save it.  (Blocking the widget's signals while clearing
+        # corrupts QPlainTextEdit's state — it crashed a later paint.)
         self.window.set_tab_title(editor, path.name, False)
         self.files.load(path, encoding=encoding, limit_mb=limit_mb)
 
@@ -342,6 +425,9 @@ class MainController(QObject):
         blocked = editor.blockSignals(True)
         try:
             editor.set_document(doc)
+            # The buffer now holds what is on disk; Qt's own flag must agree,
+            # or a later format pass would look like an edit (B1).
+            editor.document().setModified(False)
         finally:
             editor.blockSignals(blocked)
         editor.set_font_size(self.settings.font_size)
@@ -778,6 +864,12 @@ class MainController(QObject):
     def close_tab(self, index: int) -> None:
         editor = self.window.editor_at(index)
         if editor is None:
+            # The welcome page: closing it alone would leave a window without
+            # tabs, so the X does nothing while it is the only one (CD-06).
+            page = self.window.tabs.widget(index)
+            if page is not None and self.window.tabs.count() > 1:
+                self.window.close_widget(page)
+                self._sync_ui(self.window.current_editor())
             return
         doc = self._docs.get(editor)
         if doc is not None:
@@ -801,7 +893,7 @@ class MainController(QObject):
         self.window.set_always_on_top(False)
         self.window.close_editor(editor)
         if self.window.tab_count() == 0:
-            self.new_document()
+            self._last_tab_closed()
         else:
             self._sync_ui(self.window.current_editor())
 
@@ -850,6 +942,11 @@ class MainController(QObject):
         doc = self.document_for(editor)
         status = self.window.status
         if doc is None:
+            # The welcome page has no document: nothing of the previous tab
+            # may stay on screen (banner, file name in the title).
+            self.window.hide_file_changed()
+            self.window.hide_banner()
+            self.window.setWindowTitle(i18n.tr("app.name"))
             return
         self._restore_banner(doc)
         self.refresh_invisible_banner()
@@ -1373,13 +1470,20 @@ class MainController(QObject):
     # settings
     # ==================================================================
     def show_settings(self) -> None:
-        """Open View ▸ Settings and apply whatever the user accepted."""
+        """Open View ▸ Settings; Apply acts at once, OK acts and closes."""
         dialog = SettingsDialog(self.settings, self.window)
+        # Apply must not close the window (CD-02), so it runs the same path.
+        dialog.applied.connect(lambda: self._commit_settings(dialog))
         if dialog.exec() != SettingsDialog.DialogCode.Accepted:
             return
+        self._commit_settings(dialog)
 
+    def _commit_settings(self, dialog: SettingsDialog) -> None:
+        """Write the dialog's values into settings and onto every open tab."""
         old = dialog.apply_to(self.settings)
         self.settings.save()
+        self.window.apply_shortcut_settings(self.settings.redo_shortcut,
+                                            self.settings.replace_shortcut)
 
         for editor in self.window.editors():
             self._apply_editing_options(editor)
@@ -1455,6 +1559,10 @@ class MainController(QObject):
         return opened
 
     def save_session(self) -> None:
+        # One window owns the session: a second window that wrote its own
+        # ``open_files`` would erase the first one's list (B2 hazard).
+        if not getattr(self, "owns_session", True):
+            return
         self.settings.open_files = [
             str(doc.path) for doc in self._docs.values() if doc.path
         ]

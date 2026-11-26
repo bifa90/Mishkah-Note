@@ -65,8 +65,16 @@ def set_app_icon(app: QApplication) -> None:
         app.setApplicationDisplayName(APP_NAME)
 
 
-def build_window(app: QApplication, settings: Settings,
-                 service: FileService, paths: List[Path]) -> MainWindow:
+def build_window(app: QApplication, settings: Settings, service: FileService,
+                 paths: List[Path], restore: bool = True,
+                 owns_session: bool = True) -> MainWindow:
+    """Create one window and its controller.
+
+    ``restore`` re-opens the previous session; ``owns_session`` decides which
+    window writes ``open_files`` on exit.  Exactly one window — the first —
+    owns the session, otherwise two windows would overwrite each other's list
+    and the last one closed would win (the B2 hazard).
+    """
     window = MainWindow()
     set_app_icon(app)
     icon = resources.application_icon()
@@ -74,13 +82,17 @@ def build_window(app: QApplication, settings: Settings,
         window.setWindowIcon(icon)
 
     controller = MainController(window, settings, service, parent=app)
+    controller.owns_session = bool(owns_session)
     window.setProperty("controller", controller)
 
-    opened = controller.restore_session([str(p) for p in paths]) if paths else None
-    if not opened:
-        controller.restore_session()
+    if restore:
+        opened = controller.restore_session([str(p) for p in paths]) if paths else None
+        if not opened:
+            controller.restore_session()
     if window.tab_count() == 0:
-        controller.new_document()
+        # Nothing to restore: welcome the user instead of handing them an
+        # untitled buffer they must name (CD-06).
+        controller.show_home()
     return window
 
 
@@ -139,24 +151,46 @@ def main(argv: Optional[List[str]] = None) -> int:
     logger.info("theme=%s ui_language=%s", resolved_theme, settings.ui_language)
 
     service = FileService()
-    windows = [build_window(app, settings, service, paths)]
-    for window in windows:
+    windows: List[MainWindow] = []
+
+    def spawn(paths_: List[Path], restore: bool, owns_session: bool) -> MainWindow:
+        """Open one more window in this process (CD-29/B2)."""
+        window = build_window(app, settings, service, paths_,
+                              restore=restore, owns_session=owns_session)
+        # Every window can open another one; the factory is what makes the
+        # File ▸ New window item real instead of a second "New tab".
+        window.new_window_factory = lambda: spawn([], False, False)
         window.show()
+        if windows:
+            origin = windows[0]
+            window.move(origin.x() + 28, origin.y() + 28)
+        windows.append(window)
+        return window
+
+    primary = spawn(paths, True, True)
+
+    def active_window() -> MainWindow:
+        """The window a file from another launch should land in."""
+        for window in reversed(windows):
+            if window.isVisible():
+                return window
+        return primary
 
     def on_last_window_closed() -> None:
-        controller = windows[-1].property("controller")
+        controller = primary.property("controller")
         if controller is not None and not safe_mode:
             controller.save_session()
         app.quit()
 
     if instance_server is not None:
         def on_paths_received(received) -> None:
-            controller = windows[0].property("controller")
+            target = active_window()
+            controller = target.property("controller")
             if controller is not None:
                 for path in received:
                     controller.open_path(path)
-                windows[0].raise_()
-                windows[0].activateWindow()
+                target.raise_()
+                target.activateWindow()
 
         instance_server.paths_received.connect(on_paths_received)
 

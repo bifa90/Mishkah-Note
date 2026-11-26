@@ -134,3 +134,30 @@ def test_streaming_state_is_not_replayed_for_a_sequential_pass(qapp):
     second = decorator._parse(                      # noqa: SLF001
         editor.document().findBlockByNumber(901))
     assert parsed is not None and second is not None
+
+
+# --------------------------------------------------------------------------
+# S4: one measured gate, deliberately generous
+# --------------------------------------------------------------------------
+def test_pasting_100_kib_stays_under_100_ms(qapp):
+    """Inserting 100 KiB must not become an accidental copy of the buffer.
+
+    The recorded benchmark on a quiet machine is ~7.5 ms, so the ceiling carries
+    more than ten times the headroom: this catches an O(n) regression, not a
+    busy runner.  The number is printed so a slow drift is visible in the log
+    before it becomes a failure.
+    """
+    import time
+
+    editor = _editor(qapp, lines=5)
+    payload = ("مفكرة مشكاة نصٌّ عربي مع أرقام ١٢٣ " * 4000)[: 100 * 1024]
+
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.End)
+    started = time.perf_counter()
+    cursor.insertText(payload)
+    elapsed = (time.perf_counter() - started) * 1000
+
+    print(f"\n    100 KiB insert: {elapsed:.1f} ms")
+    assert editor.document().characterCount() > len(payload)
+    assert elapsed < 100, f"100 KiB insert took {elapsed:.1f} ms"

@@ -1365,7 +1365,18 @@ class MainController(QObject):
         printer = QPrinter()
         dialog = QPrintDialog(printer, self.window)
         if dialog.exec():
-            editor.print_(printer)
+            self.print_to(editor, printer)
+
+    @staticmethod
+    def print_to(editor, printer) -> None:
+        """Send *editor* to *printer*.
+
+        Separated from the dialog so the printing path — including Arabic text
+        and the bundled font — can be exercised without a human clicking
+        "Print", and without a real printer: a ``QPrinter`` writing PDF is the
+        same code with a different device.
+        """
+        editor.print_(printer)
 
     def show_about(self) -> None:
         AboutDialog(self.window).exec()

@@ -60,6 +60,11 @@ jobs:
           ruff check src tests tools
           pytest tests/ -q --junitxml=build/pytest.xml
           bash scripts/verify-packaging.sh
+      - name: Measure startup time (recorded, not gated)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tools/measure_startup.py --json
+
       - name: Report test failures
         if: always()
         run: python tools/report_test_failures.py build/pytest.xml

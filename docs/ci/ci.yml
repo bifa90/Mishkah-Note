@@ -57,6 +57,11 @@ jobs:
           MISHKAH_CLEAN_EXIT: "1"
         run: pytest -q --junitxml=build/pytest.xml
 
+      - name: Measure startup time (recorded, not gated)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tools/measure_startup.py --json
+
       - name: Report test failures
         if: always()
         run: python tools/report_test_failures.py build/pytest.xml

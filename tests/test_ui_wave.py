@@ -242,7 +242,7 @@ def test_the_context_menu_offers_paste_without_formatting(qapp, tmp_path):
         texts = [action.text() for action in menu.actions()]
         assert tr("action.paste_plain") in texts
         assert window.act_paste_plain.text() == tr("action.paste_plain")
-        menu.deleteLater()
+        _close_menu(menu)
     finally:
         window.close()
 
@@ -294,5 +294,128 @@ def test_dropped_code_content_is_coloured_too(qapp, tmp_path):
         QTest.qWait(700)
         assert editor.language_code() == "python"
         assert _coloured_formats(editor) > 0
+    finally:
+        window.close()
+
+
+# ------------------------------------------------------------------ round 5
+def _close_menu(menu) -> None:
+    """Free the menu now: a QMenu left alive keeps a C++ object past the app."""
+    from PySide6.QtCore import QCoreApplication, QEvent
+
+    menu.close()
+    menu.setParent(None)
+    menu.deleteLater()
+    QCoreApplication.sendPostedEvents(None, QEvent.Type.DeferredDelete)
+
+
+def _menu_labels(menu):
+    return [action.text() for action in menu.actions() if not action.isSeparator()]
+
+
+def test_the_context_menu_follows_the_interface_language(qapp, tmp_path):
+    from mishkah.core import i18n
+    from mishkah.core.i18n import tr
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        i18n.set_language("ar")
+        editor = controller.new_document()
+        editor.setPlainText("نص للاختبار")
+        menu = editor.build_context_menu()
+        labels = _menu_labels(menu)
+
+        assert labels == [
+            tr("action.undo"), tr("action.redo"),
+            tr("action.cut"), tr("action.copy"), tr("action.paste"),
+            tr("action.paste_plain"), tr("action.delete"),
+            tr("action.select_all"),
+            tr("action.find"), tr("action.replace"), tr("action.goto"),
+        ]
+        # The old build took Qt's untranslated strings; none may slip back.
+        assert "Paste" not in labels and "Select All" not in labels
+        _close_menu(menu)
+    finally:
+        i18n.set_language("ar")
+        window.close()
+
+
+def test_the_context_menu_is_grouped_history_then_clipboard(qapp, tmp_path):
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("abc")
+        menu = editor.build_context_menu()
+        names = [a.objectName() for a in menu.actions() if not a.isSeparator()]
+        assert names[:2] == ["action.undo", "action.redo"]
+        assert names[2:7] == ["action.cut", "action.copy", "action.paste",
+                              "action.paste_plain", "action.delete"]
+        assert names[7] == "action.select_all"
+        assert names[8:] == ["action.find", "action.replace", "action.goto"]
+        separators = sum(1 for a in menu.actions() if a.isSeparator())
+        assert separators == 3
+        _close_menu(menu)
+    finally:
+        window.close()
+
+
+def test_cut_and_copy_are_greyed_out_without_a_selection(qapp, tmp_path):
+    from PySide6.QtGui import QTextCursor  # noqa: PLC0415
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("abc")
+        editor.moveCursor(QTextCursor.MoveOperation.End)
+        menu = editor.build_context_menu()
+        by_name = {a.objectName(): a for a in menu.actions()}
+        assert not by_name["action.cut"].isEnabled()
+        assert not by_name["action.copy"].isEnabled()
+        editor.selectAll()
+        _close_menu(menu)
+        menu = editor.build_context_menu()
+        by_name = {a.objectName(): a for a in menu.actions()}
+        assert by_name["action.cut"].isEnabled()
+        assert by_name["action.copy"].isEnabled()
+        _close_menu(menu)
+    finally:
+        window.close()
+
+
+def test_the_context_menu_opens_the_find_bar(qapp, tmp_path):
+    from mishkah.core.i18n import tr
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("hello")
+        menu = editor.build_context_menu()
+        find = [a for a in menu.actions() if a.objectName() == "action.find"][0]
+        assert find.text() == tr("action.find")
+        assert editor.apply_menu_action(find.objectName()) is True
+        assert not window.find_bar.isHidden(), "the bar opened"
+        window.find_bar.hide()
+        _close_menu(menu)
+    finally:
+        window.close()
+
+
+def test_highlighting_says_nothing(qapp, tmp_path):
+    """No banner when the language is guessed: the colours are the message.
+
+    The buffer is filled the way a paste does it; the keystroke path itself is
+    covered by ``test_pasted_code_in_an_untitled_tab_is_coloured_without_saving``.
+    """
+    from PySide6.QtTest import QTest
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        editor.setPlainText("def greet(name):\n    return name\n")
+
+        QTest.qWait(700)
+        assert editor.language_code() == "python"
+        assert window.banner.isHidden(), "no notice: the colours are the message"
+        assert window.status.language_text() == "Python"
     finally:
         window.close()

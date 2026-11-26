@@ -116,6 +116,10 @@ class StatusBarWidget(QFrame):
         self._language.setText(label or "")
         self._set_segment_visible(self._language, bool(label))
 
+    def language_text(self) -> str:
+        """The language segment as shown (empty when there is nothing to say)."""
+        return self._language.text()
+
     def set_zoom(self, percent: int) -> None:
         self._zoom.setText(f"{percent}%")
 

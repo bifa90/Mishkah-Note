@@ -208,6 +208,11 @@ class MainController(QObject):
         editor.resolved_direction_changed.connect(self._on_resolved_direction)
         editor.stats_changed.connect(self._on_stats)
         editor.textChanged.connect(lambda e=editor: self._on_text_changed(e))
+        # The right-click menu speaks through signals: the window owns the
+        # search bars, so it opens them for whichever tab was clicked.
+        editor.find_requested.connect(lambda e=editor: self._menu_find(e, False))
+        editor.replace_requested.connect(lambda e=editor: self._menu_find(e, True))
+        editor.goto_requested.connect(self.goto_line)
         editor.language_detected.connect(
             lambda _code, e=editor: self._on_language_detected(e))
         editor.files_dropped.connect(self._open_dropped_paths)
@@ -875,31 +880,32 @@ class MainController(QObject):
                                  editor.document_side())
 
     def _on_language_detected(self, editor: EditorView) -> None:
-        """The content revealed its language: recolour and say so (CD-12)."""
+        """The content revealed its language: recolour, silently (CD-12).
+
+        No banner here on purpose: the colours are the message, and a strip
+        pushing the first line down while someone types is noise.  Only the
+        status bar names the language.
+        """
         self._apply_highlighting(editor)
         code = editor.language_code()
         if code == syntax.PLAIN.code:
             self.window.status.set_language("")
             return
-        label = syntax.get_language(code).name
-        self.window.status.set_language(label)
+        self.window.status.set_language(syntax.get_language(code).name)
         doc = self._docs.get(editor)
-        # Markdown has its own, more useful offer: turn the formatted view on
-        # (CD-12 keeps it opt-in, so it is never switched silently).
+        # Markdown has a different, more useful offer: turn the formatted view
+        # on (CD-12 keeps it opt-in, so it is never switched silently).
         if (code == syntax.MARKDOWN_SPEC.code and doc is not None
                 and not self.settings.live_markdown and not doc.language_banner_shown):
             doc.language_banner_shown = True
             if self.document_for(self.window.current_editor()) is doc:
                 self.window.show_markdown_hint()
+
+    def _menu_find(self, editor: EditorView, replace_mode: bool) -> None:
+        """Open the find bar for the tab whose menu was used."""
+        if self.window.current_editor() is not editor:
             return
-        # One note per document: telling the user again on every refinement
-        # would be noise, and the banner pushes the text down while they type.
-        if doc is None or doc.language_banner_shown:
-            return
-        doc.language_banner_shown = True
-        if self.document_for(self.window.current_editor()) is doc:
-            self.window.show_banner(
-                i18n.tr("banner.language_detected", language=label))
+        self.show_find(replace_mode)
 
     def _on_text_changed(self, editor: EditorView) -> None:
         doc = self._docs.get(editor)

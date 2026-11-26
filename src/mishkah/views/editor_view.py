@@ -40,7 +40,13 @@ from PySide6.QtGui import (
     QTextCursor,
     QTextDocument,
 )
-from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit
+from PySide6.QtWidgets import (
+    QApplication,
+    QListWidget,
+    QListWidgetItem,
+    QMenu,
+    QPlainTextEdit,
+)
 
 from mishkah.core import autocomplete, syntax
 from mishkah.core.i18n import tr
@@ -133,6 +139,9 @@ class EditorView(QPlainTextEdit):
     stats_changed = Signal(int, int)
     language_detected = Signal(str)      # CD-12: guessed from the content
     files_dropped = Signal(list)         # CD-22: too big/binary to paste         # lines, chars
+    find_requested = Signal()            # the context menu asks the window
+    replace_requested = Signal()
+    goto_requested = Signal()
 
     def __init__(self, document: DocumentModel, font: Optional[QFont] = None,
                  parent=None):
@@ -709,19 +718,89 @@ class EditorView(QPlainTextEdit):
             self.files_dropped.emit(refused)
 
     def build_context_menu(self):
-        """The standard menu plus "paste without formatting" (CD-13)."""
-        menu = self.createStandardContextMenu()
+        """The right-click menu, built here so it speaks the UI language.
+
+        ``createStandardContextMenu()`` fills the menu from Qt's own
+        translations, which we do not ship: it stayed English however the
+        interface was set.  Building it ourselves keeps every label in
+        ``tr()`` — Arabic included — and gives a stable, grouped order:
+        history, then clipboard, then selection, then search.
+
+        The actions carry an object name and are dispatched by
+        :meth:`apply_menu_action` on the chosen one instead of holding Python
+        callbacks: a menu with connected lambdas keeps reference cycles that
+        outlive the tab, and PySide trips over them at shutdown.
+        """
+        menu = QMenu(self)
+        cursor = self.textCursor()
+        has_selection = cursor.hasSelection()
+        clipboard_text = QApplication.clipboard().text()
+
+        def add(text_key: str, shortcuts, enabled: bool = True):
+            action = menu.addAction(tr(text_key))
+            if shortcuts:
+                action.setShortcuts([QKeySequence(key) for key in shortcuts])
+            action.setEnabled(enabled)
+            action.setObjectName(text_key)
+            return action
+
+        # 1. history
+        add("action.undo", ["Ctrl+Z"], self.document().isUndoAvailable())
+        add("action.redo", ["Ctrl+Y", "Ctrl+Shift+Z"],
+            self.document().isRedoAvailable())
         menu.addSeparator()
-        action = menu.addAction(tr("action.paste_plain"))
-        action.setShortcut(QKeySequence("Ctrl+Shift+V"))
-        action.triggered.connect(self.paste_plain)
-        action.setObjectName("PastePlain")
+        # 2. clipboard — plain paste right after paste, so it is easy to reach
+        add("action.cut", ["Ctrl+X"], has_selection)
+        add("action.copy", ["Ctrl+C"], has_selection)
+        add("action.paste", ["Ctrl+V"], bool(clipboard_text))
+        add("action.paste_plain", ["Ctrl+Shift+V"], bool(clipboard_text))
+        add("action.delete", ["Del"], not self.isReadOnly())
+        menu.addSeparator()
+        # 3. selection
+        add("action.select_all", ["Ctrl+A"], not self.document().isEmpty())
+        menu.addSeparator()
+        # 4. search — the window owns the bars, so these are signals
+        add("action.find", ["Ctrl+F"])
+        add("action.replace", ["Ctrl+H"])
+        add("action.goto", ["Ctrl+G"])
         return menu
+
+    def apply_menu_action(self, name: str) -> bool:
+        """Run one entry of the right-click menu by its object name."""
+        actions = {
+            "action.undo": self.undo,
+            "action.redo": self.redo,
+            "action.cut": self.cut,
+            "action.copy": self.copy,
+            "action.paste": self.paste,
+            "action.paste_plain": self.paste_plain,
+            "action.delete": self._delete_forward,
+            "action.select_all": self.selectAll,
+            "action.find": lambda: self.find_requested.emit(),
+            "action.replace": lambda: self.replace_requested.emit(),
+            "action.goto": lambda: self.goto_requested.emit(),
+        }
+        handler = actions.get(name)
+        if handler is None:
+            return False
+        handler()
+        return True
+
+    def _delete_forward(self) -> None:
+        """Delete the selection, or the character after the caret (Del)."""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            cursor.removeSelectedText()
+        else:
+            cursor.deleteChar()
+        self.setTextCursor(cursor)
 
     def contextMenuEvent(self, event) -> None:  # noqa: N802 - Qt naming
         menu = self.build_context_menu()
-        menu.exec(event.globalPos())
+        chosen = menu.exec(event.globalPos())
         menu.deleteLater()
+        if chosen is not None:
+            self.apply_menu_action(chosen.objectName())
 
     def paste_plain(self) -> bool:
         """Paste the clipboard as text only (CD-13).

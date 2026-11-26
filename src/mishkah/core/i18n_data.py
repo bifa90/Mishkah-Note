@@ -1456,18 +1456,6 @@ STRINGS: Dict[str, S] = {
         "fr": "Tous les fichiers (*)", "bn": "সব ফাইল (*)",
         "pt": "Todos os ficheiros (*)", "ru": "Все файлы (*)", "ur": "تمام فائلیں (*)",
     },
-    "banner.language_detected": {
-        "en": "Looks like {language}: highlighting is on.",
-        "ar": "يبدو أنه {language}: التلوين مُفعَّل الآن.",
-        "zh-Hans": "看起来是 {language}：已开启高亮。",
-        "hi": "यह {language} जैसा है: हाइलाइटिंग चालू।",
-        "es": "Parece {language}: el resaltado está activo.",
-        "fr": "On dirait du {language} : la coloration est active.",
-        "bn": "এটি {language} মনে হচ্ছে: হাইলাইট চালু।",
-        "pt": "Parece {language}: o realce está ativo.",
-        "ru": "Похоже на {language}: подсветка включена.",
-        "ur": "یہ {language} لگتا ہے: رنگ آمیزی فعال ہے۔",
-    },
     "dialog.progress": {
         "en": "Loading… {done} of {total}", "ar": "جارٍ التحميل… {done} من {total}",
         "zh-Hans": "正在加载… {done} / {total}", "hi": "लोड हो रहा है… {done} / {total}",

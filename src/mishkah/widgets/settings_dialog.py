@@ -32,7 +32,6 @@ from PySide6.QtWidgets import (
     QScrollArea,
     QSpinBox,
     QStackedWidget,
-    QStyle,
     QVBoxLayout,
     QWidget,
 )
@@ -40,6 +39,7 @@ from PySide6.QtWidgets import (
 from mishkah.core.i18n import tr
 from mishkah.core.settings import Settings
 from mishkah.core.text_direction import AUTO, LTR, RTL
+from mishkah.widgets.icons import CATEGORY_KEYS, category_icon
 
 THEMES = ("system", "light", "dark")
 DIRECTIONS = (AUTO, LTR, RTL)
@@ -48,16 +48,11 @@ SIDES = ("first_strong", "first_line")
 SHORTCUT_STYLES = ("default", "platform")
 LAST_TAB_ACTIONS = ("home", "quit")
 
-#: The seven categories, in order, with the icon the side list shows.
-CATEGORIES = (
-    ("appearance", QStyle.StandardPixmap.SP_DesktopIcon),
-    ("editor", QStyle.StandardPixmap.SP_FileIcon),
-    ("typing", QStyle.StandardPixmap.SP_FileDialogContentsView),
-    ("files", QStyle.StandardPixmap.SP_DialogSaveButton),
-    ("tabs", QStyle.StandardPixmap.SP_FileDialogDetailedView),
-    ("shortcuts", QStyle.StandardPixmap.SP_CommandLink),
-    ("advanced", QStyle.StandardPixmap.SP_ComputerIcon),
-)
+#: The seven categories, in order.  Their icons are *drawn* (``icons.py``) and
+#: inked for the active theme: the style's own pixmaps are coloured for the
+#: system palette, and on a dark desktop with the light stylesheet they arrived
+#: white on white.
+CATEGORIES = CATEGORY_KEYS
 
 
 class SettingsDialog(QDialog):
@@ -103,12 +98,17 @@ class SettingsDialog(QDialog):
             self._page_shortcuts,
             self._page_advanced,
         )
-        for (key, pixmap), build in zip(CATEGORIES, builders):
-            item = QListWidgetItem(self.style().standardIcon(pixmap),
+        dark = self._dark_chrome()
+        for key, build in zip(CATEGORIES, builders):
+            item = QListWidgetItem(category_icon(key, dark, 18),
                                    tr(f"settings.cat.{key}"))
             item.setData(Qt.ItemDataRole.UserRole, key)
             self.list_categories.addItem(item)
             page = build()
+            # The stretch goes *last*: it used to be added first, which pushed
+            # every control to the bottom of the page (reported as "the settings
+            # sit at the bottom of the window").
+            page.layout().addStretch(1)
             self._pages.append(page)
             self.stack.addWidget(self._scrollable(page))
 
@@ -138,6 +138,13 @@ class SettingsDialog(QDialog):
         self._load(settings)
         self.show_category(getattr(settings, "settings_page", "appearance"))
 
+    @staticmethod
+    def _dark_chrome() -> bool:
+        """Which chrome the icons must match (see ``app.is_dark_chrome``)."""
+        from mishkah.app import is_dark_chrome
+
+        return is_dark_chrome()
+
     # ------------------------------------------------------------------
     # scaffolding
     # ------------------------------------------------------------------
@@ -150,11 +157,11 @@ class SettingsDialog(QDialog):
 
     @staticmethod
     def _page() -> tuple[QWidget, QVBoxLayout]:
+        """An empty page, top-aligned: the caller adds the trailing stretch."""
         page = QWidget()
         layout = QVBoxLayout(page)
         layout.setContentsMargins(4, 4, 12, 8)
         layout.setSpacing(12)
-        layout.addStretch(1)
         return page, layout
 
     @staticmethod

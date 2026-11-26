@@ -50,6 +50,8 @@ QT_ONLY_MODULES = (
     "test_widgets.py",
     "test_review_tools.py",
     "test_g3b_checklist.py",
+    "test_g3b_findings.py",
+    "test_w4_findings.py",
 )
 if not qt_available:
     collect_ignore = list(QT_ONLY_MODULES)

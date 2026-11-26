@@ -13,7 +13,8 @@ from typing import Optional
 from PySide6.QtCore import Qt, Signal
 from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QPushButton, QSizePolicy, QWidget
 
-from mishkah.core.i18n import tr
+from mishkah.core.i18n import current_language, tr
+from mishkah.core.syntax import display_name
 from mishkah.core.text_direction import AUTO, LTR, RTL
 
 #: A round glyph for "automatic" keeps the chip readable in both directions
@@ -81,6 +82,7 @@ class StatusBarWidget(QFrame):
         self._line_count = 0
         self._size_label = ""
         self._word_count = 0
+        self._language_code = ""
         self._language_label = ""
         self._zoom_percent = 100
         self._line_ending_mode = "\n"
@@ -138,10 +140,44 @@ class StatusBarWidget(QFrame):
         self._set_segment_visible(self._words, bool(count))
 
     def set_language(self, label: str) -> None:
-        """Which grammar is colouring this tab (empty hides the segment)."""
+        """Which grammar is colouring this tab, as a finished label.
+
+        The code is dropped on purpose: a literal label cannot be re-named for a
+        new interface language, so ``retranslate`` must leave it alone rather
+        than overwrite it with a stale name.
+        """
+        self._language_code = ""
         self._language_label = label or ""
-        self._language.setText(label or "")
-        self._set_segment_visible(self._language, bool(label))
+        self._render_language()
+
+    def set_language_code(self, code: str) -> None:
+        """Name the grammar by its *code*, so a language switch can re-name it.
+
+        The label is a translated string (Arabic names for Arabic readers, the
+        language's own name otherwise).  Storing the finished string meant that
+        after switching the interface language the segment kept saying «بايثون»
+        in an English window — the last thing on screen still in the old
+        language.
+        """
+        self._language_code = code or ""
+        self._language_label = ""
+        self._render_language()
+
+    def language_code(self) -> str:
+        """The stored code (empty when no grammar is named)."""
+        return self._language_code
+
+    def _language_name(self) -> str:
+        code = self._language_code
+        if not code:
+            return ""
+        return display_name(code, current_language())
+
+    def _render_language(self) -> None:
+        """Paint the segment from whichever of the two forms is stored."""
+        text = self._language_name() if self._language_code else self._language_label
+        self._language.setText(text)
+        self._set_segment_visible(self._language, bool(text))
 
     def language_text(self) -> str:
         """The language segment as shown (empty when there is nothing to say)."""
@@ -209,7 +245,7 @@ class StatusBarWidget(QFrame):
         self.set_lines(self._line_count)
         self.set_size(self._size_label)
         self.set_words(self._word_count)
-        self.set_language(self._language_label)
+        self._render_language()
         self.set_zoom(self._zoom_percent)
         self.set_line_ending(self._line_ending_mode)
         self.set_encoding(self._encoding_name)

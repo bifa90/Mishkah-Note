@@ -108,7 +108,14 @@ def test_tinted_icon_takes_the_colour_it_is_given(qapp):
                for x in range(image.width()) for y in range(image.height())
                if image.pixelColor(x, y).alpha() > 200]
     assert painted, "tinting erased the icon"
-    assert all((c.red(), c.green(), c.blue()) == (0x12, 0x34, 0x56) for c in painted)
+    # ±4, not exact equality: a half-transparent edge pixel is stored
+    # premultiplied and cannot come back with the same channels.
+    expected = (0x12, 0x34, 0x56)
+    for colour in painted:
+        for channel, wanted in zip((colour.red(), colour.green(), colour.blue()),
+                                   expected):
+            assert abs(channel - wanted) <= 4, (
+                f"tinted pixel {colour.name()} kept its old colour")
 
 
 def test_the_autosave_icon_is_inked_too(qapp, tmp_path):

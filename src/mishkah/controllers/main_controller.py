@@ -1015,8 +1015,9 @@ class MainController(QObject):
         status.set_encoding(doc.encoding)
         status.set_line_ending(doc.line_ending)
         code = self._language_for(editor) if editor is not None else syntax.PLAIN.code
-        status.set_language("" if code == syntax.PLAIN.code
-                            else syntax.display_name(code, self.settings.ui_language))
+        # By *code*: the label is re-rendered on a language switch, so storing
+        # the finished string left «بايثون» in an English window.
+        status.set_language_code("" if code == syntax.PLAIN.code else code)
         status.set_size(doc.size_label)
         status.set_lines(doc.line_count)
         self.window.set_tab_menu_state(doc.pinned, doc.color)
@@ -1047,10 +1048,9 @@ class MainController(QObject):
         self._apply_highlighting(editor)
         code = editor.language_code()
         if code == syntax.PLAIN.code:
-            self.window.status.set_language("")
+            self.window.status.set_language_code("")
             return
-        self.window.status.set_language(
-            syntax.display_name(code, self.settings.ui_language))
+        self.window.status.set_language_code(code)
         doc = self._docs.get(editor)
         # Markdown has a different, more useful offer: turn the formatted view
         # on (CD-12 keeps it opt-in, so it is never switched silently).

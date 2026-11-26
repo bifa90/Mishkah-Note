@@ -58,6 +58,23 @@ def apply_theme(app: QApplication, theme: str) -> str:
     return resolved
 
 
+def is_dark_chrome() -> bool:
+    """True when the *window* is dark, whatever the desktop theme says.
+
+    The stylesheet decides the background, so it decides the ink too: asking the
+    palette describes the desktop, and on a dark desktop the light stylesheet
+    still needs dark glyphs.
+    """
+    app = QApplication.instance()
+    theme = app.property("mishkah_theme") if app is not None else None
+    if theme == "dark":
+        return True
+    if theme == "light":
+        return False
+    palette = app.palette() if app is not None else QPalette()
+    return palette.color(QPalette.ColorRole.Window).lightness() < 128
+
+
 def set_app_icon(app: QApplication) -> None:
     icon = resources.application_icon()
     if not icon.isNull():

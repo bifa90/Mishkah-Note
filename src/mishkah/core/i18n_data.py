@@ -826,10 +826,12 @@ STRINGS: Dict[str, S] = {
         "ru": "Текстовый редактор в стиле Windows 11 для Linux с поддержкой арабского и других письменностей.",
         "ur": "لینکس کے لیے ونڈوز 11 طرز کا ٹیکسٹ ایڈیٹر، عربی اور دیگر رسم الخط کے لیے۔",
     },
+    # "Developer", not "Author": the box credits who *built* the program, and
+    # «المؤلف» read as the author of the text someone is writing.
     "about.author": {
-        "en": "Author", "ar": "المؤلف", "zh-Hans": "作者", "hi": "लेखक",
-        "es": "Autor", "fr": "Auteur", "bn": "লেখক", "pt": "Autor",
-        "ru": "Автор", "ur": "مصنف",
+        "en": "Developer", "ar": "المطور", "zh-Hans": "开发者", "hi": "डेवलपर",
+        "es": "Desarrollador", "fr": "Développeur", "bn": "ডেভেলপার",
+        "pt": "Programador", "ru": "Разработчик", "ur": "ڈویلپر",
     },
     "about.assistants": {
         "en": "AI assistants", "ar": "المساعدون بالذكاء الاصطناعي",

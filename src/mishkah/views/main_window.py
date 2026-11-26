@@ -55,7 +55,7 @@ from mishkah.views.editor_view import EditorView
 from mishkah.views.status_bar_widget import StatusBarWidget
 from mishkah.widgets.find_dialog import FindReplaceBar
 from mishkah.widgets.home_page import HomePage
-from mishkah.widgets.icons import document_icon, themed_cross_icon
+from mishkah.widgets.icons import document_icon, themed_cross_icon, tinted_icon
 from mishkah.widgets.toggle_switch import ToggleSwitch
 
 ENCODINGS = (
@@ -532,7 +532,12 @@ class MainWindow(QMainWindow):
         """
         icon = self.style().standardIcon(QStyle.StandardPixmap.SP_DialogSaveButton)
         if not icon.isNull():
-            return icon
+            # The style colours its glyphs for the *system* palette; on a dark
+            # desktop with the light stylesheet that is a white floppy on a
+            # white toolbar.  Ink it for the chrome we actually paint.
+            from mishkah.app import is_dark_chrome
+
+            return tinted_icon(icon, "#E4E4E4" if is_dark_chrome() else "#3D3D3D", 16)
         pixmap = QPixmap(16, 16)
         pixmap.fill(Qt.GlobalColor.transparent)
         painter = QPainter(pixmap)

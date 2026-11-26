@@ -147,6 +147,9 @@ class EditorView(QPlainTextEdit):
                  parent=None):
         super().__init__(parent)
         self._doc = document
+        # Announced by screen readers when the caret enters the text; without
+        # it the widget is only "text edit", with no hint of what it edits.
+        self.setAccessibleName(tr("a11y.editor"))
         self._base_font_size = (font.pointSize() if font and font.pointSize() > 0
                                 else DEFAULT_FONT_SIZE)
         self._base_font_uses_pixels = bool(font is not None and font.pointSize() <= 0

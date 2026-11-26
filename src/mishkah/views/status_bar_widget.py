@@ -61,6 +61,14 @@ class StatusBarWidget(QFrame):
         for chip in (self._zoom, self._line_ending, self._encoding, self._direction):
             layout.addWidget(chip)
 
+        # Screen readers announce the *name*, sighted users read the text; the
+        # description carries the current value so both say the same thing.
+        self._encoding.setAccessibleName(tr("action.encoding"))
+        self._line_ending.setAccessibleName(tr("menu.line_ending"))
+        self._direction.setAccessibleName(tr("menu.direction"))
+        self._zoom.setAccessibleName(tr("a11y.zoom"))
+        self._zoom.setAccessibleDescription("100%")
+
         self._line_ending.clicked.connect(self.line_ending_clicked)
         self._encoding.clicked.connect(self.encoding_clicked)
         self._direction.clicked.connect(self._cycle_direction)
@@ -122,13 +130,17 @@ class StatusBarWidget(QFrame):
 
     def set_zoom(self, percent: int) -> None:
         self._zoom.setText(f"{percent}%")
+        self._zoom.setAccessibleDescription(f"{percent}%")
 
     def set_line_ending(self, line_ending: str) -> None:
-        self._line_ending.setText({"\r\n": "CRLF", "\r": "CR"}.get(line_ending, "LF"))
+        text = {"\r\n": "CRLF", "\r": "CR"}.get(line_ending, "LF")
+        self._line_ending.setText(text)
+        self._line_ending.setAccessibleDescription(text)
 
     def set_encoding(self, encoding: str) -> str:
         text = encoding.upper().replace("-SIG", " with BOM")
         self._encoding.setText(text)
+        self._encoding.setAccessibleDescription(text)
         return text
 
     def set_direction(self, mode: str, resolved: Optional[str] = None,
@@ -151,6 +163,10 @@ class StatusBarWidget(QFrame):
         self._direction.setText(text)
         self._direction.setToolTip(tr("direction.hint"))
 
+    def tab_order(self) -> list:
+        """The order Tab should visit the clickable chips in."""
+        return [self._encoding, self._line_ending, self._direction]
+
     def direction_mode(self) -> str:
         return self._direction_mode
 
@@ -160,15 +176,25 @@ class StatusBarWidget(QFrame):
 
     def retranslate(self) -> None:
         self._direction.setToolTip(tr("direction.hint"))
+        self._encoding.setAccessibleName(tr("action.encoding"))
+        self._line_ending.setAccessibleName(tr("menu.line_ending"))
+        self._direction.setAccessibleName(tr("menu.direction"))
+        self._zoom.setAccessibleName(tr("a11y.zoom"))
 
 
 class _Chip(QPushButton):
-    """Flat, borderless button used for the status-bar segments."""
+    """Flat, borderless button used for the status-bar segments.
+
+    The chips change the encoding, the line ending and the text direction, so
+    a keyboard user has to be able to reach them: they take focus by Tab (never
+    by click, which would steal the caret while typing) and each carries an
+    accessible name plus the value it currently shows.
+    """
 
     def __init__(self, parent: Optional[QWidget] = None):
         super().__init__(parent)
         self.setObjectName("StatusChip")
         self.setFlat(True)
         self.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.setFocusPolicy(Qt.FocusPolicy.NoFocus)
+        self.setFocusPolicy(Qt.FocusPolicy.TabFocus)
         self.setSizePolicy(QSizePolicy.Policy.Minimum, QSizePolicy.Policy.Preferred)

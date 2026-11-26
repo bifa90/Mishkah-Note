@@ -49,6 +49,9 @@ class FindReplaceBar(QFrame):
         self.find_edit = QLineEdit()
         self.find_edit.setPlaceholderText(tr("find.what"))
         self.find_edit.setClearButtonEnabled(True)
+        # A placeholder vanishes as soon as anything is typed and is not reliably
+        # announced; the accessible name is what a screen reader reads.
+        self.find_edit.setAccessibleName(tr("find.what"))
         self.find_edit.returnPressed.connect(self.find_next)
         self._find_prev = QPushButton(tr("find.previous"))
         self._find_next = QPushButton(tr("find.next"))
@@ -63,6 +66,7 @@ class FindReplaceBar(QFrame):
         self._close.setCursor(Qt.CursorShape.PointingHandCursor)
         self._close.setStyleSheet(close_button_stylesheet(12))
         self._close.setToolTip(tr("dialog.close"))
+        self._close.setAccessibleName(tr("dialog.close"))
         if not self._close.icon().isNull():
             self._close.setIcon(themed_cross_icon(self, 10))
         row1.addWidget(QLabel(tr("find.what")))
@@ -79,6 +83,7 @@ class FindReplaceBar(QFrame):
         row2.setSpacing(6)
         self.replace_edit = QLineEdit()
         self.replace_edit.setPlaceholderText(tr("find.replace_with"))
+        self.replace_edit.setAccessibleName(tr("find.replace_with"))
         self._replace = QPushButton(tr("find.replace"))
         self._replace_all = QPushButton(tr("find.replace_all"))
         row2.addWidget(QLabel(tr("find.replace_with")))
@@ -140,6 +145,13 @@ class FindReplaceBar(QFrame):
         self.find_edit.setFocus()
         self.find_edit.selectAll()
 
+    def tab_order(self) -> list:
+        """The bar's controls, in the order Tab should visit them."""
+        return [self.find_edit, self._find_prev, self._find_next,
+                self._close, self.replace_edit, self._replace, self._replace_all,
+                self.match_case, self.whole_word, self.use_regex, self.wrap,
+                self._toggle_replace]
+
     def hide_bar(self) -> None:
         self._incremental.stop()
         self.set_match_state(True)
@@ -185,7 +197,9 @@ class FindReplaceBar(QFrame):
     # ------------------------------------------------------------- a11y
     def retranslate(self) -> None:
         self.find_edit.setPlaceholderText(tr("find.what"))
+        self.find_edit.setAccessibleName(tr("find.what"))
         self.replace_edit.setPlaceholderText(tr("find.replace_with"))
+        self.replace_edit.setAccessibleName(tr("find.replace_with"))
         self._find_prev.setText(tr("find.previous"))
         self._find_next.setText(tr("find.next"))
         self._replace.setText(tr("find.replace"))
@@ -196,6 +210,7 @@ class FindReplaceBar(QFrame):
         self.wrap.setText(tr("find.wrap_around"))
         self._toggle_replace.setText(tr("action.replace"))
         self._close.setToolTip(tr("dialog.close"))
+        self._close.setAccessibleName(tr("dialog.close"))
         if not self._close.icon().isNull():
             self._close.setIcon(themed_cross_icon(self, 10))
 

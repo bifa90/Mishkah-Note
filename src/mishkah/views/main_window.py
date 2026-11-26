@@ -46,7 +46,7 @@ from PySide6.QtWidgets import (
 )
 
 from mishkah import PROJECT_URL
-from mishkah.core import syntax, tab_style
+from mishkah.core import i18n, syntax, tab_style
 from mishkah.core.i18n import tr
 from mishkah.core.languages import language_choices
 from mishkah.core.text_direction import AUTO, LTR, RTL
@@ -414,6 +414,9 @@ class MainWindow(QMainWindow):
         self.act_banner_dismiss.setIconSize(QSize(10, 10))
         self.act_banner_dismiss.setFixedSize(QSize(22, 22))
         self.act_banner_dismiss.setCursor(Qt.CursorShape.PointingHandCursor)
+        # No text and a drawn glyph: without this the button is silent.
+        self.act_banner_dismiss.setAccessibleName(tr("dialog.close"))
+        self.act_banner_dismiss.setToolTip(tr("dialog.close"))
         # A round button: a glyph in the system font can arrive as tofu, so the
         # cross is drawn, and the ring is a stylesheet of its own.
         self.act_banner_dismiss.setStyleSheet(
@@ -437,6 +440,7 @@ class MainWindow(QMainWindow):
         self._pinned_index: Optional[int] = None
         self._build_menus()
         self._build_autosave_control()
+        self.install_tab_order()
 
     # ==================================================================
     # menus
@@ -669,7 +673,7 @@ class MainWindow(QMainWindow):
             checkable=True, checked=True, group=self.language_override_group)
         self._language_override_actions["auto"] = auto_action
         self.menu_language_override.addSeparator()
-        for code, label in syntax.language_choices():
+        for code, label in syntax.language_choices(i18n.current_language()):
             action = self._action(
                 self.menu_language_override, label,
                 lambda _=False, c=code: self.language_override_chosen.emit(c),
@@ -1201,6 +1205,21 @@ class MainWindow(QMainWindow):
         self.status.setFont(font)
         self.find_bar.setFont(font)
 
+    def install_tab_order(self) -> None:
+        """One Tab chain: tabs → search → banners → status chips.
+
+        Relying on widget construction order left the banner (created after the
+        tab widget but shown mid-window) ahead of the search bar, and the status
+        chips out of the chain altogether.  The editor is deliberately absent:
+        every tab page owns one, and it sits between the tabs and the search bar
+        by Qt's own page handling.
+        """
+        chain = [self.tabs, *self.find_bar.tab_order(),
+                 self.act_banner_reload, self.act_banner_overwrite,
+                 self.act_banner_dismiss, *self.status.tab_order()]
+        for first, second in zip(chain, chain[1:]):
+            QWidget.setTabOrder(first, second)
+
     def retranslate(self) -> None:
         """Rebuild every label after a UI-language switch."""
         self.menuBar().clear()
@@ -1212,6 +1231,8 @@ class MainWindow(QMainWindow):
         self.autosave_label.setText(tr("action.autosave_label"))
         self.autosave_switch.setToolTip(self._autosave_tooltip())
         self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
+        self.act_banner_dismiss.setAccessibleName(tr("dialog.close"))
+        self.act_banner_dismiss.setToolTip(tr("dialog.close"))
         self.autosave_holder.show()
         self.find_bar.retranslate()
         self.status.retranslate()

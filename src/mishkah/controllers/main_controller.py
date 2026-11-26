@@ -955,7 +955,7 @@ class MainController(QObject):
         status.set_line_ending(doc.line_ending)
         code = self._language_for(editor) if editor is not None else syntax.PLAIN.code
         status.set_language("" if code == syntax.PLAIN.code
-                            else syntax.get_language(code).name)
+                            else syntax.display_name(code, self.settings.ui_language))
         status.set_size(doc.size_label)
         status.set_lines(doc.line_count)
         self.window.set_tab_menu_state(doc.pinned, doc.color)
@@ -988,7 +988,8 @@ class MainController(QObject):
         if code == syntax.PLAIN.code:
             self.window.status.set_language("")
             return
-        self.window.status.set_language(syntax.get_language(code).name)
+        self.window.status.set_language(
+            syntax.display_name(code, self.settings.ui_language))
         doc = self._docs.get(editor)
         # Markdown has a different, more useful offer: turn the formatted view
         # on (CD-12 keeps it opt-in, so it is never switched silently).

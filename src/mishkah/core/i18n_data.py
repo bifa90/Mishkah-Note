@@ -486,6 +486,20 @@ STRINGS: Dict[str, S] = {
         "bn": "নথি {direction}", "pt": "documento {direction}",
         "ru": "документ {direction}", "ur": "دستاویز {direction}",
     },
+    "a11y.editor": {
+        "en": "Editing area", "ar": "منطقة الكتابة",
+        "zh-Hans": "编辑区域", "hi": "संपादन क्षेत्र",
+        "es": "Área de edición", "fr": "Zone d'édition",
+        "bn": "সম্পাদনা এলাকা", "pt": "Área de edição",
+        "ru": "Область редактирования", "ur": "تحریری علاقہ",
+    },
+    "a11y.zoom": {
+        "en": "Zoom", "ar": "التكبير",
+        "zh-Hans": "缩放", "hi": "ज़ूम",
+        "es": "Zoom", "fr": "Zoom",
+        "bn": "জুম", "pt": "Zoom",
+        "ru": "Масштаб", "ur": "زوم",
+    },
     "action.autosave_label": {
         "en": "Autosave", "ar": "الحفظ التلقائي",
         "zh-Hans": "自动保存", "hi": "स्वतः सहेजना",

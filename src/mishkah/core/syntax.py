@@ -450,9 +450,47 @@ def get_language(code: Optional[str]) -> LanguageSpec:
     return BY_CODE.get(code or "", PLAIN)
 
 
-def language_choices() -> Tuple[Tuple[str, str], ...]:
-    """(code, label) pairs for the manual override menu."""
-    return tuple((spec.code, spec.name) for spec in LANGUAGES)
+#: What each language is called in Arabic.  A program's name is a proper noun,
+#: so the entries that are letters or acronyms (``C``, ``JSON``, ``SQL``) stay
+#: as they are — transliterating them is how Arabic menus end up unreadable —
+#: while the names that are ordinary words (``Plain text``, ``Shell``) are
+#: translated.  The status bar and the language menu read this table.
+ARABIC_NAMES: Dict[str, str] = {
+    "plain": "نص عادي",
+    "python": "بايثون",
+    "javascript": "جافاسكربت",
+    "typescript": "تايبسكربت",
+    "json": "JSON",
+    "html": "HTML",
+    "css": "CSS",
+    "c": "C",
+    "cpp": "C++",
+    "rust": "رست",
+    "go": "جو",
+    "java": "جافا",
+    "shell": "شل",
+    "sql": "SQL",
+    "yaml": "YAML",
+    "markdown": "ماركداون",
+}
+
+
+def display_name(code: Optional[str], language: str = "en") -> str:
+    """The language's name as the *user* should see it.
+
+    Arabic readers get the Arabic table above; every other interface language
+    keeps the Latin name, which is correct rather than half-translated.  An
+    unknown code degrades to ``Plain text`` instead of an empty label.
+    """
+    spec = get_language(code)
+    if (language or "").split("-")[0].lower() == "ar":
+        return ARABIC_NAMES.get(spec.code, spec.name)
+    return spec.name
+
+
+def language_choices(language: str = "en") -> Tuple[Tuple[str, str], ...]:
+    """(code, label) pairs for the manual override menu, in *language*."""
+    return tuple((spec.code, display_name(spec.code, language)) for spec in LANGUAGES)
 
 
 def line_comment_for(path_or_code: Optional[str]) -> Optional[str]:

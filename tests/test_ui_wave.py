@@ -190,3 +190,109 @@ def test_markdown_is_offered_never_switched_silently(qapp, tmp_path):
         assert window.action_banner.isHidden() is True
     finally:
         window.close()
+
+
+# ------------------------------------------------------------------ CD-22
+def test_dropping_a_file_on_the_text_pastes_its_content(qapp, tmp_path):
+    from PySide6.QtCore import QMimeData, QUrl
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        source = tmp_path / "note.txt"
+        source.write_text("first line\nsecond line\n", encoding="utf-8")
+        editor = controller.new_document()
+        data = QMimeData()
+        data.setUrls([QUrl.fromLocalFile(str(source))])
+
+        editor.insertFromMimeData(data)
+        text = editor.document().toPlainText()
+        assert "first line" in text and "second line" in text
+        assert str(source) not in text, "the path is not pasted"
+    finally:
+        window.close()
+
+
+def test_dropping_a_binary_file_opens_a_tab_instead(qapp, tmp_path):
+    from PySide6.QtCore import QMimeData, QUrl
+
+    window, controller, _ = _controller(tmp_path)
+    opened = []
+    try:
+        controller._open_dropped_paths = opened.extend        # noqa: SLF001
+        binary = tmp_path / "image.bin"
+        binary.write_bytes(b"\x00\x01\x02\x03" * 100)
+        editor = controller.new_document()
+        data = QMimeData()
+        data.setUrls([QUrl.fromLocalFile(str(binary))])
+
+        editor.insertFromMimeData(data)
+        assert opened == [str(binary)]
+        assert editor.document().toPlainText() == ""
+    finally:
+        window.close()
+
+
+def test_the_context_menu_offers_paste_without_formatting(qapp, tmp_path):
+    from mishkah.core.i18n import tr
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        editor = controller.new_document()
+        menu = editor.build_context_menu()
+        texts = [action.text() for action in menu.actions()]
+        assert tr("action.paste_plain") in texts
+        assert window.act_paste_plain.text() == tr("action.paste_plain")
+        menu.deleteLater()
+    finally:
+        window.close()
+
+
+def _coloured_formats(editor) -> int:
+    doc = editor.document()
+    total = 0
+    block = doc.firstBlock()
+    while block.isValid():
+        total += len(block.layout().formats())
+        block = block.next()
+    return total
+
+
+def test_pasted_code_in_an_untitled_tab_is_coloured_without_saving(qapp, tmp_path):
+    from PySide6.QtCore import Qt
+    from PySide6.QtTest import QTest
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        assert controller.settings.syntax_highlighting is True
+        editor = controller.new_document()
+        assert editor.document().toPlainText() == ""
+        editor.setFocus()
+        QTest.keyClicks(editor, "def greet(name):")
+        QTest.keyClick(editor, Qt.Key_Return)
+        QTest.keyClicks(editor, "    return 'hello ' + name")
+
+        QTest.qWait(700)                       # the debounce is 400 ms
+        assert editor.language_code() == "python"
+        assert _coloured_formats(editor) > 0, "the pasted code stays colourless"
+    finally:
+        window.close()
+
+
+def test_dropped_code_content_is_coloured_too(qapp, tmp_path):
+    from PySide6.QtCore import QMimeData, QUrl
+    from PySide6.QtTest import QTest
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        source = tmp_path / "snippet.txt"
+        source.write_text("def main():\n    return 42\n", encoding="utf-8")
+        editor = controller.new_document()
+        data = QMimeData()
+        data.setUrls([QUrl.fromLocalFile(str(source))])
+        editor.insertFromMimeData(data)
+
+        QTest.qWait(700)
+        assert editor.language_code() == "python"
+        assert _coloured_formats(editor) > 0
+    finally:
+        window.close()

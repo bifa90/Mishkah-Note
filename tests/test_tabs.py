@@ -174,8 +174,13 @@ def test_typing_preferences_reach_new_editors(controller):
     assert editor.word_completion_enabled() is False
 
 
-def test_highlighting_setting_is_off_by_default(controller):
+def test_highlighting_is_on_by_default(controller):
+    """CD-12: code colours itself, so the switch starts on."""
     editor = controller.new_document()
+    assert controller.settings.syntax_highlighting is True
+    assert editor.syntax_highlighting_enabled() is True
+
+    controller.set_syntax_highlighting(False)
     assert controller.settings.syntax_highlighting is False
     assert editor.syntax_highlighting_enabled() is False
 
@@ -184,7 +189,7 @@ def test_language_override_is_per_tab(controller):
     first = controller.new_document()
     controller.set_tab_language("python")
     assert first.language_code() == "python"
-    assert first.syntax_highlighting_enabled() is False   # toggling is separate
+    assert first.syntax_highlighting_enabled() is True    # colours, same grammar
 
     second = controller.new_document()
     assert second.language_code() == "plain"

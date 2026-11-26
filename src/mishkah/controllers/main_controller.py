@@ -210,6 +210,7 @@ class MainController(QObject):
         editor.textChanged.connect(lambda e=editor: self._on_text_changed(e))
         editor.language_detected.connect(
             lambda _code, e=editor: self._on_language_detected(e))
+        editor.files_dropped.connect(self._open_dropped_paths)
 
     @staticmethod
     def _resolve_theme(theme: str) -> str:
@@ -339,6 +340,9 @@ class MainController(QObject):
         finally:
             editor.blockSignals(blocked)
         editor.set_font_size(self.settings.font_size)
+        # The content is in the buffer now: colour it with the grammar the
+        # name or the text itself implies (CD-12), before the first paint.
+        self._apply_highlighting(editor)
 
         if doc.uses_performance_mode and self.settings.performance_mode:
             editor.set_word_wrap(False)
@@ -492,6 +496,7 @@ class MainController(QObject):
             return
         if enabled and doc.path is None:
             doc.autosave = False
+            doc.autosave_pending = True
             self.window.set_autosave(False)
             self._autosave_after_save = True
             self.window.show_save_first(self._doc_title(doc))
@@ -624,6 +629,9 @@ class MainController(QObject):
             editor = self.window.current_editor()
             if editor is None or not self.save_current():
                 self._autosave_after_save = False     # cancelled: stay off
+                current = self.current_document()
+                if current is not None:
+                    current.autosave_pending = False
             return
         if action == "enable_markdown":
             self.set_live_markdown(True)
@@ -718,6 +726,7 @@ class MainController(QObject):
         self._note_write(doc)
         if self._autosave_after_save and doc.path is not None:
             self._autosave_after_save = False
+            doc.autosave_pending = False
             doc.autosave = True
             if self.document_for(self.window.current_editor()) is doc:
                 self.window.set_autosave(True)
@@ -803,11 +812,41 @@ class MainController(QObject):
         self.window.set_always_on_top(bool(doc and doc.pinned))
         self._sync_ui(editor)
 
+    def _restore_banner(self, doc: Optional[DocumentModel]) -> None:
+        """Show the banner that belongs to *doc*, or hide the one that does not.
+
+        A message about one file must follow that file, not the window: the
+        notice for "file 1.txt" used to vanish the moment another tab came to
+        the front and only returned if the user went back to it.
+        """
+        if doc is None:
+            self.window.hide_file_changed()
+            return
+        if doc in self._changed_docs:
+            name = doc.path.name if doc.path is not None else doc.title
+            self.window.show_file_changed(name)
+            return
+        if doc in self._encoding_pending:
+            self.window.show_encoding_pending(self._doc_title(doc), doc.encoding)
+            return
+        if doc.autosave_pending:
+            self.window.show_save_first(self._doc_title(doc))
+            return
+        if doc.truncated:
+            from mishkah.core.large_file import PREVIEW_BYTES
+            shown = min(PREVIEW_BYTES,
+                        int(self.settings.hard_limit_mb or 0) * 1024 * 1024)
+            self.window.show_preview(doc.title, _human(shown),
+                                     _human(doc.size_on_disk))
+            return
+        self.window.hide_file_changed()
+
     def _sync_ui(self, editor: Optional[EditorView]) -> None:
         doc = self.document_for(editor)
         status = self.window.status
         if doc is None:
             return
+        self._restore_banner(doc)
         self.refresh_invisible_banner()
         self.window.set_autosave(bool(doc.autosave))
         status.set_encoding(doc.encoding)

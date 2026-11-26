@@ -129,7 +129,9 @@ class Settings:
     auto_indent: bool = True
     word_completion: bool = True
     #: Off by default: a plain mishkah should not colour code unprompted.
-    syntax_highlighting: bool = False
+    #: On by default: colouring is what a text editor is expected to do, and
+    #: with content detection the correct grammar is chosen without a dialog.
+    syntax_highlighting: bool = True
     #: Off by default: live Markdown is a view, opt-in like highlighting.
     live_markdown: bool = False
 

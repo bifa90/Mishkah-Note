@@ -21,8 +21,16 @@ PERFORMANCE_LINE_THRESHOLD = 2_000_000
 LIVE_SIZE_EXACT_LIMIT = 100_000
 
 
-@dataclass
+@dataclass(eq=False)
 class DocumentModel:
+    """State of one open document.
+
+    Identity, not value: two untitled buffers are the same *kind* of thing but
+    never the same document.  Bookkeeping lists (changed on disk, encoding
+    pending, autosave after save) compare documents, and value equality made
+    a brand-new tab inherit the banner of another one.
+    """
+
     path: Optional[Path] = None
     content: str = ""
     fmt: TextFormat = field(default_factory=TextFormat)
@@ -42,6 +50,8 @@ class DocumentModel:
     language: str = "auto"
     #: CD-12: whether the "looks like X" note was already shown for this tab.
     language_banner_shown: bool = False
+    #: Autosave was asked for before the tab had a path; it starts on save.
+    autosave_pending: bool = False
     revision: int = 0
     #: ``(mtime_ns, size)`` of the file the last time we read or wrote it.
     #: ``None`` = unknown (a new, never-saved document).  CD-18 compares this

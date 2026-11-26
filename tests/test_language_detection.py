@@ -24,6 +24,21 @@ def _controller(tmp_path):
     return window, MainController(window, settings, FileService()), settings
 
 
+def _wait_for_load(controller, window, timeout_ms: int = 4000):
+    """Wait until the background loader has actually filled the tab."""
+    from PySide6.QtTest import QTest
+
+    waited = 0
+    while waited < timeout_ms:
+        editor = window.current_editor()
+        doc = controller.document_for(editor) if editor is not None else None
+        if doc is not None and doc.content:
+            return editor
+        QTest.qWait(50)
+        waited += 50
+    return window.current_editor()
+
+
 def _paste(editor, text: str) -> None:
     from PySide6.QtCore import QMimeData
     from PySide6.QtGui import QTextCursor
@@ -70,34 +85,43 @@ def test_typing_code_without_pasting_also_colours_it(qapp, tmp_path):
         window.close()
 
 
-def test_a_known_file_name_wins_over_the_content(qapp, tmp_path):
-    """A .txt file with code in it keeps the name's answer: plain text."""
-    from PySide6.QtTest import QTest
+def test_a_txt_file_still_asks_the_content(qapp, tmp_path):
+    """".txt" says nothing about the language, so the code inside decides."""
 
     window, controller, _ = _controller(tmp_path)
     try:
         target = tmp_path / "notes.txt"
         target.write_text(PYTHON_CODE, encoding="utf-8")
         controller._begin_load(target)          # noqa: SLF001
-        QTest.qWait(700)
-        editor = window.current_editor()
+        editor = _wait_for_load(controller, window)
         assert editor is not None
         controller._apply_highlighting(editor)   # noqa: SLF001
-        assert controller._language_for(editor) == "plain"   # noqa: SLF001
+        assert controller._language_for(editor) == "python"   # noqa: SLF001
+    finally:
+        window.close()
+
+
+def test_a_named_extension_still_wins(qapp, tmp_path):
+
+    window, controller, _ = _controller(tmp_path)
+    try:
+        target = tmp_path / "notes.md"
+        target.write_text(PYTHON_CODE, encoding="utf-8")
+        controller._begin_load(target)          # noqa: SLF001
+        editor = _wait_for_load(controller, window)
+        assert controller._language_for(editor) == "markdown"   # noqa: SLF001
     finally:
         window.close()
 
 
 def test_a_python_file_is_python_from_the_start(qapp, tmp_path):
-    from PySide6.QtTest import QTest
 
     window, controller, _ = _controller(tmp_path)
     try:
         target = tmp_path / "script.py"
         target.write_text(PYTHON_CODE, encoding="utf-8")
         controller._begin_load(target)          # noqa: SLF001
-        QTest.qWait(700)
-        editor = window.current_editor()
+        editor = _wait_for_load(controller, window)
         assert controller._language_for(editor) == "python"   # noqa: SLF001
     finally:
         window.close()

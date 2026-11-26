@@ -27,12 +27,14 @@ from __future__ import annotations
 
 import re
 import time
+from pathlib import Path
 from typing import Optional, Tuple
 
 from PySide6.QtCore import QMargins, QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (
     QColor,
     QFont,
+    QKeySequence,
     QPainter,
     QTextBlockFormat,
     QTextCursor,
@@ -41,6 +43,7 @@ from PySide6.QtGui import (
 from PySide6.QtWidgets import QListWidget, QListWidgetItem, QPlainTextEdit
 
 from mishkah.core import autocomplete, syntax
+from mishkah.core.i18n import tr
 from mishkah.core.text_direction import (
     AUTO,
     FIRST_LINE,
@@ -97,6 +100,10 @@ STATS_IDLE_MS = 150
 #: (CD-07).  Anything further away cannot be seen, so it is not parsed.
 MARKDOWN_WINDOW_LINES = 400
 
+#: A dropped file larger than this opens in its own tab instead of being
+#: pasted into the buffer (CD-22).
+DROP_PASTE_LIMIT = 2 * 1024 * 1024
+
 #: How long typing has to pause before the content sniffs its own language.
 LANGUAGE_DETECT_MS = 400
 
@@ -124,7 +131,8 @@ class EditorView(QPlainTextEdit):
     direction_changed = Signal(str)          # auto | rtl | ltr (mode changed)
     resolved_direction_changed = Signal(str)  # the caret moved to another direction
     stats_changed = Signal(int, int)
-    language_detected = Signal(str)      # CD-12: guessed from the content         # lines, chars
+    language_detected = Signal(str)      # CD-12: guessed from the content
+    files_dropped = Signal(list)         # CD-22: too big/binary to paste         # lines, chars
 
     def __init__(self, document: DocumentModel, font: Optional[QFont] = None,
                  parent=None):
@@ -248,6 +256,10 @@ class EditorView(QPlainTextEdit):
         self.document().setModified(False)
         self._document_side = None          # a new buffer gets a new decision
         self._side_locked = True            # a loaded file is not "one line"
+        # The buffer knows its language the moment it is loaded: no waiting
+        # for the debounce, so a file opens with the right grammar.
+        self._content_language = syntax.language_for_text(
+            text[:syntax.SNIFF_TEXT_LIMIT])
         self._sync_auto_alignment()
         self._emit_stats()
 
@@ -649,6 +661,68 @@ class EditorView(QPlainTextEdit):
     # ==================================================================
     # word completion popup
     # ==================================================================
+    def insertFromMimeData(self, source) -> None:  # noqa: N802 - Qt naming
+        """Dropping a file on the text pastes its content (CD-22).
+
+        The default handler writes the file's *path* into the buffer, which is
+        never what someone dragging a note onto the page wants.  Text files up
+        to :data:`DROP_PASTE_LIMIT` are inserted; anything else (binary, huge)
+        is handed to the controller, which opens it in a tab instead.
+        """
+        paths = []
+        if source is not None and source.hasUrls():
+            paths = [url.toLocalFile() for url in source.urls()
+                     if url.isLocalFile() and url.toLocalFile()]
+        if not paths:
+            super().insertFromMimeData(source)
+            return
+
+        from mishkah.core import large_file
+
+        texts = []
+        refused = []
+        for path in paths:
+            try:
+                target = Path(path)
+                if not target.is_file() or target.stat().st_size > DROP_PASTE_LIMIT:
+                    refused.append(path)
+                    continue
+                with open(target, "rb") as handle:
+                    head = handle.read(8192)
+                if large_file.looks_binary(head):
+                    refused.append(path)
+                    continue
+                texts.append(target.read_text(encoding="utf-8", errors="replace"))
+            except OSError:
+                refused.append(path)
+        if texts:
+            body = "\n".join(text.rstrip("\n") for text in texts)
+            cursor = self.textCursor()
+            cursor.beginEditBlock()
+            if self.document().characterCount() > 1:
+                cursor.insertText("\n" + body + "\n")
+            else:
+                cursor.insertText(body)
+            cursor.endEditBlock()
+            self.setTextCursor(cursor)
+        if refused:
+            self.files_dropped.emit(refused)
+
+    def build_context_menu(self):
+        """The standard menu plus "paste without formatting" (CD-13)."""
+        menu = self.createStandardContextMenu()
+        menu.addSeparator()
+        action = menu.addAction(tr("action.paste_plain"))
+        action.setShortcut(QKeySequence("Ctrl+Shift+V"))
+        action.triggered.connect(self.paste_plain)
+        action.setObjectName("PastePlain")
+        return menu
+
+    def contextMenuEvent(self, event) -> None:  # noqa: N802 - Qt naming
+        menu = self.build_context_menu()
+        menu.exec(event.globalPos())
+        menu.deleteLater()
+
     def paste_plain(self) -> bool:
         """Paste the clipboard as text only (CD-13).
 
@@ -795,6 +869,8 @@ class EditorView(QPlainTextEdit):
                 self._markdown = None
                 self.viewport().update()
             return
+        was_modified = self.document().isModified()
+        self._formatting = True
         if self._markdown is None:
             self._markdown = MarkdownDecorator(self.document(),
                                                self._theme_name, self.font())
@@ -803,6 +879,8 @@ class EditorView(QPlainTextEdit):
             self._markdown.set_active_block(self.textCursor().blockNumber())
         else:
             self._markdown.set_theme(self._theme_name)
+        self._formatting = False
+        self.document().setModified(was_modified)
         self.viewport().update()
 
     def live_markdown_enabled(self) -> bool:
@@ -861,20 +939,30 @@ class EditorView(QPlainTextEdit):
     def set_syntax_highlighting(self, enabled: bool,
                                 language: Optional[str] = None,
                                 theme: str = "light") -> None:
-        if language:
-            self._language = language
-        if not enabled:
-            if self._highlighter is not None:
-                self._highlighter.setDocument(None)
-                self._highlighter.deleteLater()
-                self._highlighter = None
-            return
-        code = self.language_code()
-        if self._highlighter is None:
-            self._highlighter = SyntaxHighlighter(self.document(), code, theme)
-        else:
-            self._highlighter.set_theme(theme)
-            self._highlighter.set_language(code)
+        """Colour the buffer with *language* (or the language we infer).
+
+        The language passed in is applied to the highlighter only — it is not
+        remembered as a user choice, otherwise the first guess would freeze
+        and later content detection could never correct it (CD-12).
+        """
+        was_modified = self.document().isModified()
+        self._formatting = True                 # formats only, not an edit
+        try:
+            if not enabled:
+                if self._highlighter is not None:
+                    self._highlighter.setDocument(None)
+                    self._highlighter.deleteLater()
+                    self._highlighter = None
+                return
+            code = language or self.language_code()
+            if self._highlighter is None:
+                self._highlighter = SyntaxHighlighter(self.document(), code, theme)
+            else:
+                self._highlighter.set_theme(theme)
+                self._highlighter.set_language(code)
+        finally:
+            self._formatting = False
+            self.document().setModified(was_modified)
 
     def syntax_highlighting_enabled(self) -> bool:
         return self._highlighter is not None
@@ -894,6 +982,11 @@ class EditorView(QPlainTextEdit):
         """
         if self._language and self._language != "auto":
             return self._language
+        # The tab's own choice (View ▸ Language) lives on the document, so it
+        # survives a reload and is not tied to this widget.
+        chosen = getattr(self._doc, "language", "auto") if self._doc else "auto"
+        if chosen and chosen != "auto":
+            return chosen
         path = self._doc.path if self._doc is not None else None
         by_path = syntax.language_for_path(path)
         if by_path != syntax.PLAIN.code:

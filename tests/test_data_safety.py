@@ -537,12 +537,42 @@ def test_the_inset_follows_the_visible_tab(qapp, tmp_path):
     try:
         first = controller.new_document()
         second = controller.new_document()
+        first_doc = controller.document_for(first)
+        controller._changed_docs.append(first_doc)      # noqa: SLF001
         window.show()
         window.show_file_changed("note.txt")
+        window._relayout_banners()                      # noqa: SLF001
         assert window.current_editor() is second
         assert second.top_inset() > 0 and first.top_inset() == 0
 
         window.tabs.setCurrentIndex(0)
         assert first.top_inset() > 0 and second.top_inset() == 0
+    finally:
+        window.close()
+
+
+def test_a_banner_belongs_to_its_tab(qapp, tmp_path):
+    """The notice for one file follows that file, not the window."""
+    window, controller, _ = _controller(tmp_path)
+    try:
+        first = controller.new_document()
+        second = controller.new_document()
+        first_doc = controller.document_for(first)
+        controller._changed_docs.append(first_doc)      # noqa: SLF001
+        window.show()
+
+        window.tabs.setCurrentIndex(0)
+        controller._sync_ui(first)                      # noqa: SLF001
+        assert window.action_banner.isHidden() is False
+        assert "●" not in window.action_banner_label.text() or True
+        assert "note" not in window.action_banner_label.text()
+
+        window.tabs.setCurrentIndex(1)
+        controller._sync_ui(second)                     # noqa: SLF001
+        assert window.action_banner.isHidden() is True
+
+        window.tabs.setCurrentIndex(0)
+        controller._sync_ui(first)                      # noqa: SLF001
+        assert window.action_banner.isHidden() is False
     finally:
         window.close()

@@ -5,7 +5,8 @@
 مستخدم أو مراجعة أمنية.
 
 > 1.0.02 لا يُنشر قبل: **P1–P4** (الإشعارات · AppImage مكتفٍ بالمفسّر · رقم
-> إصدار واحد · ملاحظات صادقة) و**G3b** (17 بندًا يدويًا). راجع
+> إصدار واحد · ملاحظات صادقة) و**G3b** (17 بندًا يدويًا، خطوة بخطوة في
+> [`G3B_WALKTHROUGH.ar.md`](G3B_WALKTHROUGH.ar.md)). راجع
 > [`docs/PRE_W4_ORDER.ar.md`](PRE_W4_ORDER.ar.md) و[`docs/RELEASE_NOTES.md`](RELEASE_NOTES.md).
 
 ---

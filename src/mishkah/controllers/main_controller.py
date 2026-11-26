@@ -208,6 +208,7 @@ class MainController(QObject):
         page = self.window.home_page()
         if page is None:
             page = HomePage(self.window)
+            page.setFont(self.window.ui_font())
             page.new_requested.connect(self._new_from_home)
             page.open_requested.connect(self._open_from_home)
             page.recent_requested.connect(self._open_recent_from_home)

@@ -14,7 +14,11 @@ BRANDING_DIR = RESOURCES_DIR / "branding"
 LOGO_SVG = BRANDING_DIR / "logo.svg"
 LOGO_RASTER = BRANDING_DIR / "logo.webp"
 
+#: Latin-free Arabic sans used by the Arabic interface chrome.
 BUNDLED_FONT = FONTS_DIR / "IBMPlexSansArabic-Regular.ttf"
+#: Urdu chrome face.  The reading face for Urdu stays Nastaliq, whose tall
+#: strokes clip in 12 px menus; this one keeps the menu bar legible.
+BUNDLED_URDU_FONT = FONTS_DIR / "NotoSansArabic-Regular.ttf"
 
 _ICON_CANDIDATES = ("app-512.png", "app-256.png", "app-128.png", "app.png", "app.svg")
 

@@ -32,6 +32,7 @@
 | **PySide6** و **Shiboken6** | **LGPL v3** (أو GPL v3 أو تجارية) | غلاف بايثون لـ Qt؛ ديناميكي |
 | **charset-normalizer** | MIT | كشف الترميز |
 | **IBM Plex Sans Arabic** (الخطوط المضمّنة) | **SIL Open Font License 1.1** | النص في `src/mishkah/resources/fonts/OFL.txt` |
+| **Noto Sans Arabic** (الخطوط المضمّنة) | **SIL Open Font License 1.1** | النص في `src/mishkah/resources/fonts/OFL-NotoSansArabic.txt` |
 | **Python 3** (المفسّر) | PSF License Agreement | يوفّره نظامك |
 | خطوط النظام (Noto، Liberation…) | رخصها الخاصة | غير محزومة |
 
@@ -95,5 +96,6 @@ Mishkah Note itself is MIT (see `LICENSE`). It uses **Qt 6 and PySide6** under t
 dynamically loaded from the system in the deb, rpm, Arch and Flatpak packages; the **AppImage and
 the Windows MSI bundle** those libraries and a **CPython** runtime, and this file states where they
 live and how to replace them, as the LGPL requires. `charset-normalizer` is MIT, the bundled
-**IBM Plex Sans Arabic** font is under the **SIL OFL 1.1** (`OFL.txt` ships with it), and the
+**IBM Plex Sans Arabic** and **Noto Sans Arabic** fonts are under the **SIL OFL 1.1**
+(`OFL.txt` and `OFL-NotoSansArabic.txt` ship with them), and the
 CPython interpreter is covered by the **PSF License Agreement**. No warranty is given.

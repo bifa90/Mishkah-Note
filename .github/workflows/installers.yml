@@ -110,6 +110,7 @@ jobs:
             $exe = Join-Path $directory "Mishkah Note.exe"
             if (-not (Test-Path $exe)) { throw "installed executable missing" }
             if (-not (Get-ChildItem $directory -Recurse -Filter IBMPlexSansArabic-Regular.ttf)) { throw "bundled Arabic font missing" }
+            if (-not (Get-ChildItem $directory -Recurse -Filter NotoSansArabic-Regular.ttf)) { throw "bundled Urdu font missing" }
             $check = Start-Process $exe -ArgumentList "--version" -Wait -PassThru
             if ($check.ExitCode -ne 0) { throw "installed executable failed" }
           } catch {

@@ -1201,9 +1201,24 @@ class MainWindow(QMainWindow):
         self.act_show_invisible.blockSignals(blocked)
 
     def set_ui_font(self, font: QFont) -> None:
+        """Apply the interface face to the chrome *and* to the welcome page.
+
+        Urdu asks for a different face in the chrome than in the editor (see
+        ``Language.ui_faces``), so the menus, their popups and the welcome page
+        all take the same resolved font; the editor keeps its own.
+        """
+        self._ui_font = QFont(font)
         self.menuBar().setFont(font)
         self.status.setFont(font)
         self.find_bar.setFont(font)
+        for menu in self.menuBar().findChildren(QMenu):
+            menu.setFont(font)
+        for page in self.findChildren(HomePage):
+            page.setFont(font)
+
+    def ui_font(self) -> QFont:
+        """The current interface font (a copy, so callers cannot mutate it)."""
+        return QFont(getattr(self, "_ui_font", QFont()))
 
     def install_tab_order(self) -> None:
         """One Tab chain: tabs → search → banners → status chips.
@@ -1231,6 +1246,8 @@ class MainWindow(QMainWindow):
         self.autosave_label.setText(tr("action.autosave_label"))
         self.autosave_switch.setToolTip(self._autosave_tooltip())
         self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
+        for page in self.findChildren(HomePage):
+            page.retranslate()
         self.act_banner_dismiss.setAccessibleName(tr("dialog.close"))
         self.act_banner_dismiss.setToolTip(tr("dialog.close"))
         self.autosave_holder.show()

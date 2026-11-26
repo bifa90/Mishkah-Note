@@ -43,6 +43,11 @@ class Language:
     script: str
     fonts: Tuple[str, ...]         # script-specific reading faces, best first
     sample: str                    # string used to preview the language
+    #: Faces for the *chrome* — menus, buttons, the status bar.  Nastaliq is the
+    #: right face for reading Urdu prose and the wrong one for a 12 px menu: it is
+    #: tall, slanted and clips inside a button, so a language may ask for a
+    #: different face in the interface than in the editor.
+    ui_faces: Tuple[str, ...] = ()
 
     @property
     def editor_fonts(self) -> Tuple[str, ...]:
@@ -56,7 +61,8 @@ class Language:
 
     @property
     def ui_fonts(self) -> Tuple[str, ...]:
-        return tuple(list(self.fonts) + list(UI_STACK))
+        faces = self.ui_faces or self.fonts
+        return tuple(dict.fromkeys(faces + self.fonts + UI_STACK))
 
 
 _LANGUAGES: Tuple[Language, ...] = (
@@ -123,6 +129,12 @@ _LANGUAGES: Tuple[Language, ...] = (
             "Noto Sans Arabic",
             "Tahoma",
         ),
+        ui_faces=(
+            "IBM Plex Sans Arabic",      # bundled: the chrome never depends on the system
+            "Noto Sans Arabic",
+            "Noto Naskh Arabic",
+            "Tahoma",
+        ),
         sample="نص عربي تجريبي: الثعلب البني السريع يقفز فوق الكلب الكسول.",
     ),
     Language(
@@ -164,6 +176,14 @@ _LANGUAGES: Tuple[Language, ...] = (
             "Urdu Typesetting",
             "Noto Naskh Arabic",
             "IBM Plex Sans Arabic",
+        ),
+        # Nastaliq inside a 12 px menu button is unreadable and clips; the
+        # chrome asks for a sans Arabic face, and the editor keeps Nastaliq.
+        ui_faces=(
+            "Noto Sans Arabic",
+            "Noto Naskh Arabic",
+            "IBM Plex Sans Arabic",
+            "Tahoma",
         ),
         sample="تیز بھوری لومڑی سست کتے پر چھلانگ لگاتی ہے۔",
     ),

@@ -49,7 +49,7 @@ QMenu::separator {
 QMenu::indicator { width: 14px; height: 14px; }
 QMenu[menuDensity="tight"] { padding: 3px; }
 QMenu[menuDensity="tight"]::item {
-    padding: 0px 22px 0px 22px;
+    padding: 1px 24px 1px 24px;
     border-radius: 4px;
 }
 QMenu[menuDensity="tight"]::separator { margin: 2px 8px; }

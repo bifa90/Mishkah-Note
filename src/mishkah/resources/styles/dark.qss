@@ -31,7 +31,7 @@ QMenu::item:disabled { color: #7A7A7A; }
 QMenu::separator { height: 1px; background: #3A3A3A; margin: 4px 8px; }
 QMenu::indicator { width: 14px; height: 14px; }
 QMenu[menuDensity="tight"] { padding: 3px; }
-QMenu[menuDensity="tight"]::item { padding: 0px 22px 0px 22px; border-radius: 4px; }
+QMenu[menuDensity="tight"]::item { padding: 1px 24px 1px 24px; border-radius: 4px; }
 QMenu[menuDensity="tight"]::separator { margin: 2px 8px; }
 QMenu[menuDensity="snug"] { padding: 3px; }
 QMenu[menuDensity="snug"]::item { padding: 3px 22px 3px 22px; border-radius: 4px; }

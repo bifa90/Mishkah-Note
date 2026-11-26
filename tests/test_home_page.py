@@ -407,10 +407,10 @@ def test_urdu_dropdown_menus_are_compact_and_fit_on_a_laptop_screen(qapp, tmp_pa
     apply_theme(qapp, "light")
     window, controller, _ = _controller(tmp_path, ui_language="ur")
     try:
-        # Urdu: tight frame, ~10.5-11.5 pt font (~10-15% above the 9.5 pt floor)
+        # Urdu: tight frame (+10% room), ~11.0-12.0 pt font (+5% over 11 pt)
         for menu in window.menuBar().findChildren(QMenu):
             assert menu.property("menuDensity") == "tight"
-            assert 10.5 <= menu.font().pointSizeF() <= 11.5
+            assert 11.0 <= menu.font().pointSizeF() <= 12.0
         view_height = window.menu_view.sizeHint().height()
         assert view_height < 640, f"Urdu View menu too tall for a laptop screen: {view_height}px"
 

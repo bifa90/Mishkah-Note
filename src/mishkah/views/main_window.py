@@ -1212,8 +1212,8 @@ class MainWindow(QMainWindow):
         """Compute popup-menu font and QSS density per interface language.
 
         * ``ur`` (Urdu): Noto Sans Arabic carries a 2.11× em line box, so keep
-          the tightest item frame (``tight``) while sizing the font ~15% larger
-          than the earlier 9.5 pt floor (~11 pt at default 12 pt UI font).
+          the tight item frame (``tight``) with ~11.5 pt font at default 12 pt
+          UI font so every dropdown stays legible and inside a laptop screen.
         * ``ar`` (Arabic): IBM Plex Sans Arabic is already sized well at 12 pt;
           keep the font size untouched and only trim the item padding (``snug``).
         * ``hi``, ``bn`` (Hindi, Bengali): keep both font and padding untouched.
@@ -1232,8 +1232,8 @@ class MainWindow(QMainWindow):
             em_px = info.pixelSize()
             metrics_h = QFontMetrics(font).height()
             ratio = (metrics_h / em_px) if em_px > 0 else 1.0
-            scale = min(0.92, 1.92 / ratio) if ratio > 1.75 else 0.92
-            target_pt = max(9.5, min(11.5, round(pt * scale * 2) / 2))
+            scale = min(0.96, 2.02 / ratio) if ratio > 1.75 else 0.96
+            target_pt = max(10.0, min(12.0, round(pt * scale * 2) / 2))
             menu_font.setPointSizeF(target_pt)
             return menu_font, "tight"
 

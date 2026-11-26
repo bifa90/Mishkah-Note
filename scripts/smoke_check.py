@@ -132,7 +132,15 @@ def main(argv: list[str] | None = None) -> int:
     print(f"    {report.passed} passed, {report.failed} failed")
     if report.failed:
         return 1
-    return 77 if status == 77 else 0
+    if status == 77:
+        # CI sets MISHKAH_REQUIRE_QT=1: a silently skipped Qt half would make
+        # this run green without ever proving that Qt, the fonts and the window
+        # really work inside the package.
+        if os.environ.get("MISHKAH_REQUIRE_QT") == "1":
+            print("    ✘ Qt was required (MISHKAH_REQUIRE_QT=1) but could not load")
+            return 1
+        return 77
+    return 0
 
 
 if __name__ == "__main__":

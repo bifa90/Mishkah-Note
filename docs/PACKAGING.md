@@ -112,8 +112,9 @@ bash scripts/smoke-test.sh --appimage dist/*.AppImage # يفكّ الصورة و
 ```
 
 فحوص Qt في `smoke-test.sh` تحتاج `PySide6` **ومكتبات Qt** (`libgl1`،
-`libxkbcommon0`، `libdbus-1-3`)؛ فإن غابت أُعلنت متخطّاة، ووُضع في CI على
-`ubuntu-latest` حيث تتوفر.
+`libxkbcommon0`، `libdbus-1-3`)؛ فإن غابت أُعلنت متخطّاة. في CI يُضبط
+`MISHKAH_REQUIRE_QT=1`، فيصير **غياب Qt فشلًا** لا تخطيًا صامتًا: لا نريد شهادة
+خضراء لم تُجرَّب فيها الحزمة مع Qt أصلًا.
 
 ## الاعتماديات
 

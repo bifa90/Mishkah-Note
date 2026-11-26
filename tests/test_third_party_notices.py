@@ -95,6 +95,7 @@ def test_smoke_test_checks_a_version_and_a_round_trip():
     text = (REPO / "scripts/smoke_check.py").read_text(encoding="utf-8")
     assert "--expect" in text
     assert "write_text_atomic" in text and "load_file" in text
+    assert "MISHKAH_REQUIRE_QT" in text, "CI must not accept a silently skipped Qt half"
     driver = (REPO / "scripts/smoke-test.sh").read_text(encoding="utf-8")
     for flag in ("--deb", "--appimage", "--build"):
         assert flag in driver

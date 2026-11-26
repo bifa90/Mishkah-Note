@@ -32,13 +32,27 @@ def _editor(lines: int = 200):
     return editor
 
 
-def _pdf_printer(path):
+def _print_to_pdf(editor, path, qapp):
+    """Print *editor* into a PDF at *path*, then let every Qt object go.
+
+    The printer is created and destroyed inside this function on purpose: a
+    ``QPrinter`` that outlives its test keeps a font engine and a paint device
+    alive into another test's teardown, which is exactly the shape of the
+    PySide6/CPython crash the project already works around at session end.
+    """
     from PySide6.QtPrintSupport import QPrinter
+
+    from mishkah.controllers.main_controller import MainController
 
     printer = QPrinter(QPrinter.PrinterMode.HighResolution)
     printer.setOutputFormat(QPrinter.OutputFormat.PdfFormat)
     printer.setOutputFileName(str(path))
-    return printer
+    MainController.print_to(editor, printer)
+
+    editor.deleteLater()
+    del printer
+    qapp.processEvents()
+    return path.read_bytes()
 
 
 def _pages(data: bytes) -> int:
@@ -47,13 +61,10 @@ def _pages(data: bytes) -> int:
 
 
 def test_an_arabic_document_prints_to_a_paginated_pdf(qapp, tmp_path):
-    from mishkah.controllers.main_controller import MainController
-
     target = tmp_path / "arabic.pdf"
-    MainController.print_to(_editor(), _pdf_printer(target))
+    data = _print_to_pdf(_editor(), target, qapp)
 
     assert target.is_file()
-    data = target.read_bytes()
     assert data.startswith(b"%PDF"), data[:16]
     assert len(data) > 4000, "a 200-line document should not produce a stub"
     assert _pages(data) > 1, "200 lines did not paginate"
@@ -61,22 +72,16 @@ def test_an_arabic_document_prints_to_a_paginated_pdf(qapp, tmp_path):
 
 
 def test_a_longer_document_gets_more_pages(qapp, tmp_path):
-    from mishkah.controllers.main_controller import MainController
-
-    short, long = tmp_path / "short.pdf", tmp_path / "long.pdf"
-    MainController.print_to(_editor(40), _pdf_printer(short))
-    MainController.print_to(_editor(600), _pdf_printer(long))
-    assert _pages(long.read_bytes()) > _pages(short.read_bytes())
+    short = _pages(_print_to_pdf(_editor(40), tmp_path / "short.pdf", qapp))
+    long = _pages(_print_to_pdf(_editor(600), tmp_path / "long.pdf", qapp))
+    assert long > short
 
 
 def test_an_empty_document_still_produces_a_valid_pdf(qapp, tmp_path):
-    from mishkah.controllers.main_controller import MainController
     from mishkah.models.document import DocumentModel
     from mishkah.views.editor_view import EditorView
 
-    target = tmp_path / "empty.pdf"
-    MainController.print_to(EditorView(DocumentModel()), _pdf_printer(target))
-    data = target.read_bytes()
+    data = _print_to_pdf(EditorView(DocumentModel()), tmp_path / "empty.pdf", qapp)
     assert data.startswith(b"%PDF")
     assert _pages(data) == 1
 

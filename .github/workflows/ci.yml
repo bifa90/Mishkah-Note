@@ -57,6 +57,11 @@ jobs:
           MISHKAH_CLEAN_EXIT: "1"
         run: pytest -q --junitxml=build/pytest.xml
 
+      - name: Measure startup time (recorded, not gated)
+        env:
+          QT_QPA_PLATFORM: offscreen
+        run: python tools/measure_startup.py --json
+
       - name: Report test failures
         if: always()
         run: python tools/report_test_failures.py build/pytest.xml
@@ -95,6 +100,14 @@ jobs:
           QT_QPA_PLATFORM: offscreen
           MISHKAH_CLEAN_EXIT: "1"
         run: bash scripts/verify-packaging.sh
+
+      - name: Smoke-test the built .deb from the inside
+        env:
+          QT_QPA_PLATFORM: offscreen
+          MISHKAH_REQUIRE_QT: "1"
+        run: |
+          pip install PySide6
+          bash scripts/smoke-test.sh --deb "$(ls dist/*.deb | head -1)"
 
       - name: Upload the built packages
         uses: actions/upload-artifact@v4

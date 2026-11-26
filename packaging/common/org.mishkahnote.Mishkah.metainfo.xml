@@ -60,6 +60,12 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="1.0.02" date="2026-11-26">
+      <description>
+        <p>Correctness and data-safety release.</p>
+        <p xml:lang="ar">إصدار تصحيحات وسلامة بيانات.</p>
+      </description>
+    </release>
     <release version="1.0.01" date="2026-10-22">
       <description>
         <p>First release of Mishkah Note, with live Markdown as an opt-in view.</p>

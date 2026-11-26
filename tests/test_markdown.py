@@ -205,7 +205,9 @@ def test_hidden_syntax_collapses(qapp):
         fmt = formats[offset]
         assert fmt.fontPointSize() < 1.5            # shrunk to nothing
         assert fmt.fontLetterSpacing() < 0           # and pulled together
-    line = editor.markdown_decorator().document().findBlockByNumber(number).userData().line
+    # The parse result lives in the decorator's dict, not in Qt-owned block
+    # user data: Qt deletes those in C++ and the Python wrapper crashed.
+    line = editor.markdown_decorator().parsed_line(number)
     assert line.kind == markdown.PARAGRAPH
     assert "**" not in line.visible_text
 

@@ -19,7 +19,6 @@ from PySide6.QtGui import (
     QColor,
     QFont,
     QSyntaxHighlighter,
-    QTextBlockUserData,
     QTextCharFormat,
     QTextDocument,
 )
@@ -43,15 +42,8 @@ PALETTE: Dict[str, tuple] = {
 MAX_HIGHLIGHT_BLOCKS = 50_000
 
 
-class _BlockState(QTextBlockUserData):
-    """Remembers "this block ends inside a block comment"."""
-
-    __slots__ = ("in_comment",)
-
-    def __init__(self, in_comment: bool = False):
-        super().__init__()
-        self.in_comment = in_comment
-
+#: Block state meaning "this line is still inside a block comment".
+_IN_COMMENT = 1
 
 class SyntaxHighlighter(QSyntaxHighlighter):
     def __init__(self, document: QTextDocument, language: str = "plain",
@@ -125,9 +117,12 @@ class SyntaxHighlighter(QSyntaxHighlighter):
         previous = self.currentBlock().previous()
         in_comment = False
         if previous.isValid():
-            data = previous.userData()
-            if isinstance(data, _BlockState):
-                in_comment = data.in_comment
+            # An *int* block state, not a Python object: Qt owns the state of
+            # every block in the document, and handing it a Python-owned
+            # QTextBlockUserData made the interpreter die while freeing it
+            # ("none_dealloc"/"bool_dealloc", seen on toggling highlighting in
+            # a large Markdown file and at exit in CI).
+            in_comment = previous.userState() == _IN_COMMENT
 
         start = 0
         if in_comment:
@@ -138,7 +133,7 @@ class SyntaxHighlighter(QSyntaxHighlighter):
                 start = length
             else:
                 self.setFormat(0, len(text), comment_format)
-                self.setCurrentBlockUserData(_BlockState(True))
+                self.setCurrentBlockState(_IN_COMMENT)
                 return
 
         while True:
@@ -153,10 +148,10 @@ class SyntaxHighlighter(QSyntaxHighlighter):
                 start = end_at
             else:
                 self.setFormat(open_at, len(text) - open_at, comment_format)
-                self.setCurrentBlockUserData(_BlockState(True))
+                self.setCurrentBlockState(_IN_COMMENT)
                 return
 
-        self.setCurrentBlockUserData(_BlockState(False))
+        self.setCurrentBlockState(0)
 
     # ------------------------------------------------------------------
     def language_code(self) -> str:

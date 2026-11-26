@@ -14,6 +14,216 @@ S = Dict[str, str]
 
 STRINGS: Dict[str, S] = {
     # ------------------------------------------------------------------ app
+    "settings.cat.appearance": {
+        "en": 'Appearance', "ar": 'المظهر', "zh-Hans": '外观',
+        "hi": 'रूप-रंग', "es": 'Apariencia', "fr": 'Apparence',
+        "bn": 'চেহারা', "pt": 'Aparência', "ru": 'Оформление',
+        "ur": 'ظاہری شکل',
+    },
+    "settings.cat.editor": {
+        "en": 'Editor', "ar": 'المحرّر', "zh-Hans": '编辑器',
+        "hi": 'संपादक', "es": 'Editor', "fr": 'Éditeur',
+        "bn": 'সম্পাদক', "pt": 'Editor', "ru": 'Редактор',
+        "ur": 'مدیر',
+    },
+    "settings.cat.typing": {
+        "en": 'Typing and direction', "ar": 'الكتابة والاتجاه', "zh-Hans": '输入与方向',
+        "hi": 'टाइपिंग और दिशा', "es": 'Escritura y dirección', "fr": 'Saisie et direction',
+        "bn": 'লেখা ও দিক', "pt": 'Escrita e direção', "ru": 'Ввод и направление',
+        "ur": 'تحریر اور سمت',
+    },
+    "settings.cat.files": {
+        "en": 'Files and saving', "ar": 'الملفات والحفظ', "zh-Hans": '文件与保存',
+        "hi": 'फ़ाइलें और सहेजना', "es": 'Archivos y guardado', "fr": 'Fichiers et enregistrement',
+        "bn": 'ফাইল ও সংরক্ষণ', "pt": 'Ficheiros e gravação', "ru": 'Файлы и сохранение',
+        "ur": 'فائلیں اور محفوظ کرنا',
+    },
+    "settings.cat.tabs": {
+        "en": 'Tabs and session', "ar": 'التبويبات والجلسة', "zh-Hans": '标签页与会话',
+        "hi": 'टैब और सत्र', "es": 'Pestañas y sesión', "fr": 'Onglets et session',
+        "bn": 'ট্যাব ও সেশন', "pt": 'Separadores e sessão', "ru": 'Вкладки и сеанс',
+        "ur": 'ٹیبز اور سیشن',
+    },
+    "settings.cat.shortcuts": {
+        "en": 'Shortcuts', "ar": 'الاختصارات', "zh-Hans": '快捷键',
+        "hi": 'शॉर्टकट', "es": 'Atajos', "fr": 'Raccourcis',
+        "bn": 'শর্টকাট', "pt": 'Atalhos', "ru": 'Сочетания',
+        "ur": 'شارٹ کٹ',
+    },
+    "settings.cat.advanced": {
+        "en": 'Advanced', "ar": 'متقدم', "zh-Hans": '高级',
+        "hi": 'उन्नत', "es": 'Avanzado', "fr": 'Avancé',
+        "bn": 'উন্নত', "pt": 'Avançado', "ru": 'Дополнительно',
+        "ur": 'جدید',
+    },
+    "settings.last_tab": {
+        "en": 'Closing the last tab', "ar": 'عند إغلاق آخر تبويب', "zh-Hans": '关闭最后一个标签页时',
+        "hi": 'अंतिम टैब बंद करने पर', "es": 'Al cerrar la última pestaña', "fr": 'À la fermeture du dernier onglet',
+        "bn": 'শেষ ট্যাব বন্ধ করলে', "pt": 'Ao fechar o último separador', "ru": 'При закрытии последней вкладки',
+        "ur": 'آخری ٹیب بند کرنے پر',
+    },
+    "settings.last_tab.home": {
+        "en": 'Show the welcome page', "ar": 'اعرض صفحة البداية', "zh-Hans": '显示欢迎页',
+        "hi": 'होम पेज दिखाएँ', "es": 'Mostrar la página de inicio', "fr": 'Afficher la page d’accueil',
+        "bn": 'হোম পেজ দেখান', "pt": 'Mostrar a página inicial', "ru": 'Показать главную страницу',
+        "ur": 'ہوم صفحہ دکھائیں',
+    },
+    "settings.last_tab.quit": {
+        "en": 'Quit the application', "ar": 'أنهِ البرنامج', "zh-Hans": '退出程序',
+        "hi": 'ऐप बंद करें', "es": 'Salir de la aplicación', "fr": 'Quitter l’application',
+        "bn": 'অ্যাপ বন্ধ করুন', "pt": 'Sair da aplicação', "ru": 'Завершить программу',
+        "ur": 'ایپ بند کریں',
+    },
+    "settings.redo_shortcut": {
+        "en": 'Redo', "ar": 'إعادة', "zh-Hans": '重做',
+        "hi": 'फिर से करें', "es": 'Rehacer', "fr": 'Rétablir',
+        "bn": 'আবার করুন', "pt": 'Refazer', "ru": 'Повторить',
+        "ur": 'دوبارہ',
+    },
+    "settings.replace_shortcut": {
+        "en": 'Replace', "ar": 'استبدال', "zh-Hans": '替换',
+        "hi": 'बदलें', "es": 'Reemplazar', "fr": 'Remplacer',
+        "bn": 'প্রতিস্থাপন', "pt": 'Substituir', "ru": 'Заменить',
+        "ur": 'تبدیل کریں',
+    },
+    "settings.shortcut.default": {
+        "en": 'This build’s default', "ar": 'الافتراضي في هذا الإصدار', "zh-Hans": '本版本默认',
+        "hi": 'इस बिल्ड का डिफ़ॉल्ट', "es": 'Valor por defecto', "fr": 'Valeur par défaut',
+        "bn": 'এই সংস্করণের ডিফল্ট', "pt": 'Predefinição desta versão', "ru": 'По умолчанию в этой сборке',
+        "ur": 'اس بلڈ کا طے شدہ',
+    },
+    "settings.shortcut.platform": {
+        "en": 'Follow the platform', "ar": 'حسب المنصة', "zh-Hans": '跟随平台',
+        "hi": 'प्लेटफ़ॉर्म के अनुसार', "es": 'Según la plataforma', "fr": 'Selon la plateforme',
+        "bn": 'প্ল্যাটফর্ম অনুযায়ী', "pt": 'Conforme a plataforma', "ru": 'По платформе',
+        "ur": 'پلیٹ فارم کے مطابق',
+    },
+    "settings.document_side": {
+        "en": 'Document alignment', "ar": 'محاذاة المستند', "zh-Hans": '文档对齐',
+        "hi": 'दस्तावेज़ संरेखण', "es": 'Alineación del documento', "fr": 'Alignement du document',
+        "bn": 'নথির প্রান্তিককরণ', "pt": 'Alinhamento do documento', "ru": 'Выравнивание документа',
+        "ur": 'دستاویز کی سیدھ',
+    },
+    "settings.document_side.first_strong": {
+        "en": 'First strong character', "ar": 'أول حرف قوي في المستند', "zh-Hans": '首个强方向字符',
+        "hi": 'पहला प्रबल अक्षर', "es": 'Primer carácter fuerte', "fr": 'Premier caractère fort',
+        "bn": 'প্রথম প্রবল অক্ষর', "pt": 'Primeiro caráter forte', "ru": 'Первый сильный символ',
+        "ur": 'پہلا مضبوط حرف',
+    },
+    "settings.document_side.first_line": {
+        "en": 'First readable line', "ar": 'أول سطر قابل للقراءة', "zh-Hans": '首行',
+        "hi": 'पहली पठनीय पंक्ति', "es": 'Primera línea legible', "fr": 'Première ligne lisible',
+        "bn": 'প্রথম পঠনযোগ্য লাইন', "pt": 'Primeira linha legível', "ru": 'Первая читаемая строка',
+        "ur": 'پہلی پڑھنے کے قابل سطر',
+    },
+    "settings.autosave_idle": {
+        "en": 'Autosave after a pause', "ar": 'الحفظ التلقائي بعد توقف الكتابة', "zh-Hans": '停止输入后自动保存',
+        "hi": 'रुकने पर स्वतः सहेजें', "es": 'Guardado automático tras una pausa', "fr": 'Enregistrement auto après une pause',
+        "bn": 'বিরতির পরে স্বয়ংক্রিয় সংরক্ষণ', "pt": 'Gravação automática após pausa', "ru": 'Автосохранение после паузы',
+        "ur": 'رکنے پر خودکار محفوظ کریں',
+    },
+    "settings.word_completion": {
+        "en": 'Complete words as you type', "ar": 'إكمال الكلمات أثناء الكتابة', "zh-Hans": '输入时补全词语',
+        "hi": 'टाइप करते समय शब्द पूर्ण करें', "es": 'Completar palabras al escribir', "fr": 'Compléter les mots pendant la frappe',
+        "bn": 'লেখার সময় শব্দ সম্পূর্ণ করুন', "pt": 'Completar palavras ao escrever', "ru": 'Дополнять слова при вводе',
+        "ur": 'لکھتے وقت الفاظ مکمل کریں',
+    },
+    "settings.hard_cap": {
+        "en": 'Largest file read into memory', "ar": 'أقصى حجم يُقرأ في الذاكرة', "zh-Hans": '读入内存的最大文件',
+        "hi": 'स्मृति में पढ़ी जाने वाली अधिकतम फ़ाइल', "es": 'Archivo máximo leído en memoria', "fr": 'Taille maximale lue en mémoire',
+        "bn": 'মেমরিতে পড়ার সর্বোচ্চ আকার', "pt": 'Tamanho máximo lido em memória', "ru": 'Наибольший файл в памяти',
+        "ur": 'میموری میں پڑھی جانے والی زیادہ سے زیادہ فائل',
+    },
+    "settings.path_label": {
+        "en": 'Settings file', "ar": 'ملف الإعدادات', "zh-Hans": '设置文件',
+        "hi": 'सेटिंग्स फ़ाइल', "es": 'Archivo de configuración', "fr": 'Fichier de configuration',
+        "bn": 'সেটিংস ফাইল', "pt": 'Ficheiro de definições', "ru": 'Файл настроек',
+        "ur": 'ترتیبات کی فائل',
+    },
+    "settings.reset": {
+        "en": 'Restore the defaults', "ar": 'استعادة الإعدادات الافتراضية', "zh-Hans": '恢复默认设置',
+        "hi": 'डिफ़ॉल्ट पर लौटाएँ', "es": 'Restablecer los valores', "fr": 'Rétablir les valeurs par défaut',
+        "bn": 'ডিফল্টে ফিরুন', "pt": 'Repor as predefinições', "ru": 'Сбросить настройки',
+        "ur": 'طے شدہ ترتیبات پر واپس',
+    },
+    "dialog.apply": {
+        "en": 'Apply', "ar": 'تطبيق', "zh-Hans": '应用',
+        "hi": 'लागू करें', "es": 'Aplicar', "fr": 'Appliquer',
+        "bn": 'প্রয়োগ করুন', "pt": 'Aplicar', "ru": 'Применить',
+        "ur": 'لاگو کریں',
+    },
+
+    # ------------------------------------------------------------ home page
+    "tab.home": {
+        "en": "Home", "ar": "البداية", "zh-Hans": "主页", "hi": "होम",
+        "es": "Inicio", "fr": "Accueil", "bn": "হোম", "pt": "Início",
+        "ru": "Главная", "ur": "ہوم",
+    },
+    "home.tagline": {
+        "en": "Everything you write lives in a file you choose.",
+        "ar": "كل ما تكتبه يبقى في ملف تختاره أنت.",
+        "zh-Hans": "你写的一切都保存在你选择的文件里。",
+        "hi": "आप जो लिखते हैं वह आपकी चुनी हुई फ़ाइल में रहता है।",
+        "es": "Todo lo que escribes vive en un archivo que tú eliges.",
+        "fr": "Tout ce que vous écrivez reste dans un fichier que vous choisissez.",
+        "bn": "আপনি যা লেখেন তা আপনার বেছে নেওয়া ফাইলেই থাকে।",
+        "pt": "Tudo o que escreve fica num ficheiro que escolhe.",
+        "ru": "Всё, что вы пишете, хранится в выбранном вами файле.",
+        "ur": "آپ جو لکھتے ہیں وہ آپ کی منتخب کردہ فائل میں رہتا ہے۔",
+    },
+    "home.new": {
+        "en": "New file", "ar": "ملف جديد", "zh-Hans": "新建文件",
+        "hi": "नई फ़ाइल", "es": "Archivo nuevo", "fr": "Nouveau fichier",
+        "bn": "নতুন ফাইল", "pt": "Novo ficheiro", "ru": "Новый файл",
+        "ur": "نئی فائل",
+    },
+    "home.open": {
+        "en": "Open a file…", "ar": "فتح ملف…", "zh-Hans": "打开文件…",
+        "hi": "फ़ाइल खोलें…", "es": "Abrir un archivo…",
+        "fr": "Ouvrir un fichier…", "bn": "ফাইল খুলুন…",
+        "pt": "Abrir um ficheiro…", "ru": "Открыть файл…",
+        "ur": "فائل کھولیں…",
+    },
+    "home.recent": {
+        "en": "Recent files", "ar": "آخر الملفات", "zh-Hans": "最近的文件",
+        "hi": "हाल की फ़ाइलें", "es": "Archivos recientes",
+        "fr": "Fichiers récents", "bn": "সাম্প্রতিক ফাইল",
+        "pt": "Ficheiros recentes", "ru": "Недавние файлы",
+        "ur": "حالیہ فائلیں",
+    },
+    "home.recent_empty": {
+        "en": "No recent files yet — the ones you open will appear here.",
+        "ar": "لا ملفات حديثة بعد — ستظهر هنا الملفات التي تفتحها.",
+        "zh-Hans": "还没有最近的文件——你打开的文件会显示在这里。",
+        "hi": "अभी कोई हाल की फ़ाइल नहीं — आप जो खोलेंगे वे यहाँ दिखेंगी।",
+        "es": "Aún no hay archivos recientes: los que abras aparecerán aquí.",
+        "fr": "Aucun fichier récent : ceux que vous ouvrez apparaîtront ici.",
+        "bn": "এখনও সাম্প্রতিক ফাইল নেই — আপনি যা খুলবেন তা এখানে দেখা যাবে।",
+        "pt": "Ainda não há ficheiros recentes — os que abrir aparecem aqui.",
+        "ru": "Недавних файлов пока нет — открытые появятся здесь.",
+        "ur": "ابھی کوئی حالیہ فائل نہیں — جو کھولیں گے وہ یہاں دکھائی دیں گے۔",
+    },
+    "home.settings": {
+        "en": "Settings", "ar": "الإعدادات", "zh-Hans": "设置",
+        "hi": "सेटिंग्स", "es": "Configuración", "fr": "Paramètres",
+        "bn": "সেটিংস", "pt": "Configurações", "ru": "Настройки",
+        "ur": "ترتیبات",
+    },
+    "home.help": {
+        "en": "About", "ar": "حول البرنامج", "zh-Hans": "关于",
+        "hi": "परिचय", "es": "Acerca de", "fr": "À propos",
+        "bn": "সম্পর্কে", "pt": "Sobre", "ru": "О программе", "ur": "تعارف",
+    },
+    "home.restore": {
+        "en": "Restore the previous session",
+        "ar": "استعادة الجلسة السابقة",
+        "zh-Hans": "恢复上次会话", "hi": "पिछला सत्र बहाल करें",
+        "es": "Restaurar la sesión anterior",
+        "fr": "Restaurer la session précédente",
+        "bn": "আগের সেশন পুনরুদ্ধার", "pt": "Restaurar a sessão anterior",
+        "ru": "Восстановить прошлый сеанс", "ur": "پچھلا سیشن بحال کریں",
+    },
+
     "app.name": {
         "en": "Mishkah Note",
         "ar": "مفكرة مشكاة",
@@ -67,6 +277,42 @@ STRINGS: Dict[str, S] = {
         "en": "&File", "ar": "&ملف", "zh-Hans": "文件(&F)", "hi": "&फ़ाइल",
         "es": "&Archivo", "fr": "&Fichier", "bn": "&ফাইল", "pt": "&Ficheiro",
         "ru": "&Файл", "ur": "&فائل",
+    },
+    "action.paste_plain": {
+        "en": "Paste without formatting", "ar": "لصق بدون تنسيق",
+        "zh-Hans": "无格式粘贴", "hi": "बिना फ़ॉर्मैटिंग चिपकाएँ",
+        "es": "Pegar sin formato", "fr": "Coller sans mise en forme",
+        "bn": "ফরম্যাটিং ছাড়া পেস্ট", "pt": "Colar sem formatação",
+        "ru": "Вставить без форматирования", "ur": "بغیر فارمیٹنگ چسپاں کریں",
+    },
+    "action.enable_markdown": {
+        "en": "Turn on", "ar": "تفعيل", "zh-Hans": "开启", "hi": "चालू करें",
+        "es": "Activar", "fr": "Activer", "bn": "চালু করুন",
+        "pt": "Ativar", "ru": "Включить", "ur": "فعال کریں",
+    },
+    "banner.markdown_hint": {
+        "en": "This looks like Markdown. Show it formatted? The file itself is untouched.",
+        "ar": "يبدو هذا نص ماركداون. أعرضه منسّقًا؟ الملف نفسه لا يتغيّر.",
+        "zh-Hans": "这看起来是 Markdown。以格式显示吗？文件本身不会改变。",
+        "hi": "यह Markdown जैसा है। स्वरूपित दिखाएँ? फ़ाइल नहीं बदलती।",
+        "es": "Parece Markdown. ¿Mostrarlo con formato? El archivo no cambia.",
+        "fr": "On dirait du Markdown. L'afficher mis en forme ? Le fichier reste intact.",
+        "bn": "এটি Markdown মনে হচ্ছে। ফরম্যাট করে দেখাবেন? ফাইল বদলায় না।",
+        "pt": "Isto parece Markdown. Mostrar formatado? O ficheiro não muda.",
+        "ru": "Похоже на Markdown. Показать с форматированием? Файл не меняется.",
+        "ur": "یہ مارک ڈاؤن لگتا ہے۔ فارمیٹ میں دکھائیں؟ فائل تبدیل نہیں ہوتی۔",
+    },
+    "menu.file.new_tab": {
+        "en": "New tab", "ar": "تبويب جديد", "zh-Hans": "新建标签页",
+        "hi": "नया टैब", "es": "Pestaña nueva", "fr": "Nouvel onglet",
+        "bn": "নতুন ট্যাব", "pt": "Novo separador", "ru": "Новая вкладка",
+        "ur": "نیا ٹیب",
+    },
+    "status.words": {
+        "en": "{count} words", "ar": "{count} كلمة", "zh-Hans": "{count} 词",
+        "hi": "{count} शब्द", "es": "{count} palabras", "fr": "{count} mots",
+        "bn": "{count} শব্দ", "pt": "{count} palavras", "ru": "{count} слов",
+        "ur": "{count} الفاظ",
     },
     "menu.file.new": {
         "en": "New", "ar": "جديد", "zh-Hans": "新建", "hi": "नया",
@@ -239,6 +485,20 @@ STRINGS: Dict[str, S] = {
         "es": "documento {direction}", "fr": "document {direction}",
         "bn": "নথি {direction}", "pt": "documento {direction}",
         "ru": "документ {direction}", "ur": "دستاویز {direction}",
+    },
+    "a11y.editor": {
+        "en": "Editing area", "ar": "منطقة الكتابة",
+        "zh-Hans": "编辑区域", "hi": "संपादन क्षेत्र",
+        "es": "Área de edición", "fr": "Zone d'édition",
+        "bn": "সম্পাদনা এলাকা", "pt": "Área de edição",
+        "ru": "Область редактирования", "ur": "تحریری علاقہ",
+    },
+    "a11y.zoom": {
+        "en": "Zoom", "ar": "التكبير",
+        "zh-Hans": "缩放", "hi": "ज़ूम",
+        "es": "Zoom", "fr": "Zoom",
+        "bn": "জুম", "pt": "Zoom",
+        "ru": "Масштаб", "ur": "زوم",
     },
     "action.autosave_label": {
         "en": "Autosave", "ar": "الحفظ التلقائي",
@@ -953,10 +1213,34 @@ STRINGS: Dict[str, S] = {
               "کے لیے ایک ہی رہتی ہے، اس لیے تمام سطریں ایک ہی حاشیہ بانٹتی ہیں۔",
     },
     "settings.large_files": {
-        "en": "Large files", "ar": "الملفات الكبيرة", "zh-Hans": "大文件",
-        "hi": "बड़ी फ़ाइलें", "es": "Archivos grandes", "fr": "Fichiers volumineux",
-        "bn": "বড় ফাইল", "pt": "Ficheiros grandes", "ru": "Большие файлы",
-        "ur": "بڑی فائلیں",
+        "en": "Open as a preview above", "ar": "افتح كمعاينة إذا تجاوز الحجم",
+        "zh-Hans": "超过此大小则仅预览", "hi": "इससे बड़ी फ़ाइल पूर्वावलोकन में खोलें",
+        "es": "Abrir como vista previa por encima de",
+        "fr": "Ouvrir en aperçu au-delà de",
+        "bn": "এর বেশি হলে পূর্বরূপে খুলুন", "pt": "Abrir como pré-visualização acima de",
+        "ru": "Открывать как просмотр при размере больше",
+        "ur": "اس سے بڑی فائل پیش نظارہ میں کھولیں",
+    },
+    "settings.large_files.note": {
+        "en": "A larger file opens read-only, showing its beginning, with an "
+              "\"Open fully\" button. Always ask first.",
+        "ar": "الملف الأكبر يُفتح للقراءة فقط مع بدايته، ويظهر زر «افتح الملف كاملًا»، "
+              "ويُسأل دائمًا قبل التحميل.",
+        "zh-Hans": "更大的文件以只读方式显示开头，并提供“完整打开”按钮；加载前总会询问。",
+        "hi": "बड़ी फ़ाइल केवल पढ़ने योग्य रूप में शुरुआत दिखाती है और \"पूरा खोलें\" "
+              "बटन देती है; लोड से पहले हमेशा पूछा जाता है।",
+        "es": "Un archivo mayor se abre solo lectura con su inicio y un botón "
+              "«Abrir completo». Siempre se pregunta antes.",
+        "fr": "Un fichier plus gros s'ouvre en lecture seule avec son début et un "
+              "bouton « Ouvrir entièrement ». La question est toujours posée.",
+        "bn": "বড় ফাইল কেবল-পাঠ্য হিসেবে শুরু দেখায় এবং \"সম্পূর্ণ খুলুন\" বোতাম দেয়; "
+              "লোডের আগে সবসময় জিজ্ঞাসা করা হয়।",
+        "pt": "Um ficheiro maior abre só de leitura com o início e um botão "
+              "«Abrir por completo». Pergunta sempre antes.",
+        "ru": "Больший файл открывается только для чтения, с началом и кнопкой "
+              "«Открыть полностью». Перед загрузкой всегда спрашиваем.",
+        "ur": "بڑی فائل صرف پڑھنے کے لیے شروع دکھاتی ہے اور «پوری کھولیں» بٹن دیتی ہے؛ "
+              "لوڈ سے پہلے ہمیشہ پوچھا جاتا ہے۔",
     },
     "settings.extension": {
         "en": "Add extension on save", "ar": "إضافة الامتداد عند الحفظ",
@@ -1353,7 +1637,7 @@ STRINGS: Dict[str, S] = {
     },
     "settings.syntax_note": {
         "en": "Off by default. Colours follow the file type; press Ctrl+Shift+H to toggle.",
-        "ar": "معطّل افتراضيًا. تتحدد الألوان حسب نوع الملف؛ استخدم Ctrl+Shift+H للتبديل.",
+        "ar": "مفعّل افتراضيًا. تتحدد الألوان حسب اسم الملف ثم محتواه؛ استخدم Ctrl+Shift+H للتبديل.",
         "zh-Hans": "默认关闭。颜色随文件类型而定；按 Ctrl+Shift+H 切换。",
         "hi": "डिफ़ॉल्ट रूप से बंद। रंग फ़ाइल प्रकार के अनुसार; Ctrl+Shift+H दबाएँ।",
         "es": "Desactivado por defecto. Los colores siguen el tipo de archivo; Ctrl+Shift+H.",
@@ -1395,6 +1679,20 @@ STRINGS: Dict[str, S] = {
         "hi": "सभी फ़ाइलें (*)", "es": "Todos los archivos (*)",
         "fr": "Tous les fichiers (*)", "bn": "সব ফাইল (*)",
         "pt": "Todos os ficheiros (*)", "ru": "Все файлы (*)", "ur": "تمام فائلیں (*)",
+    },
+    "dialog.progress": {
+        "en": "Loading… {done} of {total}", "ar": "جارٍ التحميل… {done} من {total}",
+        "zh-Hans": "正在加载… {done} / {total}", "hi": "लोड हो रहा है… {done} / {total}",
+        "es": "Cargando… {done} de {total}", "fr": "Chargement… {done} sur {total}",
+        "bn": "লোড হচ্ছে… {done} / {total}", "pt": "Carregando… {done} de {total}",
+        "ru": "Загрузка… {done} из {total}", "ur": "لوڈ ہو رہا ہے… {done} میں سے {total}",
+    },
+    "action.open_full": {
+        "en": "Open fully", "ar": "افتح الملف كاملًا",
+        "zh-Hans": "完整打开", "hi": "पूरा खोलें",
+        "es": "Abrir completo", "fr": "Ouvrir entièrement",
+        "bn": "সম্পূর্ণ খুলুন", "pt": "Abrir por completo",
+        "ru": "Открыть полностью", "ur": "پوری کھولیں",
     },
     "banner.preview": {
         "en": "Preview only — showing the first {size} of a {total} file. Save is disabled.",

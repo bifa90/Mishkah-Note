@@ -18,7 +18,7 @@ concurrency:
 env:
   PYTHON_VERSION: "3.11"
   #: Must equal ``version`` in pyproject.toml (tools/check_version.py enforces it).
-  RELEASE_VERSION: "1.0.01"
+  RELEASE_VERSION: "1.0.02"
 jobs:
   flatpak:
     name: Flatpak
@@ -110,6 +110,7 @@ jobs:
             $exe = Join-Path $directory "Mishkah Note.exe"
             if (-not (Test-Path $exe)) { throw "installed executable missing" }
             if (-not (Get-ChildItem $directory -Recurse -Filter IBMPlexSansArabic-Regular.ttf)) { throw "bundled Arabic font missing" }
+            if (-not (Get-ChildItem $directory -Recurse -Filter NotoSansArabic-Regular.ttf)) { throw "bundled Urdu font missing" }
             $check = Start-Process $exe -ArgumentList "--version" -Wait -PassThru
             if ($check.ExitCode -ne 0) { throw "installed executable failed" }
           } catch {

@@ -12,7 +12,7 @@ from PySide6.QtCore import QFileSystemWatcher, QObject, Qt, QTimer
 from PySide6.QtGui import QFont, QTextCursor
 from PySide6.QtWidgets import QApplication, QMessageBox
 
-from mishkah.core import i18n, syntax, tab_style
+from mishkah.core import i18n, syntax, tab_style, text_stats
 from mishkah.core.disk_state import changed_on_disk, stat_signature
 from mishkah.core.file_kinds import (
     READ_ONLY,
@@ -33,6 +33,7 @@ from mishkah.services.file_service import FileService
 from mishkah.views.editor_view import EditorView
 from mishkah.views.main_window import MainWindow
 from mishkah.widgets.about_dialog import AboutDialog
+from mishkah.widgets.home_page import HomePage
 from mishkah.widgets.settings_dialog import SettingsDialog
 
 logger = logging.getLogger(__name__)
@@ -49,6 +50,8 @@ class MainController(QObject):
         self.settings = settings
         self.files = file_service or FileService(self)
         self._docs: Dict[EditorView, DocumentModel] = {}
+        #: True for the first window only (see app.build_window).
+        self.owns_session = True
         self._invisible_banner = False
         #: CD-18: documents whose file changed on disk, waiting for a decision.
         #: A list, not a set: DocumentModel is a dataclass and unhashable.
@@ -84,6 +87,7 @@ class MainController(QObject):
     def _wire(self) -> None:
         w = self.window
         w.file_new.connect(self.new_document)
+        w.new_window_requested.connect(self.open_new_window)
         w.file_open.connect(self.open_document_dialog)
         w.file_save.connect(self.save_current)
         w.file_save_as.connect(lambda: self.save_current(as_copy=True))
@@ -119,6 +123,45 @@ class MainController(QObject):
         w.recent_chosen.connect(self.open_path)
         w.recent_cleared.connect(self._clear_recent)
 
+        w.new_tab_requested.connect(self.new_document)
+        w.paths_dropped.connect(self._open_dropped_paths)
+        w.paste_plain_requested.connect(self._paste_plain)
+        # Every menu entry that is wired to an *action object* lives in
+        # ``_bind_actions``: a language switch rebuilds the menu bar, so those
+        # bindings have to be made again (see ``_bind_actions``).
+        self._bind_actions()
+        w.menus_rebuilt.connect(self._bind_actions)
+
+        w.find_bar.find_requested.connect(self._on_find)
+        w.find_bar.incremental_requested.connect(self._on_incremental_find)
+        w.find_bar.replace_requested.connect(self._on_replace)
+        w.find_bar.replace_all_requested.connect(self._on_replace_all)
+        w.find_bar.closed.connect(lambda: self._focus_editor())
+
+        w.status.direction_requested.connect(self.set_direction)
+        w.status.encoding_clicked.connect(self._choose_encoding)
+        w.status.line_ending_clicked.connect(self._cycle_line_ending)
+
+        self.files.load_finished.connect(self._on_loaded)
+        self.files.load_failed.connect(self._on_load_failed)
+        self.files.save_finished.connect(self._on_saved)
+        self.files.save_failed.connect(self._on_save_failed)
+        self.files.load_progress.connect(self._on_progress)
+
+    def _bind_actions(self) -> None:
+        """Wire the menu actions, now and after every menu rebuild.
+
+        A language switch calls ``menuBar().clear()`` and builds the menus again,
+        which means fresh ``QAction`` objects while the controller still pointed
+        at the old ones — deleted silently, with no error.  The user met it as
+        "Ctrl+F does nothing after I changed the language": Find, Replace, Undo,
+        Redo, Cut, Copy, Paste, Delete, Select all, Go to line, Date/time and
+        the three zoom actions were all dead, and only those, because everything
+        else is wired through the window's own signals, which survive.
+
+        Safe to call repeatedly: each call binds the actions that exist *now*.
+        """
+        w = self.window
         w.act_undo.triggered.connect(lambda: self._editor_op("undo"))
         w.act_redo.triggered.connect(lambda: self._editor_op("redo"))
         w.act_cut.triggered.connect(lambda: self._editor_op("cut"))
@@ -133,21 +176,6 @@ class MainController(QObject):
         w.act_zoom_in.triggered.connect(lambda: self._zoom(+1))
         w.act_zoom_out.triggered.connect(lambda: self._zoom(-1))
         w.act_zoom_reset.triggered.connect(self._zoom_reset)
-
-        w.find_bar.find_requested.connect(self._on_find)
-        w.find_bar.replace_requested.connect(self._on_replace)
-        w.find_bar.replace_all_requested.connect(self._on_replace_all)
-        w.find_bar.closed.connect(lambda: self._focus_editor())
-
-        w.status.direction_requested.connect(self.set_direction)
-        w.status.encoding_clicked.connect(self._choose_encoding)
-        w.status.line_ending_clicked.connect(self._cycle_line_ending)
-
-        self.files.load_finished.connect(self._on_loaded)
-        self.files.load_failed.connect(self._on_load_failed)
-        self.files.save_finished.connect(self._on_saved)
-        self.files.save_failed.connect(self._on_save_failed)
-        self.files.load_progress.connect(self._on_progress)
 
     # ==================================================================
     # appearance
@@ -166,6 +194,8 @@ class MainController(QObject):
         self.window.act_line_numbers.setChecked(s.line_numbers)
         self.window.status.setVisible(s.show_status_bar)
         self.window.set_recent_files(s.recent_files)
+        self.window.apply_shortcut_settings(s.redo_shortcut,
+                                           s.replace_shortcut)
 
         direction = Qt.LayoutDirection.RightToLeft if language.rtl \
             else Qt.LayoutDirection.LeftToRight
@@ -190,6 +220,80 @@ class MainController(QObject):
         self._sync_ui(editor)
         return editor
 
+    # ==================================================================
+    # welcome page (CD-06)
+    # ==================================================================
+    def show_home(self) -> HomePage:
+        """Show the welcome page, creating it the first time (CD-06)."""
+        page = self.window.home_page()
+        if page is None:
+            page = HomePage(self.window)
+            page.setFont(self.window.ui_font())
+            page.new_requested.connect(self._new_from_home)
+            page.open_requested.connect(self._open_from_home)
+            page.recent_requested.connect(self._open_recent_from_home)
+            page.settings_requested.connect(self.show_settings)
+            page.help_requested.connect(self.show_about)
+            page.restore_requested.connect(self._restore_from_home)
+            self.window.add_home_page(page)
+        self._refresh_home(page)
+        self.window.tabs.setCurrentWidget(page)
+        self.window.hide_file_changed()
+        self.window.hide_banner()
+        self.window.setWindowTitle(i18n.tr("app.name"))
+        return page
+
+    def _drop_home(self) -> None:
+        """The page did its job: a document is beside it, so it steps aside."""
+        page = self.window.home_page()
+        if page is not None and self.window.tabs.count() > 1:
+            self.window.close_widget(page)
+            self._sync_ui(self.window.current_editor())
+
+    def _new_from_home(self) -> None:
+        self.new_document()
+        self._drop_home()
+
+    def _open_from_home(self) -> None:
+        self.open_document_dialog()
+        self._drop_home()
+
+    def _open_recent_from_home(self, path: str) -> None:
+        self.open_path(path)
+        self._drop_home()
+
+    def _refresh_home(self, page: HomePage) -> None:
+        page.set_recent_files(self.settings.recent_files)
+        previous = [p for p in self.settings.open_files if Path(p).exists()]
+        page.set_restore_available(bool(previous))
+
+    def _restore_from_home(self) -> None:
+        """Open the files the last session left behind, then drop the page."""
+        opened = self.restore_session(list(self.settings.open_files)) or 0
+        if opened and self.window.home_page() is not None:
+            page = self.window.home_page()
+            if self.window.tabs.count() > 1:
+                self.window.close_widget(page)
+
+    def _last_tab_closed(self) -> None:
+        """Closing the last tab: the welcome page or the end (CD-06)."""
+        if self.settings.last_tab_action == "quit":
+            self.window.close()
+            return
+        self.show_home()
+
+    def open_new_window(self) -> None:
+        """CD-29/B2: ask the application for a second window.
+
+        Without a factory (tests, embedding) the request becomes a new tab, so
+        the menu item is never dead and never pretends to have opened a window.
+        """
+        factory = getattr(self.window, "new_window_factory", None)
+        if callable(factory):
+            factory()
+            return
+        self.new_document()
+
     def _bind_editor(self, editor: EditorView, doc: DocumentModel) -> None:
         self._docs[editor] = doc
         editor.set_word_wrap(self.settings.word_wrap)
@@ -204,6 +308,14 @@ class MainController(QObject):
         editor.resolved_direction_changed.connect(self._on_resolved_direction)
         editor.stats_changed.connect(self._on_stats)
         editor.textChanged.connect(lambda e=editor: self._on_text_changed(e))
+        # The right-click menu speaks through signals: the window owns the
+        # search bars, so it opens them for whichever tab was clicked.
+        editor.find_requested.connect(lambda e=editor: self._menu_find(e, False))
+        editor.replace_requested.connect(lambda e=editor: self._menu_find(e, True))
+        editor.goto_requested.connect(self.goto_line)
+        editor.language_detected.connect(
+            lambda _code, e=editor: self._on_language_detected(e))
+        editor.files_dropped.connect(self._open_dropped_paths)
 
     @staticmethod
     def _resolve_theme(theme: str) -> str:
@@ -245,7 +357,12 @@ class MainController(QObject):
         chosen = doc.language if doc is not None else "auto"
         if chosen and chosen != "auto":
             return chosen
-        return syntax.language_for_path(doc.path if doc is not None else None)
+        by_path = syntax.language_for_path(doc.path if doc is not None else None)
+        if by_path != syntax.PLAIN.code:
+            return by_path
+        # Nothing in the name: ask the content (CD-12), so code pasted into an
+        # untitled tab is highlighted without saving and reopening it.
+        return editor.detected_language()
 
     def document_for(self, editor: Optional[EditorView]) -> Optional[DocumentModel]:
         if editor is None:
@@ -254,6 +371,21 @@ class MainController(QObject):
 
     def current_document(self) -> Optional[DocumentModel]:
         return self.document_for(self.window.current_editor())
+
+    def _paste_plain(self) -> None:
+        """Edit ▸ Paste without formatting (CD-13)."""
+        editor = self.window.current_editor()
+        if editor is not None and not editor.isReadOnly():
+            editor.paste_plain()
+
+    def _open_dropped_paths(self, paths) -> None:
+        """Open files dropped on the window, each in its own tab (CD-22).
+
+        A refused file (binary, unreadable) is reported by the loader and
+        leaves no empty tab behind, which is exactly the CD-05 rule.
+        """
+        for path in paths or []:
+            self.open_path(str(path))
 
     def open_document_dialog(self) -> None:
         start = ""
@@ -273,7 +405,10 @@ class MainController(QObject):
 
         size = path.stat().st_size
         ask_mb = self.settings.ask_before_mb
-        limit_mb = None
+        # The configured ceiling was never handed to the loader: any file at
+        # all was read whole into memory.  Above the ceiling the tab now opens
+        # as a preview and says so (CD-11 / M4).
+        limit_mb = max(1, int(self.settings.hard_limit_mb or 0)) or None
         if ask_mb and size > ask_mb * 1024 * 1024:
             if not self.window.ask_big_file(
                     path.name, _human(size)):
@@ -287,11 +422,51 @@ class MainController(QObject):
         self._bind_editor(editor, doc)
         index = self.window.add_editor(editor, doc)
         self._pending_paths[index] = str(path)
-        editor.setPlainText("")
+        # No placeholder text is written here.  A new editor is already empty,
+        # and clearing it would count as an edit: the document would be marked
+        # modified before its content arrived, so closing a freshly opened file
+        # would ask to save it.  (Blocking the widget's signals while clearing
+        # corrupts QPlainTextEdit's state — it crashed a later paint.)
         self.window.set_tab_title(editor, path.name, False)
+        self._start_load_progress(path)
         self.files.load(path, encoding=encoding, limit_mb=limit_mb)
 
+    #: Files above this size get a progress dialog, not just a percentage in
+    #: the window title (which is invisible on a maximised window).
+    BIG_LOAD_BYTES = 4 * 1024 * 1024
+
+    def _start_load_progress(self, path: Path) -> None:
+        """Open the cancellable dialog before a large read starts (G3b #13).
+
+        A 98 MB file froze the window for twenty seconds with nothing on screen
+        but a title-bar percentage the user never saw.  The dialog is shown
+        *before* the worker starts, so the wait is acknowledged instead of
+        looking like a hang.
+        """
+        self._close_load_progress()
+        try:
+            if path.stat().st_size < self.BIG_LOAD_BYTES:
+                return
+        except OSError:
+            return
+        from mishkah.widgets.progress_dialog import ProgressDialog
+
+        dialog = ProgressDialog(i18n.tr("progress.loading", name=path.name),
+                                self.window, minimum_duration=0)
+        dialog.report(0, 1000)
+        dialog.cancelled.connect(self.files.cancel_all)
+        dialog.show()
+        self._load_dialog = dialog
+
+    def _close_load_progress(self) -> None:
+        dialog = getattr(self, "_load_dialog", None)
+        self._load_dialog = None
+        if dialog is not None:
+            dialog.close()
+            dialog.deleteLater()
+
     def _on_loaded(self, doc: DocumentModel) -> None:
+        self._close_load_progress()
         editor = self._editor_for_path(doc.path)
         if editor is None:
             editor = self.new_document()
@@ -307,9 +482,15 @@ class MainController(QObject):
         blocked = editor.blockSignals(True)
         try:
             editor.set_document(doc)
+            # The buffer now holds what is on disk; Qt's own flag must agree,
+            # or a later format pass would look like an edit (B1).
+            editor.document().setModified(False)
         finally:
             editor.blockSignals(blocked)
         editor.set_font_size(self.settings.font_size)
+        # The content is in the buffer now: colour it with the grammar the
+        # name or the text itself implies (CD-12), before the first paint.
+        self._apply_highlighting(editor)
 
         if doc.uses_performance_mode and self.settings.performance_mode:
             editor.set_word_wrap(False)
@@ -323,9 +504,11 @@ class MainController(QObject):
         self.window.set_tab_title(editor, self._doc_title(doc), False)
         self._watch(doc)
         if doc.truncated:
-            self.window.show_banner(i18n.tr(
-                "banner.preview", size=_human(8 * 1024 * 1024),
-                total=_human(doc.size_on_disk)))
+            from mishkah.core.large_file import PREVIEW_BYTES
+            shown = min(PREVIEW_BYTES,
+                        int(self.settings.hard_limit_mb or 0) * 1024 * 1024)
+            self.window.show_preview(doc.title, _human(shown),
+                                     _human(doc.size_on_disk))
         elif doc.read_only:
             self.window.show_banner(i18n.tr("banner.readonly"))
         else:
@@ -349,6 +532,7 @@ class MainController(QObject):
         return None
 
     def _on_load_failed(self, path: str, title: str, detail: str) -> None:
+        self._close_load_progress()
         if title == "cancelled":
             return
         editor = self._editor_for_path(Path(path)) if path else None
@@ -368,6 +552,9 @@ class MainController(QObject):
             return
         self.window.setWindowTitle(
             f"{i18n.tr('app.name')} — {done * 100 // max(1, total)}%")
+        dialog = getattr(self, "_load_dialog", None)
+        if dialog is not None:
+            dialog.report_bytes(done, total)
 
     # ==================================================================
     # saving
@@ -461,6 +648,7 @@ class MainController(QObject):
             return
         if enabled and doc.path is None:
             doc.autosave = False
+            doc.autosave_pending = True
             self.window.set_autosave(False)
             self._autosave_after_save = True
             self.window.show_save_first(self._doc_title(doc))
@@ -593,6 +781,22 @@ class MainController(QObject):
             editor = self.window.current_editor()
             if editor is None or not self.save_current():
                 self._autosave_after_save = False     # cancelled: stay off
+                current = self.current_document()
+                if current is not None:
+                    current.autosave_pending = False
+            return
+        if action == "enable_markdown":
+            self.set_live_markdown(True)
+            self.window.set_typing_menu_state(
+                self.settings.auto_close_brackets,
+                self.settings.auto_indent,
+                self.settings.syntax_highlighting,
+                self.current_document().language if self.current_document() else "auto",
+                True,
+            )
+            return
+        if action == "open_full":
+            self._open_preview_fully(doc)
             return
         if action == "convert":
             if editor is not None:
@@ -607,6 +811,17 @@ class MainController(QObject):
             return
         if action == "reload":
             self._reload_from_disk(doc, editor)
+
+    def _open_preview_fully(self, doc: DocumentModel) -> None:
+        """Read the whole file into the preview tab the user is looking at."""
+        if doc.path is None:
+            return
+        editor = self._editor_for_document(doc)
+        if editor is None:
+            return
+        index = self.window.index_of(editor)
+        self._pending_paths[index] = str(doc.path)
+        self.files.load(doc.path, encoding=doc.encoding, limit_mb=None)
 
     def _convert_encoding(self, doc: DocumentModel, editor: EditorView) -> None:
         """Accept the new encoding, then save with it (the explicit step)."""
@@ -663,6 +878,7 @@ class MainController(QObject):
         self._note_write(doc)
         if self._autosave_after_save and doc.path is not None:
             self._autosave_after_save = False
+            doc.autosave_pending = False
             doc.autosave = True
             if self.document_for(self.window.current_editor()) is doc:
                 self.window.set_autosave(True)
@@ -709,6 +925,12 @@ class MainController(QObject):
     def close_tab(self, index: int) -> None:
         editor = self.window.editor_at(index)
         if editor is None:
+            # The welcome page: closing it alone would leave a window without
+            # tabs, so the X does nothing while it is the only one (CD-06).
+            page = self.window.tabs.widget(index)
+            if page is not None and self.window.tabs.count() > 1:
+                self.window.close_widget(page)
+                self._sync_ui(self.window.current_editor())
             return
         doc = self._docs.get(editor)
         if doc is not None:
@@ -732,7 +954,7 @@ class MainController(QObject):
         self.window.set_always_on_top(False)
         self.window.close_editor(editor)
         if self.window.tab_count() == 0:
-            self.new_document()
+            self._last_tab_closed()
         else:
             self._sync_ui(self.window.current_editor())
 
@@ -748,15 +970,53 @@ class MainController(QObject):
         self.window.set_always_on_top(bool(doc and doc.pinned))
         self._sync_ui(editor)
 
+    def _restore_banner(self, doc: Optional[DocumentModel]) -> None:
+        """Show the banner that belongs to *doc*, or hide the one that does not.
+
+        A message about one file must follow that file, not the window: the
+        notice for "file 1.txt" used to vanish the moment another tab came to
+        the front and only returned if the user went back to it.
+        """
+        if doc is None:
+            self.window.hide_file_changed()
+            return
+        if doc in self._changed_docs:
+            name = doc.path.name if doc.path is not None else doc.title
+            self.window.show_file_changed(name)
+            return
+        if doc in self._encoding_pending:
+            self.window.show_encoding_pending(self._doc_title(doc), doc.encoding)
+            return
+        if doc.autosave_pending:
+            self.window.show_save_first(self._doc_title(doc))
+            return
+        if doc.truncated:
+            from mishkah.core.large_file import PREVIEW_BYTES
+            shown = min(PREVIEW_BYTES,
+                        int(self.settings.hard_limit_mb or 0) * 1024 * 1024)
+            self.window.show_preview(doc.title, _human(shown),
+                                     _human(doc.size_on_disk))
+            return
+        self.window.hide_file_changed()
+
     def _sync_ui(self, editor: Optional[EditorView]) -> None:
         doc = self.document_for(editor)
         status = self.window.status
         if doc is None:
+            # The welcome page has no document: nothing of the previous tab
+            # may stay on screen (banner, file name in the title).
+            self.window.hide_file_changed()
+            self.window.hide_banner()
+            self.window.setWindowTitle(i18n.tr("app.name"))
             return
+        self._restore_banner(doc)
         self.refresh_invisible_banner()
         self.window.set_autosave(bool(doc.autosave))
         status.set_encoding(doc.encoding)
         status.set_line_ending(doc.line_ending)
+        code = self._language_for(editor) if editor is not None else syntax.PLAIN.code
+        status.set_language("" if code == syntax.PLAIN.code
+                            else syntax.display_name(code, self.settings.ui_language))
         status.set_size(doc.size_label)
         status.set_lines(doc.line_count)
         self.window.set_tab_menu_state(doc.pinned, doc.color)
@@ -777,9 +1037,42 @@ class MainController(QObject):
             status.set_direction(doc.direction_mode, editor.resolved_direction(),
                                  editor.document_side())
 
+    def _on_language_detected(self, editor: EditorView) -> None:
+        """The content revealed its language: recolour, silently (CD-12).
+
+        No banner here on purpose: the colours are the message, and a strip
+        pushing the first line down while someone types is noise.  Only the
+        status bar names the language.
+        """
+        self._apply_highlighting(editor)
+        code = editor.language_code()
+        if code == syntax.PLAIN.code:
+            self.window.status.set_language("")
+            return
+        self.window.status.set_language(
+            syntax.display_name(code, self.settings.ui_language))
+        doc = self._docs.get(editor)
+        # Markdown has a different, more useful offer: turn the formatted view
+        # on (CD-12 keeps it opt-in, so it is never switched silently).
+        if (code == syntax.MARKDOWN_SPEC.code and doc is not None
+                and not self.settings.live_markdown and not doc.language_banner_shown):
+            doc.language_banner_shown = True
+            if self.document_for(self.window.current_editor()) is doc:
+                self.window.show_markdown_hint()
+
+    def _menu_find(self, editor: EditorView, replace_mode: bool) -> None:
+        """Open the find bar for the tab whose menu was used."""
+        if self.window.current_editor() is not editor:
+            return
+        self.show_find(replace_mode)
+
     def _on_text_changed(self, editor: EditorView) -> None:
         doc = self._docs.get(editor)
         if doc is None or doc.truncated:
+            return
+        if editor.in_formatting_pass():
+            # A direction change rewrites formats only; the file is untouched
+            # and the tab must not claim otherwise (B1).
             return
         was_modified = doc.is_modified
         doc.mark_modified()
@@ -800,7 +1093,9 @@ class MainController(QObject):
         editor = self.window.current_editor()
         if doc is None or editor is None or doc.truncated:
             return
-        self.window.status.set_size(doc.live_size_label(editor.toPlainText()))
+        text = editor.toPlainText()
+        self.window.status.set_size(doc.live_size_label(text))
+        self.window.status.set_words(text_stats.count_words(text))
 
     # ==================================================================
     # direction
@@ -892,6 +1187,9 @@ class MainController(QObject):
     def show_find(self, replace_mode: bool) -> None:
         editor = self.window.current_editor()
         seed = editor.textCursor().selectedText() if editor else ""
+        # Where the search starts from: incremental search always comes back
+        # to this point, so refining a word does not walk down the document.
+        self._find_anchor = editor.textCursor().position() if editor else 0
         self.window.find_bar.show_bar(replace_mode, seed)
         self._place_find_bar()
 
@@ -902,12 +1200,34 @@ class MainController(QObject):
         x = self.window.width() - bar.width() - margin - 24
         bar.move(max(margin, x), 76)
 
+    def _on_incremental_find(self, needle: str) -> None:
+        """Search while the needle is being typed (CD-11).
+
+        The caret keeps walking to the first match after the point where the
+        bar was opened, so typing one more character refines the hit instead
+        of skipping to the next one.  Nothing is marked modified: only the
+        selection moves.
+        """
+        editor = self.window.current_editor()
+        if editor is None or not needle:
+            return
+        anchor = getattr(self, "_find_anchor", None)
+        if anchor is not None and 0 <= anchor <= editor.document().characterCount():
+            cursor = editor.textCursor()
+            cursor.setPosition(anchor)
+            editor.setTextCursor(cursor)
+        options = dict(self.window.find_bar.options())
+        options["wrap"] = False          # incremental search never wraps
+        found = editor.find_text(needle, backward=False, **options)
+        self.window.find_bar.set_match_state(found)
+
     def _on_find(self, needle: str, backward: bool) -> None:
         editor = self.window.current_editor()
         if editor is None or not needle:
             return
         options = self.window.find_bar.options()
         found = editor.find_text(needle, backward=backward, **options)
+        self.window.find_bar.set_match_state(found)
         if not found:
             self.window.status.set_position(
                 *self._cursor_position(editor), 0)
@@ -918,7 +1238,10 @@ class MainController(QObject):
         if editor is None or not needle:
             return
         options = self.window.find_bar.options()
-        if editor.replace_current(needle, replacement, options["case_sensitive"]):
+        if editor.replace_current(needle, replacement,
+                                  case_sensitive=options["case_sensitive"],
+                                  whole_word=options["whole_word"],
+                                  regex=options["regex"]):
             editor.find_text(needle, case_sensitive=options["case_sensitive"],
                              whole_word=options["whole_word"],
                              regex=options["regex"], wrap=options["wrap"])
@@ -1103,7 +1426,43 @@ class MainController(QObject):
         printer = QPrinter()
         dialog = QPrintDialog(printer, self.window)
         if dialog.exec():
-            editor.print_(printer)
+            self.print_to(editor, printer)
+            self.open_print_output(printer)
+
+    @staticmethod
+    def open_print_output(printer) -> Optional[str]:
+        """Show the PDF that was just written, if the user printed to a file.
+
+        "Print to File" is how everyone makes a PDF here — there is no export
+        command — and until now the dialog closed on a file the user had to go
+        hunting for.  Only a *file* is opened: a real printer has no path, and
+        opening a shell on it would be nonsense.
+        """
+        try:
+            from PySide6.QtCore import QUrl
+            from PySide6.QtGui import QDesktopServices
+            from PySide6.QtPrintSupport import QPrinter
+
+            if printer.outputFormat() != QPrinter.OutputFormat.PdfFormat:
+                return None
+            path = printer.outputFileName()
+            if not path or not Path(path).is_file():
+                return None
+            QDesktopServices.openUrl(QUrl.fromLocalFile(str(Path(path).resolve())))
+            return str(Path(path).resolve())
+        except Exception:      # pragma: no cover - desktop integration is optional
+            return None
+
+    @staticmethod
+    def print_to(editor, printer) -> None:
+        """Send *editor* to *printer*.
+
+        Separated from the dialog so the printing path — including Arabic text
+        and the bundled font — can be exercised without a human clicking
+        "Print", and without a real printer: a ``QPrinter`` writing PDF is the
+        same code with a different device.
+        """
+        editor.print_(printer)
 
     def show_about(self) -> None:
         AboutDialog(self.window).exec()
@@ -1209,13 +1568,20 @@ class MainController(QObject):
     # settings
     # ==================================================================
     def show_settings(self) -> None:
-        """Open View ▸ Settings and apply whatever the user accepted."""
+        """Open View ▸ Settings; Apply acts at once, OK acts and closes."""
         dialog = SettingsDialog(self.settings, self.window)
+        # Apply must not close the window (CD-02), so it runs the same path.
+        dialog.applied.connect(lambda: self._commit_settings(dialog))
         if dialog.exec() != SettingsDialog.DialogCode.Accepted:
             return
+        self._commit_settings(dialog)
 
+    def _commit_settings(self, dialog: SettingsDialog) -> None:
+        """Write the dialog's values into settings and onto every open tab."""
         old = dialog.apply_to(self.settings)
         self.settings.save()
+        self.window.apply_shortcut_settings(self.settings.redo_shortcut,
+                                            self.settings.replace_shortcut)
 
         for editor in self.window.editors():
             self._apply_editing_options(editor)
@@ -1291,6 +1657,10 @@ class MainController(QObject):
         return opened
 
     def save_session(self) -> None:
+        # One window owns the session: a second window that wrote its own
+        # ``open_files`` would erase the first one's list (B2 hazard).
+        if not getattr(self, "owns_session", True):
+            return
         self.settings.open_files = [
             str(doc.path) for doc in self._docs.values() if doc.path
         ]

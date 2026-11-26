@@ -1,0 +1,899 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>بوابة G3b — قائمة الفحص اليدوي · Mishkah Note 1.0.02</title>
+<style>
+:root{
+  --brand:#5FC1EA; --ink:#1f2d34; --dim:#607684; --line:#dbe6ec;
+  --bg:#f6fafc; --card:#ffffff; --ok:#1e8e52; --bad:#c8382f; --warn:#b1761b;
+  --hl:#fff3c4;
+}
+@media (prefers-color-scheme: dark){
+  :root{ --ink:#e8f1f5; --dim:#9fb3bd; --line:#28414c; --bg:#101a1f;
+         --card:#16242b; --hl:#4a4326; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);
+  font-family:"IBM Plex Sans Arabic","Noto Sans Arabic","Segoe UI",Tahoma,sans-serif;
+  line-height:1.75;font-size:16px}
+header.top{position:sticky;top:0;z-index:5;background:var(--card);
+  border-bottom:1px solid var(--line);padding:14px 20px;
+  display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+h1{font-size:20px;margin:0}
+h1 small{font-weight:400;color:var(--dim);font-size:13px;display:block}
+.bar{height:8px;background:var(--line);border-radius:6px;overflow:hidden;flex:1;min-width:140px}
+.bar>i{display:block;height:100%;width:0;background:var(--brand);transition:width .25s}
+.counter{font-variant-numeric:tabular-nums;font-size:14px;color:var(--dim)}
+button{font:inherit;cursor:pointer;border:1px solid var(--line);background:var(--card);
+  color:var(--ink);border-radius:8px;padding:6px 12px}
+button.primary{background:var(--brand);border-color:var(--brand);color:#06222e;font-weight:600}
+button:disabled{opacity:.5;cursor:not-allowed}
+main{max-width:1180px;margin:0 auto;padding:22px 18px 80px}
+.intro{background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:16px 18px;margin-bottom:18px}
+.intro p{margin:.4em 0}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--dim);margin-top:8px}
+.legend b{color:var(--ink)}
+.grid{display:grid;gap:16px;grid-template-columns:repeat(auto-fill,minmax(330px,1fr))}
+article.item{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:16px 16px 12px;display:flex;flex-direction:column;gap:10px;
+  border-inline-start:4px solid var(--line)}
+article.item[data-verdict="ok"]{border-inline-start-color:var(--ok)}
+article.item[data-verdict="bad"]{border-inline-start-color:var(--bad)}
+article.item[data-verdict="later"]{border-inline-start-color:var(--warn)}
+.head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.num{font-weight:700;font-variant-numeric:tabular-nums;background:var(--brand);
+  color:#06222e;border-radius:8px;padding:1px 9px;font-size:14px}
+.title{font-weight:700;font-size:17px}
+.group{font-size:12px;color:var(--dim);border:1px solid var(--line);border-radius:999px;
+  padding:0 8px}
+.shape{width:100%;height:auto;max-height:150px;background:transparent}
+.shape text{font-family:"IBM Plex Sans Arabic","Noto Sans Arabic",Tahoma,sans-serif}
+.pane{fill:#fff;stroke:var(--line);stroke-width:1}
+.pane2{fill:#eef6fa;stroke:var(--line)}
+.rule{stroke:var(--line);stroke-width:1}
+.rule2{stroke:var(--line);stroke-width:1}
+.ink{fill:#1f2d34}
+.dim{fill:#7d94a1}
+.tiny{fill:#9fb3bd}
+.brand{fill:var(--brand)}
+.brandink{fill:#1b6f8f}
+.ok{fill:#1e8e52}
+.bad{fill:#c8382f}
+.chip{fill:#eef6fa;stroke:#dbe6ec}
+.tab{fill:#eef6fa;stroke:#dbe6ec}
+.hl{fill:none;stroke:var(--brand);stroke-width:1.6;stroke-dasharray:4 3}
+.hl2{fill:#ffe066;opacity:.45}
+.warn{fill:#fdf1d8;stroke:#ecd39a}
+.dark{fill:#111b20;stroke:#28414c}
+.darkchip{fill:#1b2a31}
+.darkink{fill:#dbe9ef}
+.darkdim{fill:#8fa6b1}
+code{background:#eef6fa;border:1px solid var(--line);border-radius:6px;
+  padding:1px 6px;font-size:13px;direction:ltr;display:inline-block;
+  font-family:"IBM Plex Mono","DejaVu Sans Mono",monospace}
+.run{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.run code{flex:1;min-width:180px;overflow:auto;white-space:nowrap}
+.label{font-size:12px;color:var(--dim);text-transform:uppercase;letter-spacing:.04em}
+.rec{font-size:13px;border-radius:10px;padding:8px 10px;display:flex;gap:8px;
+  align-items:flex-start;background:#eef6fa;border:1px solid var(--line)}
+.rec[data-level="medium"]{background:#fdf1d8;border-color:#ecd39a}
+.rec b{white-space:nowrap}
+.verdicts{display:flex;gap:6px;flex-wrap:wrap;margin-top:2px}
+.verdicts label{display:flex;align-items:center;gap:6px;border:1px solid var(--line);
+  border-radius:999px;padding:4px 10px;font-size:13px;cursor:pointer}
+.verdicts input{accent-color:var(--brand)}
+.verdicts label.ok:has(input:checked){border-color:var(--ok);background:#e8f6ee}
+.verdicts label.bad:has(input:checked){border-color:var(--bad);background:#fbeceb}
+.verdicts label.later:has(input:checked){border-color:var(--warn);background:#fdf1d8}
+textarea{width:100%;min-height:56px;resize:vertical;font:inherit;font-size:13px;
+  border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--bg);
+  color:var(--ink)}
+footer.summary{position:fixed;inset-inline:0;bottom:0;background:var(--card);
+  border-top:1px solid var(--line);padding:8px 18px;display:flex;gap:12px;
+  align-items:center;flex-wrap:wrap;font-size:14px;z-index:6}
+.fail-list{color:var(--bad);font-size:13px}
+@media print{
+  header.top{position:static}.grid{grid-template-columns:1fr 1fr}
+  footer.summary{display:none}article.item{break-inside:avoid}
+  .verdicts label:has(input:checked){outline:2px solid var(--ink)}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <h1>بوابة G3b — 17 بندًا يدويًا
+    <small>Mishkah Note 1.0.02 · اختر نتيجة لكل بند · لا شيء يُرسل من هذه الصفحة</small></h1>
+  <div class="bar" role="progressbar" aria-label="التقدّم"><i></i></div>
+  <span class="counter">0/17</span>
+  <button class="primary" id="export">تصدير الجدول</button>
+  <button id="clear">مسح</button>
+</header>
+<main>
+  <section class="intro">
+    <p><b>كيف تستخدم الصفحة:</b> لكل بند ثلاثة أزرار — <b>نجح</b> · <b>فشل</b> ·
+      <b>لم أجرّبه</b> — وحقل ملاحظة حر. تُحفظ إجاباتك في متصفحك حتى لو أغلقت
+      الصفحة، و«تصدير الجدول» ينسخ جدولًا جاهزًا للصقه في المحادثة.</p>
+    <p><b>التوصية</b> هي ما أتوقعه وما أنصح بمراقبته، ومعها <b>إن فشل، أبدأ بـ</b>
+      حتى يصلني البلاغ بنقطة انطلاق لا بلغز. الفحص كله نحو <b>20 دقيقة</b>.</p>
+    <div class="legend">
+      <span><b>المجموعات:</b> أ · الإقلاع · ب · العربية والاتجاه · ج · اللغات والخطوط · د · الملفات والسلامة · هـ · العرض والطباعة</span>
+      <span><b>✅ ثقة عالية</b> — يغطيه اختبار آلي أو أثبتُّه بنفسي</span>
+      <span><b>🟡 ثقة متوسطة</b> — يعتمد على جهازك أو إعدادك</span>
+    </div>
+    <p class="dim">الشرح الكامل والأوامر في
+      <code>docs/G3B_WALKTHROUGH.ar.md</code>.</p>
+  </section>
+  <div class="grid">
+<article class="item" data-item="1">
+  <div class="head">
+    <span class="num">1</span>
+    <span class="title">رقم الإصدار والمساعدة</span>
+    <span class="group">أ · الإقلاع</span>
+  </div>
+  <div class="run"><code>mishkah --version &amp;&amp; mishkah --help</code><button data-copy="mishkah --version &amp;&amp; mishkah --help">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>شغّل الأمرين في الطرفية.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div><code>1.0.02</code> وحدها في الأول، وقائمة خيارات في الثاني بلا أثر استثناء.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">terminal</text><text x="12" y="38" font-size="9" text-anchor="start" fill="#7d94a1">$ mishkah --version</text><text x="12" y="56" font-size="12" text-anchor="start" fill="#1e8e52" font-weight="600">1.0.02</text><text x="12" y="76" font-size="9" text-anchor="start" fill="#7d94a1">$ mishkah --help</text><text x="12" y="90" font-size="8" text-anchor="start" fill="#1f2d34">--version  --help  --new</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>كل حزمة ووسم صفحة تنزيل تقرأ هذا الرقم؛ رقم خاطئ = مستخدم يظن أنه نزّل إصدارًا وهو نزّل غيره، وبوابة النشر تمرّ على رقم لا يطابق الملف.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية (اختبار آلي يغطيه)<br><span class="dim">إن فشل، أبدأ بـ: أفحص `_version.txt` والوسم أولًا؛ الفشل هنا يوقف النشر كله.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v1" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v1" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v1" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="2">
+  <div class="head">
+    <span class="num">2</span>
+    <span class="title">الإقلاع بلا ملفات</span>
+    <span class="group">أ · الإقلاع</span>
+  </div>
+  <div class="run"><code>mishkah</code><button data-copy="mishkah">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>شغّل التطبيق من مجلد فارغ ولا تفتح شيئًا.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>صفحة البداية: الشعار والاسم والإصدار والأزرار — لا مستند فارغ، ولا لافتة خطأ، ولا نافذة منبثقة.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">welcome · RTL</text><text x="232" y="34" font-size="7" text-anchor="end" fill="#7d94a1">ملف  تحرير  عرض  تنسيق</text><rect x="186" y="40" width="30" height="30" rx="5" fill="#5FC1EA"/><text x="201" y="61" font-size="12" text-anchor="middle" fill="#ffffff">◆</text><text x="232" y="85" font-size="12" text-anchor="end" fill="#1f2d34" font-weight="700">مفكرة مشكاة</text><text x="232" y="97" font-size="8" text-anchor="end" fill="#7d94a1">Mishkah Note</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>أول ثانيتين يحكم فيهما المستخدم على البرنامج. مستند فارغ إضافي يعني تبويبًا يجب إغلاقه يدويًا قبل أي عمل.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أتحقق من إعداد `restore_session` ومن مسار `show_home()`.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v2" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v2" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v2" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="3">
+  <div class="head">
+    <span class="num">3</span>
+    <span class="title">إغلاق آخر تبويب</span>
+    <span class="group">أ · الإقلاع</span>
+  </div>
+  <div class="run"><code>Ctrl+N ثم Ctrl+W</code><button data-copy="Ctrl+N ثم Ctrl+W">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>أنشئ تبويبًا ثم أغلقه.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>تعود صفحة البداية ولا تُغلق النافذة (إلا إن كان إعداد «آخر تبويب ← إغلاق النافذة» مفعّلًا عندك).</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">tabs</text><rect x="10" y="28" width="54" height="16" rx="3" fill="#eef6fa" stroke="#dbe6ec"/><text x="16" y="40" font-size="7" text-anchor="start" fill="#1f2d34">البداية</text><text x="54" y="40" font-size="9" text-anchor="start" fill="#7d94a1">×</text><text x="80" y="40" font-size="9" text-anchor="start" fill="#7d94a1">+</text><text x="12" y="66" font-size="8" text-anchor="start" fill="#7d94a1">Ctrl+W  →  آخر تبويب</text><rect x="10" y="74" width="220" height="20" rx="3" fill="#eef6fa" stroke="#dbe6ec"/><text x="222" y="88" font-size="8" text-anchor="end" fill="#1e8e52">تعود صفحة البداية</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>من يغلق تبويبه الأخير لا يريد أن يخرج من البرنامج؛ هذا قرار مُعلن في الإعدادات، وكل مستخدم يمرّ به يوميًا.</div>
+  </div>
+  <div class="rec" data-level="medium">
+    <b>🟡 توصيتي:</b>
+    <span>أتوقع النجاح — ثقة متوسطة (يعتمد على إعدادك)<br><span class="dim">إن فشل، أبدأ بـ: أذكر قيمة `last_tab_action` في البلاغ قبل أن أعده عيبًا.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v3" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v3" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v3" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="4">
+  <div class="head">
+    <span class="num">4</span>
+    <span class="title">الكتابة العربية من أول حرف</span>
+    <span class="group">ب · العربية والاتجاه</span>
+  </div>
+  <div class="run"><code>Ctrl+N ثم اكتب: مرحبًا، هذه أول فقرة.</code><button data-copy="Ctrl+N ثم اكتب: مرحبًا، هذه أول فقرة.">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>اكتب فقرتين عربيتين، ثم <code>Enter</code> بينهما.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>المحاذاة من اليمين، والمؤشر في أول السطر على اليمين، والسطر الأول لا يُزحزح ولا يترك فراغًا تحته.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">RTL</text><rect x="40" y="32" width="188" height="3" rx="1" fill="#1f2d34"/><rect x="90" y="42" width="138" height="3" rx="1" fill="#1f2d34"/><rect x="120" y="52" width="108" height="3" rx="1" fill="#7d94a1"/><rect x="70" y="62" width="158" height="3" rx="1" fill="#1f2d34"/><rect x="228" y="28" width="2" height="14" rx="0" fill="#5FC1EA"/><text x="232" y="88" font-size="8" text-anchor="end" fill="#1e8e52">المحاذاة من اليمين ↤</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>الاتجاه الخاطئ لا يجعل التطبيق «أقل جودة» بل بلا معنى لجمهوره العربي؛ لهذا وُضع قبل أي ميزة في ترتيب الأولويات.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أراجع كشف الاتجاه التلقائي (`text_direction`) وافتراض الاتجاه.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v4" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v4" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v4" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="5">
+  <div class="head">
+    <span class="num">5</span>
+    <span class="title">خلط العربية والإنجليزية في مستند</span>
+    <span class="group">ب · العربية والاتجاه</span>
+  </div>
+  <div class="run"><code>افتح mixed.txt</code><button data-copy="افتح mixed.txt">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>افتح ملفًا فيه فقرات عربية وإنجليزية متبادلة.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>كل فقرة تأخذ اتجاهها من أول حرف قوي فيها، بلا لمس أي مفتاح اتجاه.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">mixed</text><text x="228" y="38" font-size="8" text-anchor="end" fill="#1f2d34">مرحبا hello 123</text><rect x="120" y="42" width="108" height="2" rx="1" fill="#7d94a1"/><text x="12" y="62" font-size="8" text-anchor="start" fill="#1f2d34">third paragraph</text><rect x="12" y="66" width="74" height="2" rx="1" fill="#7d94a1"/><text x="228" y="88" font-size="7" text-anchor="end" fill="#1e8e52">عربية ← يمين · English ← يسار</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>أكثر مستند حقيقي فيه لغتان: اسم برنامج، أمر طرفية، رابط. إن فشل هذا فسيفشل في معظم الملفات لا في حالة نادرة.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أختبر بمستندك نفسه؛ قد يكون السبب حرفًا محايدًا في بداية الفقرة.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v5" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v5" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v5" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="6">
+  <div class="head">
+    <span class="num">6</span>
+    <span class="title">تثبيت الاتجاه لا يعلّم «معدَّل»</span>
+    <span class="group">ب · العربية والاتجاه</span>
+  </div>
+  <div class="run"><code>Ctrl+Shift+→ ثم ← ثم Ctrl+Shift+A</code><button data-copy="Ctrl+Shift+→ ثم ← ثم Ctrl+Shift+A">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>بدّل الاتجاه يمينًا ويسارًا ثم أعد التلقائي في مستند غير معدَّل.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>الاتجاه يتغيّر فورًا، وعلامة «معدَّل» لا تظهر، و<code>Ctrl+S</code> لا يسأل عن حفظ شيء.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">direction</text><text x="12" y="40" font-size="8" text-anchor="start" fill="#7d94a1">Ctrl+Shift+→ · ← · A</text><rect x="12" y="48" width="60" height="18" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><text x="42" y="61" font-size="8" text-anchor="middle" fill="#1f2d34">RTL</text><rect x="78" y="48" width="60" height="18" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><text x="108" y="61" font-size="8" text-anchor="middle" fill="#1f2d34">LTR</text><rect x="144" y="48" width="60" height="18" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><text x="174" y="61" font-size="8" text-anchor="middle" fill="#1f2d34">Auto</text><text x="12" y="86" font-size="8" text-anchor="start" fill="#1e8e52">★ «معدَّل» لا تظهر</text><text x="232" y="86" font-size="10" text-anchor="end" fill="#c8382f">★ ✗</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>«معدَّل» كاذبة تدفع إلى حفظ لا حاجة له، أو إلى خوف من إغلاق يظن المستخدم أنه سيفقد شيئًا.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أفصل تغيير العرض عن تغيير المستند في `DocumentModel`.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v6" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v6" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v6" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="7">
+  <div class="head">
+    <span class="num">7</span>
+    <span class="title">صفحة البداية: الكتلة الثابتة (جولة 4)</span>
+    <span class="group">ب · العربية والاتجاه</span>
+  </div>
+  <div class="run"><code>افتح التطبيق بلا ملفات والتقط لقطة</code><button data-copy="افتح التطبيق بلا ملفات والتقط لقطة">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>تأمّل أعلى صفحة البداية.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>بالترتيب: الشعار ← <b>مفكرة مشكاة</b> ← <b>Mishkah Note</b> ← <b>الإصدار 1.0.02</b>، والكتلة كلها مع الأزرار على <b>يمين</b> الشاشة.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">welcome · RTL</text><rect x="186" y="40" width="30" height="30" rx="5" fill="#5FC1EA"/><text x="201" y="61" font-size="12" text-anchor="middle" fill="#ffffff">◆</text><text x="232" y="85" font-size="12" text-anchor="end" fill="#1f2d34" font-weight="700">مفكرة مشكاة</text><text x="232" y="97" font-size="8" text-anchor="end" fill="#7d94a1">Mishkah Note</text><rect x="150" y="30" width="90" height="74" rx="6" fill="none" stroke="#5FC1EA" stroke-width="1.6" stroke-dasharray="4 3"/><text x="154" y="44" font-size="8" text-anchor="start" fill="#1b6f8f">جولة 4</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>هذا ما أصلحناه للتو: الاسم كان ينفصل عن الأزرار، والكلام في القوائم اليسرى كان يبقى يسارًا في واجهة عربية. اختبار البكسلات يثبته، ولقطتك تثبت ما يراه إنسان.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية (مُثبت بفحص يقرأ البكسلات)<br><span class="dim">إن فشل، أبدأ بـ: أراجع `_align_to_direction()` و`AlignAbsolute` في بيئتك.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v7" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v7" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v7" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="8">
+  <div class="head">
+    <span class="num">8</span>
+    <span class="title">الأردية: قوائم بخط مستقيم</span>
+    <span class="group">ج · اللغات والخطوط</span>
+  </div>
+  <div class="run"><code>Format ▸ Language ▸ اردو</code><button data-copy="Format ▸ Language ▸ اردو">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>بدّل لغة الواجهة إلى الأردية.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>الواجهة تنقلب يمينًا، والقوائم تُعاد كتابتها <b>فورًا</b> بخط نسخي مستقيم (Noto Sans Arabic)، لا بالنستعليق المائل.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">chrome face</text><text x="232" y="34" font-size="8" text-anchor="end" fill="#1f2d34">فائل  ترميم  نظارہ  شکل  ٹیب  مدد</text><rect x="150" y="26" width="86" height="12" rx="3" fill="none" stroke="#5FC1EA" stroke-width="1.4" stroke-dasharray="4 3"/><text x="12" y="56" font-size="7" text-anchor="start" fill="#7d94a1">النستعليق في 12px:</text><text x="12" y="70" font-size="7" text-anchor="start" fill="#c8382f">ذيل يصطدم بالسطر ↓</text><text x="12" y="90" font-size="8" text-anchor="start" fill="#1e8e52">Noto Sans Arabic ← مستقيم</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>النستعليق خط كتابة ممتاز وواجهة رديئة: ذيوله تصطدم بالأسطر التالية عند 11–13 بكسل، وهو ما جعل قوائم الأردية تبدو مكسورة.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية (الخط مضغوط داخل الحزمة)<br><span class="dim">إن فشل، أبدأ بـ: أطلب ناتج `font_report.py` من جهازك — إن ظهر DejaVu فالمضمّن لم يُسجَّل.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v8" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v8" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v8" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="9">
+  <div class="head">
+    <span class="num">9</span>
+    <span class="title">تبديل سريع بين اللغات</span>
+    <span class="group">ج · اللغات والخطوط</span>
+  </div>
+  <div class="run"><code>ar → ur → ru → en</code><button data-copy="ar → ur → ru → en">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>بدّل أربع لغات بسرعة ثم ارجع إلى صفحة البداية.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>لا نص عالق بلغة سابقة: القوائم والأزرار والسطر التعريفي بلغة الواجهة الحالية، والاسم والإصدار كما هما دائمًا.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">switch</text><text x="12" y="40" font-size="8" text-anchor="start" fill="#7d94a1">ar → ur → ru → en</text><rect x="12" y="48" width="210" height="14" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><text x="208" y="59" font-size="7" text-anchor="end" fill="#1e8e52">كل النصوص تتبع اللغة الحالية</text><text x="12" y="80" font-size="8" text-anchor="start" fill="#1f2d34">لا كلمة عالقة بلغة سابقة</text><text x="232" y="92" font-size="12" text-anchor="end" fill="#1e8e52">✓</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>الميزة معلنة («تبديل فوري بلا إعادة تشغيل»)؛ نص عالق يجعلها ميزة موجودة في الوصف وغائبة في الاستخدام.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أبحث عن أي واجهة لا تُستدعى لها `retranslate()`.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v9" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v9" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v9" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="10">
+  <div class="head">
+    <span class="num">10</span>
+    <span class="title">تقرير الخطوط على جهازك</span>
+    <span class="group">ج · اللغات والخطوط</span>
+  </div>
+  <div class="run"><code>python tools/font_report.py --check; echo $?</code><button data-copy="python tools/font_report.py --check; echo $?">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>شغّل الأمر داخل بيئة التطبيق.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div><code>ar</code> ← IBM Plex Sans Arabic، و<code>ur</code> ← Noto Sans Arabic، وعمود الحروف الأردية <code>ok</code>، والنتيجة <code>0</code>.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">font_report</text><text x="10" y="36" font-size="7" text-anchor="start" fill="#7d94a1">lang</text><text x="58" y="36" font-size="7" text-anchor="start" fill="#7d94a1">asked</text><text x="128" y="36" font-size="7" text-anchor="start" fill="#7d94a1">resolved</text><text x="10" y="54" font-size="8" text-anchor="start" fill="#1f2d34">ar</text><text x="58" y="54" font-size="8" text-anchor="start" fill="#7d94a1">IBM Plex</text><text x="128" y="54" font-size="8" text-anchor="start" fill="#1e8e52">IBM Plex Sans Arabic</text><text x="10" y="70" font-size="8" text-anchor="start" fill="#1f2d34">ur</text><text x="58" y="70" font-size="8" text-anchor="start" fill="#7d94a1">Noto Sans</text><text x="128" y="70" font-size="8" text-anchor="start" fill="#1e8e52">Noto Sans Arabic</text><text x="10" y="90" font-size="8" text-anchor="start" fill="#1f2d34">ٹ ڈ ڑ ں ے ھ   →   ok</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>هذا يحوّل «لم يُختبر على macOS/Windows» إلى شيء قابل للفحص: أرسل المخرجات من جهازك، فتصبح مُختبرة أو كاشفة لعيب قبل النشر.</div>
+  </div>
+  <div class="rec" data-level="medium">
+    <b>🟡 توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية على لينكس، **متوسطة على macOS/Windows**<br><span class="dim">إن فشل، أبدأ بـ: انسخ السطور التي تبدأ بـ`!`؛ كل واحدة تحدد الملف أو العائلة الغائبة.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v10" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v10" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v10" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="11">
+  <div class="head">
+    <span class="num">11</span>
+    <span class="title">الحفظ لا يضيف بايتًا</span>
+    <span class="group">د · الملفات والسلامة</span>
+  </div>
+  <div class="run"><code>cmp ملفَين أو سكربت البايتات في الدليل</code><button data-copy="cmp ملفَين أو سكربت البايتات في الدليل">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>انسخ ملفًا، عدّل كلمة واحدة، احفظ، ثم قارن البايتات.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>لا BOM مضاف، ولا تحوّل LF إلى CRLF، والفرق محصور في الكلمة المعدَّلة.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">bytes</text><text x="12" y="40" font-size="8" text-anchor="start" fill="#7d94a1">plan.md  →  plan-copy.md</text><rect x="12" y="48" width="30" height="12" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><rect x="46" y="48" width="30" height="12" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><rect x="80" y="48" width="30" height="12" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><rect x="114" y="48" width="30" height="12" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><text x="160" y="58" font-size="8" text-anchor="start" fill="#1e8e52">بايتات متطابقة</text><text x="12" y="82" font-size="8" text-anchor="start" fill="#c8382f">EF BB BF (BOM) ✗</text><text x="232" y="82" font-size="8" text-anchor="end" fill="#c8382f">CRLF ✗</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>ملفات git تُقرأ بايتًا بايتًا: إضافة BOM تجعل كل سطر «معدَّلًا» في تاريخ المستودع، والمستخدم يظن أنه أفسد ملفه.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أراجع `encoding.py`: هل يُحفظ بالترميز المكتشف نفسه؟</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v11" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v11" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v11" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="12">
+  <div class="head">
+    <span class="num">12</span>
+    <span class="title">تعديل خارجي أثناء الفتح</span>
+    <span class="group">د · الملفات والسلامة</span>
+  </div>
+  <div class="run"><code>عدّل plan.md من محرّر آخر ثم Ctrl+S هنا</code><button data-copy="عدّل plan.md من محرّر آخر ثم Ctrl+S هنا">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>افتح ملفًا، غيّره من خارج التطبيق، ثم احفظ من التطبيق.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>لافتة بأن الملف تغيّر على القرص، ولا كتابة فوق التعديل الخارجي إلا بموافقتك الصريحة.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">conflict</text><rect x="12" y="30" width="62" height="30" rx="3" fill="#eef6fa" stroke="#dbe6ec"/><text x="18" y="44" font-size="7" text-anchor="start" fill="#1f2d34">المحرّر</text><text x="18" y="56" font-size="7" text-anchor="start" fill="#7d94a1">الخارج</text><rect x="96" y="30" width="62" height="30" rx="3" fill="#eef6fa" stroke="#dbe6ec"/><text x="102" y="44" font-size="7" text-anchor="start" fill="#1f2d34">القرص</text><text x="102" y="56" font-size="7" text-anchor="start" fill="#c8382f">+سطر</text><text x="170" y="50" font-size="13" text-anchor="start" fill="#c8382f">≠</text><rect x="12" y="70" width="216" height="20" rx="3" fill="#fdf1d8" stroke="#ecd39a"/><text x="222" y="84" font-size="7" text-anchor="end" fill="#1f2d34">تغيّر الملف — لن أكتب فوقه</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>هذا أخطر مسار في أي محرّر: كتابة فوق عمل أُنجز في مكان آخر. كل ما بنيناه في «سلامة البيانات» يقف على هذا السطر.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أعده فورًا؛ هذا البند وحده يوقف النشر إن فشل.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v12" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v12" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v12" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="13">
+  <div class="head">
+    <span class="num">13</span>
+    <span class="title">ملف كبير (٥٠ م.ب)</span>
+    <span class="group">د · الملفات والسلامة</span>
+  </div>
+  <div class="run"><code>افتح ~/g3b/big.txt</code><button data-copy="افتح ~/g3b/big.txt">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>افتح ملفًا نصيًا كبيرًا.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>شريط تقدّم ثم المستند بلا تجمّد؛ وفوق السقف المضبوط تظهر معاينة للقراءة فقط مع زر «افتح الملف كاملًا».</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">large file</text><text x="12" y="40" font-size="8" text-anchor="start" fill="#1f2d34">big.txt · 50 MB</text><rect x="12" y="48" width="216" height="10" rx="5" fill="#eef6fa"/><rect x="12" y="48" width="120" height="10" rx="5" fill="#5FC1EA"/><text x="12" y="74" font-size="7" text-anchor="start" fill="#7d94a1">معاينة للقراءة فقط + «افتح الملف كاملًا»</text><text x="232" y="92" font-size="8" text-anchor="end" fill="#1e8e52">بلا تجمّد</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>وعد «لا يتجمّد» جزء من وعد المنتج الأساسي؛ ملف واحد كبير يهدم الثقة أكثر من عشر ميزات ناقصة.</div>
+  </div>
+  <div class="rec" data-level="medium">
+    <b>🟡 توصيتي:</b>
+    <span>أتوقع النجاح — ثقة متوسطة (يعتمد على سرعة قرصك)<br><span class="dim">إن فشل، أبدأ بـ: أطلب رقم السقف المضبوط في إعداداتك وحجم الملف بالضبط.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v13" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v13" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v13" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="14">
+  <div class="head">
+    <span class="num">14</span>
+    <span class="title">ترميز قديم (Windows-1256)</span>
+    <span class="group">د · الملفات والسلامة</span>
+  </div>
+  <div class="run"><code>افتح legacy.txt</code><button data-copy="افتح legacy.txt">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>افتح ملفًا بترميز عربي قديم، عدّل سطرًا، احفظ.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>العربية تظهر سليمة، وشريحة شريط الحالة تقول <code>Windows-1256</code>، والحفظ بالترميز نفسه لا UTF-8.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">encoding</text><text x="228" y="40" font-size="9" text-anchor="end" fill="#1f2d34">نص بترميز ويندوز العربي</text><rect x="150" y="62" width="82" height="18" rx="4" fill="#eef6fa" stroke="#dbe6ec"/><text x="191" y="75" font-size="8" text-anchor="middle" fill="#1f2d34">Windows-1256</text><text x="12" y="75" font-size="7" text-anchor="start" fill="#1e8e52">الحفظ بالترميز نفسه</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>أرشيف عربي كامل على هذا الترميز؛ تحويله الصامت إلى UTF-8 يجعل بقية برامج المستخدم تقرأ الملف مشوّهًا.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أتحقق من `detect_encoding` على أول 64 KiB فقط.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v14" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v14" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v14" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="15">
+  <div class="head">
+    <span class="num">15</span>
+    <span class="title">Markdown حيّ لا يمسّ الملف</span>
+    <span class="group">هـ · العرض والطباعة</span>
+  </div>
+  <div class="run"><code>Ctrl+Shift+M</code><button data-copy="Ctrl+Shift+M">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>فعّل العرض المنسّق على ملف Markdown، ثم احفظ، ثم أوقفه.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>يتنسّق العرض، و«معدَّل» لا تظهر عند التبديل، وبعد الإيقاف يعود النص الخام حرفًا بحرف.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">markdown</text><text x="12" y="44" font-size="9" text-anchor="start" fill="#7d94a1"># عنوان</text><text x="78" y="44" font-size="9" text-anchor="start" fill="#7d94a1">→</text><text x="104" y="44" font-size="11" text-anchor="start" fill="#1f2d34" font-weight="700">عنوان</text><rect x="12" y="56" width="216" height="1" rx="0" fill="#dbe6ec"/><text x="12" y="74" font-size="8" text-anchor="start" fill="#1e8e52">البايتات لا تتغيّر · ★ لا تظهر</text><text x="232" y="94" font-size="7" text-anchor="end" fill="#7d94a1">Ctrl+Shift+M</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>الوعد الحرفي: «ما تراه هو ما كتبته — لا أكثر ولا أقل». أي تغيير في الملف بسبب العرض يكسر هذا الوعد ويكسر معه git.</div>
+  </div>
+  <div class="rec" data-level="high">
+    <b>✅ توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية<br><span class="dim">إن فشل، أبدأ بـ: أراجع أن التنسيق طبقة عرض لا تعديل على المخزن.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v15" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v15" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v15" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="16">
+  <div class="head">
+    <span class="num">16</span>
+    <span class="title">طباعة عربية إلى PDF</span>
+    <span class="group">هـ · العرض والطباعة</span>
+  </div>
+  <div class="run"><code>Ctrl+P ▸ Print to File ▸ plan.pdf</code><button data-copy="Ctrl+P ▸ Print to File ▸ plan.pdf">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>اطبع مستندًا عربيًا إلى ملف PDF ثم افتحه.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>ملف يُفتح، حروف عربية غير مقطوعة ولا معكوسة، سطور لا تتداخل، وترقيم مستمر.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#ffffff" stroke="#dbe6ec"/><line x1="2" y1="22" x2="238" y2="22" stroke="#dbe6ec"/><text x="10" y="14" font-size="8" fill="#9fb3bd" font-family="monospace">print → file</text><rect x="34" y="38" width="48" height="44" rx="3" fill="#eef6fa" stroke="#dbe6ec" transform="rotate(-4 58 60)"/><rect x="48" y="35" width="48" height="44" rx="3" fill="#eef6fa" stroke="#dbe6ec" transform="rotate(0 58 60)"/><rect x="62" y="32" width="48" height="44" rx="3" fill="#eef6fa" stroke="#dbe6ec" transform="rotate(4 58 60)"/><text x="140" y="46" font-size="11" text-anchor="start" fill="#1f2d34" font-weight="700">PDF</text><text x="140" y="60" font-size="7" text-anchor="start" fill="#1e8e52">عربي غير مقطوع</text><text x="140" y="72" font-size="7" text-anchor="start" fill="#7d94a1">ترقيم مستمر</text><text x="140" y="88" font-size="7" text-anchor="start" fill="#c8382f">افتحه بعينك</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>الطبع مسار مُختبر آليًا (عدد الصفحات والخط المضمّن)، لكن **عينك** وحدها ترى القطع والترتيب؛ والطابعة الورقية تبقى غير مُختبرة.</div>
+  </div>
+  <div class="rec" data-level="medium">
+    <b>🟡 توصيتي:</b>
+    <span>أتوقع النجاح — ثقة عالية في PDF، ولا ثقة في الطابعة الورقية<br><span class="dim">إن فشل، أبدأ بـ: أراجع مقاس الورق والهوامش واتجاه الصفحة في حوار الطابعة.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v16" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v16" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v16" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+
+<article class="item" data-item="17">
+  <div class="head">
+    <span class="num">17</span>
+    <span class="title">البحث في السمة الداكنة</span>
+    <span class="group">هـ · العرض والطباعة</span>
+  </div>
+  <div class="run"><code>Ctrl+F ▸ تسليم ▸ F3 ▸ Esc</code><button data-copy="Ctrl+F ▸ تسليم ▸ F3 ▸ Esc">نسخ</button></div>
+  <div>
+    <div class="label">ما تفعله · do</div>
+    <div>ابحث في السمة الداكنة ثم تنقّل بين النتائج وأغلق الشريط.</div>
+  </div>
+  <div>
+    <div class="label">ما تتوقعه · expect</div>
+    <div>أول نتيجة مظلَّلة وواضحة على الخلفية الداكنة، <code>F3</code> ينتقل، <code>Esc</code> يعيد التركيز للمستند بلا أثر باقٍ.</div>
+  </div>
+  <figure>
+    <div class="label">شكل مبسط · what it looks like</div>
+    <svg class="shape" viewBox="0 0 240 104" role="img" aria-hidden="true"><rect x="2" y="2" width="236" height="100" rx="7" fill="#111b20"/><rect x="12" y="26" width="150" height="14" rx="3" fill="#1b2a31"/><text x="18" y="36" font-size="7" text-anchor="start" fill="#dbe9ef">بحث: تسليم</text><text x="226" y="36" font-size="7" text-anchor="end" fill="#8fa6b1">Esc ✕</text><rect x="12" y="50" width="216" height="42" rx="3" fill="#1b2a31"/><text x="20" y="66" font-size="8" text-anchor="start" fill="#dbe9ef">… الجمعة  تسليم  في …</text><rect x="66" y="59" width="46" height="11" rx="2" fill="#ffe066"/><text x="20" y="86" font-size="7" text-anchor="start" fill="#1e8e52">التظليل مقروء · F3 ينتقل</text></svg>
+  </figure>
+  <div>
+    <div class="label">التأثير إن فشل · why it matters</div>
+    <div>ما يفشل عادة في السمة الداكنة هو التظليل لا البحث: نص أصفر على خلفية داكنة يختفي، والمستخدم يظن أن البحث لم يجد شيئًا.</div>
+  </div>
+  <div class="rec" data-level="medium">
+    <b>🟡 توصيتي:</b>
+    <span>أتوقع النجاح — ثقة متوسطة (ألوان الشفافية تعتمد على النظام)<br><span class="dim">إن فشل، أبدأ بـ: أراجع ألوان `search` في ملف السمة الداكنة.</span></span>
+  </div>
+  <div>
+    <div class="label">نتيجتك · your verdict</div>
+    <div class="verdicts"><label class="ok"><input type="radio" name="v17" value="ok"> ✅ نجح</label>
+<label class="bad"><input type="radio" name="v17" value="bad"> ❌ فشل</label>
+<label class="later"><input type="radio" name="v17" value="later"> ⏳ لم أجرّبه</label></div>
+  </div>
+  <label>
+    <span class="label">ملاحظة / ما ظهر (اختياري)</span>
+    <textarea placeholder="مثال: ظهرت اللافتة، لكن الزر لم يستجب…"></textarea>
+  </label>
+</article>
+  </div>
+</main>
+<footer class="summary">
+  <span>تقدّمك: محفوظ في هذا المتصفح</span>
+  <span class="fail-list" id="fails"></span>
+  <span class="fail-list" id="later"></span>
+  <span class="dim">لا وسم ولا نشر قبل أن تعود النتيجة.</span>
+</footer>
+<script>
+const KEY = 'mishkah-g3b-v1';
+// file:// and private windows can refuse localStorage; the page must still work,
+// it just stops remembering between visits.
+const memory = {};
+const state = () => {
+  try { return JSON.parse(localStorage.getItem(KEY) || '{}'); } catch { return memory.state || {}; }
+};
+const save = (s) => {
+  memory.state = s;
+  try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* read-only visit */ }
+};
+
+function refresh(){
+  const s = state();
+  let done = 0, bad = [], later = [];
+  document.querySelectorAll('article.item').forEach(card => {
+    const n = card.dataset.item;
+    const verdict = s[n]?.verdict || '';
+    card.dataset.verdict = verdict;
+    if (verdict) done++;
+    if (verdict === 'bad') bad.push(n);
+    if (verdict === 'later') later.push(n);
+  });
+  const total = document.querySelectorAll('article.item').length;
+  document.querySelector('.bar > i').style.width = (100 * done / total) + '%';
+  document.querySelector('.counter').textContent = `${done}/${total}`;
+  document.getElementById('fails').textContent =
+    bad.length ? `فشل: ${bad.map(n => '#' + n).join(' ')}` : '';
+  document.getElementById('later').textContent =
+    later.length ? `لم يُجرَّب: ${later.length}` : '';
+}
+
+document.addEventListener('change', (e) => {
+  const card = e.target.closest('article.item');
+  if (!card || !e.target.matches('input[type=radio]')) return;
+  const s = state();
+  s[card.dataset.item] = {...(s[card.dataset.item] || {}), verdict: e.target.value};
+  save(s); refresh();
+});
+
+document.addEventListener('input', (e) => {
+  const card = e.target.closest('article.item');
+  if (!card || !e.target.matches('textarea')) return;
+  const s = state();
+  s[card.dataset.item] = {...(s[card.dataset.item] || {}), note: e.target.value};
+  save(s);
+});
+
+document.addEventListener('click', async (e) => {
+  const copy = e.target.closest('[data-copy]');
+  if (copy){
+    try { await navigator.clipboard.writeText(copy.dataset.copy); }
+    catch { const t = document.createElement('textarea'); t.value = copy.dataset.copy;
+            document.body.appendChild(t); t.select(); document.execCommand('copy'); t.remove(); }
+    const was = copy.textContent; copy.textContent = 'نُسخ';
+    setTimeout(() => copy.textContent = was, 1200);
+    return;
+  }
+  if (e.target.id === 'export'){
+    const s = state();
+    const lines = ['| # | البند | النتيجة | ملاحظة |', '|---|---|---|---|'];
+    document.querySelectorAll('article.item').forEach(card => {
+      const n = card.dataset.item;
+      const title = card.querySelector('.title').textContent.trim();
+      const v = s[n]?.verdict || '';
+      const mark = v === 'ok' ? '✅' : v === 'bad' ? '❌' : v === 'later' ? '⏳' : '';
+      const note = (s[n]?.note || '').replace(/\n/g, ' ').replace(/\|/g, '\\|');
+      lines.push(`| ${n} | ${title} | ${mark} | ${note} |`);
+    });
+    const text = lines.join('\n');
+    try { await navigator.clipboard.writeText(text); alert('نُسخ الجدول — الصقه في المحادثة.'); }
+    catch { window.prompt('انسخ الجدول:', text); }
+    return;
+  }
+  if (e.target.id === 'clear'){
+    if (!confirm('مسح كل ما أجبت به؟')) return;
+    try { localStorage.removeItem(KEY); } catch { /* nothing stored */ }
+    location.reload();
+  }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+  const s = state();
+  document.querySelectorAll('article.item').forEach(card => {
+    const entry = s[card.dataset.item] || {};
+    if (entry.verdict){
+      const radio = card.querySelector(`input[value="${entry.verdict}"]`);
+      if (radio) radio.checked = true;
+    }
+    if (entry.note){
+      const area = card.querySelector('textarea');
+      if (area) area.value = entry.note;
+    }
+  });
+  refresh();
+});
+</script>
+</body>
+</html>

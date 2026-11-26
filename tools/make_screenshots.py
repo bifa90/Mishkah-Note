@@ -18,6 +18,7 @@ from __future__ import annotations
 import os
 import sys
 from pathlib import Path
+from typing import List
 
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
@@ -179,10 +180,20 @@ def grab(widget, name: str) -> Path:
     return target
 
 
-def scale_ui(controller: MainController) -> None:
-    """Pick the same faces the application resolves on a normal desktop."""
-    families = ["Segoe UI Variable Text", "Roboto", "IBM Plex Sans Arabic",
-                "DejaVu Sans"]
+def scale_ui(controller: MainController, language: str | None = None) -> None:
+    """Pick the same faces the application resolves on a normal desktop.
+
+    ``language`` asks for that language's own chrome stack instead of the
+    Latin one, because the Urdu screenshot has to *show* the face the product
+    uses there — a screenshot that quietly substitutes DejaVu proves nothing.
+    """
+    if language:
+        from mishkah.core.languages import get_language
+
+        families = list(get_language(language).ui_fonts)
+    else:
+        families = ["Segoe UI Variable Text", "Roboto", "IBM Plex Sans Arabic",
+                    "DejaVu Sans"]
     font = QFont()
     font.setFamilies(families)
     font.setPointSize(11)
@@ -261,6 +272,17 @@ def shot_tabs(app: QApplication) -> None:
     grab(window, "tabs.png")
 
 
+def shot_home(app: QApplication, language: str, theme: str, name: str) -> None:
+    """The welcome page: the brand block never translates, only it moves."""
+    controller = make_window(theme, language)
+    scale_ui(controller, language)
+    controller.show_home()
+    window = controller.window
+    window.show()
+    app.processEvents()
+    grab(window, name)
+
+
 def shot_settings(app: QApplication) -> None:
     from mishkah.widgets.settings_dialog import SettingsDialog
 
@@ -285,13 +307,26 @@ def shot_about(app: QApplication) -> None:
     dialog.close()
 
 
-def main() -> None:
+def main(argv: List[str] | None = None) -> None:
+    only = None
+    args = list(sys.argv[1:] if argv is None else argv)
+    if "--only" in args:
+        only = args[args.index("--only") + 1]
     OUT.mkdir(parents=True, exist_ok=True)
     app = build_app()
     app.setStyle("Fusion")
     app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps, True)
     # QT_SCALE_FACTOR must be set before the QApplication exists; when the
     # caller did not, and no screen is attached (offscreen), paint at 1×.
+    shots = {
+        "home": lambda: (shot_home(app, "ar", "light", "home-arabic.png"),
+                         shot_home(app, "ur", "dark", "home-urdu.png")),
+    }
+    if only:
+        shots[only]()
+        return
+    shot_home(app, "ar", "light", "home-arabic.png")
+    shot_home(app, "ur", "dark", "home-urdu.png")
     shot_light(app)
     shot_dark_arabic(app)
     shot_markdown(app)

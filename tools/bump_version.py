@@ -94,6 +94,23 @@ def add_metainfo_release(old: str, new: str, date: str, dry_run: bool) -> bool:
     return True
 
 
+def update_spec_version(old: str, new: str, dry_run: bool) -> bool:
+    """Point the spec's ``version_override`` default at *new*.
+
+    The spec is excluded from the blind replacement because its changelog is
+    history; the one line that must move is the ``%global`` default, and it is
+    the line ``tools/check_version.py`` reads.
+    """
+    text = (ROOT / SPEC).read_text(encoding="utf-8")
+    pattern = re.compile(r"(%global version_override )([\d.]+)")
+    if not pattern.search(text):
+        return False
+    updated, count = pattern.subn(rf"\g<1>{new}", text)
+    if count and not dry_run:
+        (ROOT / SPEC).write_text(updated, encoding="utf-8")
+    return bool(count) and old != new
+
+
 def add_spec_changelog(new: str, dry_run: bool) -> bool:
     text = (ROOT / SPEC).read_text(encoding="utf-8")
     head, _, changelog = text.partition("%changelog\n")
@@ -127,6 +144,7 @@ def main(argv: List[str] | None = None) -> int:
 
     changed = replace_static(old, args.version, args.dry_run)
     meta = add_metainfo_release(old, args.version, args.date, args.dry_run)
+    update_spec_version(old, args.version, args.dry_run)
     spec = add_spec_changelog(args.version, args.dry_run)
 
     for live, mirror in MIRRORS.items():

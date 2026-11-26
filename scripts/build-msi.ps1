@@ -10,7 +10,7 @@
 
     Run it on Windows (or a windows-latest GitHub runner):
 
-        pwsh scripts/build-msi.ps1 -Version 1.0.01
+        pwsh scripts/build-msi.ps1 -Version 1.0.02
 
     Prerequisites (installed by the script when missing):
         * Python 3.9+ with pip
@@ -108,6 +108,16 @@ if ($SkipFreeze -and (Test-Path $SourceDir)) {
         throw "PyInstaller did not produce Mishkah Note.exe"
     }
 }
+
+# ---------------------------------------------------------------------------
+# 2b. third-party notices
+# ---------------------------------------------------------------------------
+# The MSI bundles Qt/PySide6 (LGPL v3) and a CPython runtime, so the notices
+# have to be installed next to the executable.  mishkah.wxs ships every file in
+# $SourceDir, so dropping the file there is all that is needed.
+Write-Step "adding THIRD-PARTY-NOTICES.md to the payload"
+Copy-Item -Path (Join-Path $Root "THIRD-PARTY-NOTICES.md") -Destination $SourceDir -Force
+Copy-Item -Path (Join-Path $Root "LICENSE") -Destination (Join-Path $SourceDir "LICENSE.txt") -Force
 
 # ---------------------------------------------------------------------------
 # 3. licence page: WiX needs RTF

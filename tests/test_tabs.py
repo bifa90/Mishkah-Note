@@ -127,12 +127,12 @@ def test_closing_the_pinned_tab_releases_on_top(controller):
     assert controller.window.pinned_index() is None
 
 
-def test_pin_shows_a_glyph_on_the_tab(controller):
+def test_pin_is_state_not_an_icon(controller):
     editor = controller.new_document()
     controller.toggle_tab_pin(0)
-    assert controller.window.tab_bar.tabIcon(0).availableSizes()
+    assert controller.window.tab_bar.is_pinned(0) is True
     controller.window.set_tab_pinned(editor, False)
-    assert not controller.window.tab_bar.tabIcon(0).availableSizes()
+    assert controller.window.tab_bar.is_pinned(0) is False
 
 
 # ---------------------------------------------------------------------
@@ -174,8 +174,13 @@ def test_typing_preferences_reach_new_editors(controller):
     assert editor.word_completion_enabled() is False
 
 
-def test_highlighting_setting_is_off_by_default(controller):
+def test_highlighting_is_on_by_default(controller):
+    """CD-12: code colours itself, so the switch starts on."""
     editor = controller.new_document()
+    assert controller.settings.syntax_highlighting is True
+    assert editor.syntax_highlighting_enabled() is True
+
+    controller.set_syntax_highlighting(False)
     assert controller.settings.syntax_highlighting is False
     assert editor.syntax_highlighting_enabled() is False
 
@@ -184,7 +189,7 @@ def test_language_override_is_per_tab(controller):
     first = controller.new_document()
     controller.set_tab_language("python")
     assert first.language_code() == "python"
-    assert first.syntax_highlighting_enabled() is False   # toggling is separate
+    assert first.syntax_highlighting_enabled() is True    # colours, same grammar
 
     second = controller.new_document()
     assert second.language_code() == "plain"
@@ -214,8 +219,34 @@ def test_untitled_tab_follows_the_ui_language(controller, qapp):
         i18n.set_language("en")
 
 
-def test_modified_marker_is_added_once(controller):
+def test_modified_marker_is_a_dot_not_a_character(controller):
+    """CD-04: the name stays clean; the dot is painted by the tab bar."""
     editor = controller.new_document()
     editor.setPlainText("changed")
     text = controller.window.tabs.tabText(0)
-    assert text.count("●") == 1
+    assert "●" not in text
+    assert controller.window.tab_bar.tab_modified(0) is True
+
+    controller.current_document().mark_saved(None, 0)
+    controller.window.set_tab_title(editor, controller._doc_title(
+        controller.current_document()), False)
+    assert controller.window.tab_bar.tab_modified(0) is False
+
+
+def test_every_tab_shows_a_document_icon(controller):
+    editor = controller.new_document()
+    icon = controller.window.tab_bar.tabIcon(0)
+    assert icon.isNull() is False
+    assert icon.availableSizes()
+    assert controller.window.tab_bar.is_pinned(0) is False, "an icon is not a pin"
+    assert editor is not None
+
+
+def test_pinning_keeps_the_document_icon(controller):
+    controller.new_document()
+    controller.toggle_tab_pin(0)
+    bar = controller.window.tab_bar
+    assert bar.is_pinned(0) is True
+    assert bar.tabIcon(0).isNull() is False, "the document icon stays"
+    controller.toggle_tab_pin(0)
+    assert bar.is_pinned(0) is False

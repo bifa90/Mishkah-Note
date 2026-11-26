@@ -53,3 +53,17 @@ def test_flatpak_native_debug_tools_are_installed():
             text = (ROOT / folder / name).read_text()
             assert "flatpak flatpak-builder elfutils librsvg2-common" in text
             assert "--print-report=full --hints-dir=" in text
+
+
+def test_the_installer_checks_both_bundled_typefaces():
+    """Round 4 bundles Noto Sans Arabic for the Urdu chrome.
+
+    The Windows installers already refused to pass without the Arabic face; a
+    second bundled font without the same check could vanish from a payload and
+    leave the Urdu menus on whatever the system happens to have.
+    """
+    for folder in (".github/workflows", "docs/ci"):
+        for name in ("installers.yml", "release.yml"):
+            text = (ROOT / folder / name).read_text(encoding="utf-8")
+            for font in ("IBMPlexSansArabic-Regular.ttf", "NotoSansArabic-Regular.ttf"):
+                assert f"-Filter {font}" in text, f"{folder}/{name} does not check {font}"

@@ -91,3 +91,49 @@ def test_choices_are_stable_for_the_menu():
     choices = syntax.language_choices()
     assert choices[0][0] == "plain"
     assert ("python", "Python") in choices
+
+
+# ---------------------------------------------------------------------------
+# CD-12: the content knows its own language
+# ---------------------------------------------------------------------------
+SAMPLES = {
+    "python": "def run(a, b):\n    return a + b\n",
+    "javascript": "const x = 1;\nfunction go() { return x; }\n",
+    "typescript": "interface User { name: string; }\n",
+    "rust": "fn main() {\n    let mut x = 1;\n}\n",
+    "go": "package main\nfunc main2() {}\n",
+    "java": "public class A { public static void main() {} }\n",
+    "sql": "SELECT id FROM users;",
+    "cpp": "#include <iostream>\nint main(){ std::cout << 1; }",
+    "c": "#include <stdio.h>\nint main(void){ return 0; }",
+    "css": ".card { color: #fff; padding: 4px; }",
+    "html": "<!doctype html>\n<html><body><p>hi</p></body></html>",
+    "json": '{"a": 1, "b": [2, 3]}',
+    "markdown": "# Title\n\n- one\n- two\n",
+    "shell": "#!/bin/bash\nexport A=1\nif [ -f x ]; then echo hi; fi\n",
+    "yaml": "---\nname: mishkah\nversion: 1\n",
+}
+
+
+def test_the_content_is_sniffed_for_every_language():
+    from mishkah.core.syntax import language_for_text
+
+    wrong = {code: language_for_text(text)
+             for code, text in SAMPLES.items()
+             if language_for_text(text) != code}
+    assert wrong == {}
+
+
+def test_plain_prose_stays_plain():
+    from mishkah.core.syntax import language_for_text
+
+    assert language_for_text("") == "plain"
+    assert language_for_text("فقط نص عادي بلا شيفرة\nسطر آخر\n") == "plain"
+    assert language_for_text("hello world\nthis is a note\n") == "plain"
+
+
+def test_a_markdown_fence_does_not_masquerade_as_code():
+    from mishkah.core.syntax import language_for_text
+
+    text = "# Notes\n\n```python\ndef f():\n    pass\n```\n"
+    assert language_for_text(text) == "markdown"

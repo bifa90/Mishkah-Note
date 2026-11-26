@@ -36,9 +36,9 @@ flatpak-builder --user --install-deps-from=flathub build/flatpak-build \
 pwsh scripts/build-msi.ps1 -Version <version>   # على Windows فقط
 ```
 
-## شروط نشر 1.0.01
+## شروط نشر 1.0.02
 
-- يُبنى المصدر الذي يشير إليه `v1.0.01` في جميع وظائف البناء، حتى عند التشغيل اليدوي.
+- يُبنى المصدر الذي يشير إليه `v1.0.02` في جميع وظائف البناء، حتى عند التشغيل اليدوي.
 - يجب أن يشير الوسم إلى commit الهوية الحالية المقصود نشره، لا إلى مصدر مختلف.
 - تمر الاختبارات وفحوص التغليف قبل بدء بناء الحزم.
 - تُرفق ثماني حزم: wheel وsdist وDebian وRPM وArch وAppImage وFlatpak وMSI.
@@ -52,14 +52,14 @@ pwsh scripts/build-msi.ps1 -Version <version>   # على Windows فقط
 بعد تفعيل السير وتثبيت الوسم على المصدر المعتمد:
 
 ```bash
-gh workflow run release.yml --repo bifa90/Mishkah-Note --ref main -f tag=v1.0.01
+gh workflow run release.yml --repo bifa90/Mishkah-Note --ref main -f tag=v1.0.02
 gh run list --repo bifa90/Mishkah-Note --workflow release.yml
-gh release view v1.0.01 --repo bifa90/Mishkah-Note --json name,assets
+gh release view v1.0.02 --repo bifa90/Mishkah-Note --json name,assets
 ```
 
 ## دفعة النشر المعتمدة
 
-بعد تفويض صاحب المشروع، تسمح علامة `[publish 1.0.01]` في رسالة commit
+بعد تفويض صاحب المشروع، تسمح علامة `[publish 1.0.02]` في رسالة commit
 على فرع الجلسة بالنشر **فقط بعد نجاح الاختبارات وكل وظائف الحزم الثماني**.
 يضبط السير الوسم على مصدر الحزم نفسه ثم يرفع الحزم وchecksums.
 هذه العلامة لا تدمج PR؛ الدمج عملية مستقلة بعد التحقق من صفحة Releases.

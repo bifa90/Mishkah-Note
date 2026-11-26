@@ -186,3 +186,35 @@ def test_version_gate_catches_a_stale_number():
                             capture_output=True, text=True)
     assert result.returncode == 0, result.stderr
 
+
+
+def test_every_screenshot_the_readme_shows_is_in_the_repository():
+    """A dead image link is a broken front page, and nothing else notices."""
+    readme = (REPO / "README.md").read_text(encoding="utf-8")
+    targets = re.findall(r"\]\((docs/screenshots/[^)\s]+\.png)\)", readme)
+    assert targets, "the README lost its screenshots"
+    missing = [name for name in targets if not (REPO / name).is_file()]
+    assert not missing, f"README points at missing files: {missing}"
+
+
+def test_the_screenshot_generator_can_rebuild_the_welcome_page():
+    """Round 4 adds the page that shows the brand rule; keep it regenerable."""
+    tool = (REPO / "tools/make_screenshots.py").read_text(encoding="utf-8")
+    for name in ("home-arabic.png", "home-urdu.png"):
+        assert name in tool, f"{name} is in the README but not reproducible"
+    assert '"--only"' in tool or "'--only'" in tool
+
+
+def test_the_clean_exit_hook_never_pumps_qt_events():
+    """CI's one SIGSEGV (exit 139) came from pumping events at exit.
+
+    PySide6 6.12 can abort while CPython finalises, so conftest exits with
+    ``os._exit`` when ``MISHKAH_CLEAN_EXIT=1``.  Pumping the Qt event loop first
+    woke widgets that were already closed, which is exactly how a clean exit
+    became a 139.  Nothing waits on those events: the process is going away.
+    """
+    hook = (REPO / "tests" / "conftest.py").read_text(encoding="utf-8")
+    hook = hook.split("def pytest_sessionfinish")[1]
+    assert "processEvents" not in hook
+    assert "os._exit" in hook
+    assert "MISHKAH_CLEAN_EXIT" in hook

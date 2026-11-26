@@ -33,6 +33,14 @@ Mishkah Note is an Arabic-first text editor for Linux, built with Python 3.9+ an
 |---|---|---|
 | ![نص عربي بالسمة الداكنة](docs/screenshots/dark-arabic.png) | ![إعدادات الكتابة](docs/screenshots/settings.png) | ![التبويبات الملوّنة](docs/screenshots/tabs.png) |
 
+صفحة البداية لا تُترجِم الاسم: الشعار ثم **مفكرة مشكاة** ثم **Mishkah Note** ثم
+رقم الإصدار، والموضع وحده يتبع لغة الواجهة — يمينًا في العربية والأردية، ويسارًا
+في غيرها. وقوائم الأردية بخط `Noto Sans Arabic` لا بالنستعليق.
+
+| البداية — العربية · Welcome, Arabic | البداية — الأردية · Welcome, Urdu |
+|---|---|
+| ![صفحة البداية بالعربية](docs/screenshots/home-arabic.png) | ![صفحة البداية بالأردية](docs/screenshots/home-urdu.png) |
+
 ---
 
 ## المزايا الحالية
@@ -100,27 +108,27 @@ Mishkah Note is an Arabic-first text editor for Linux, built with Python 3.9+ an
 
 ## التثبيت · Installation
 
-الإصدار الحالي **1.0.01**. تنزيل الصيغ الجاهزة من صفحة
+الإصدار الحالي **1.0.02**. تنزيل الصيغ الجاهزة من صفحة
 [Releases](https://github.com/bifa90/Mishkah-Note/releases).
 
 ### Debian / Ubuntu · `.deb`
 
 ```bash
-sudo apt install ./mishkah-note_1.0.01_all.deb
+sudo apt install ./mishkah-note_1.0.02_all.deb
 mishkah
 ```
 
 ### Fedora / RHEL / openSUSE · `.rpm`
 
 ```bash
-sudo rpm -i mishkah-note-1.0.01-*.rpm
-# أو: sudo dnf install ./mishkah-note-1.0.01-1.noarch.rpm
+sudo rpm -i mishkah-note-1.0.02-*.rpm
+# أو: sudo dnf install ./mishkah-note-1.0.02-1.noarch.rpm
 ```
 
 ### Arch / Manjaro · `.pkg.tar.zst`
 
 ```bash
-sudo pacman -U mishkah-note-1.0.01-1-any.pkg.tar.zst
+sudo pacman -U mishkah-note-1.0.02-1-any.pkg.tar.zst
 ```
 
 أو من `PKGBUILD` مباشرة:
@@ -132,8 +140,8 @@ cd packaging/arch && makepkg -si
 ### AppImage — محمول بلا تثبيت · portable
 
 ```bash
-chmod +x Mishkah_Note-1.0.01-x86_64.AppImage
-./Mishkah_Note-1.0.01-x86_64.AppImage
+chmod +x Mishkah_Note-1.0.02-x86_64.AppImage
+./Mishkah_Note-1.0.02-x86_64.AppImage
 ```
 
 ### Flatpak
@@ -149,7 +157,7 @@ flatpak run org.mishkahnote.Mishkah
 ### Windows · `.msi`
 
 ```powershell
-msiexec /i Mishkah_Note_1.0.01_x64.msi
+msiexec /i Mishkah_Note_1.0.02_x64.msi
 ```
 
 ### من المصدر · From source
@@ -211,7 +219,7 @@ bash scripts/build-arch.sh                    # Arch   (makepkg)
 bash packaging/appimage/build-appimage.sh     # AppImage (appimagetool)
 flatpak-builder --user --install-deps-from=flathub build/flatpak-build \
     packaging/flatpak/org.mishkahnote.Mishkah.json
-pwsh scripts/build-msi.ps1 -Version 1.0.01    # MSI على Windows فقط
+pwsh scripts/build-msi.ps1 -Version 1.0.02    # MSI على Windows فقط
 ```
 
 للتحقق من كل ما تسمح به أدوات جهازك:
@@ -254,12 +262,36 @@ src/mishkah/
 نعم، على دفعات مع شريط تقدّم وإلغاء، ووضع أداء تلقائي فوق مليوني سطر.
 
 **هل يحتاج Python؟**
-`MSI` لا يحتاج Python إطلاقًا. `.deb` و`.rpm` و`.pkg.tar.zst` تطلب
-`python3` و`python3-pyside6` من مستودع التوزيعة، و`AppImage` يستخدم `python3`
-الموجود على النظام، وFlatpak يوفّره من بيئة التشغيل `org.kde.Platform`.
+`MSI` و`AppImage` **لا يحتاجان Python** على جهازك: كلٌّ منهما يحمل مفسّره
+ومكتبات PySide6 (لذلك حجمهما أكبر بنحو 40 م.ب). `.deb` و`.rpm` و`.pkg.tar.zst`
+تطلب `python3` و`python3-pyside6` من مستودع التوزيعة، وFlatpak يوفّره من بيئة
+التشغيل `org.kde.Platform`.
 
 **هل توجد نسخة Windows أصلية؟**
 نعم، عبر MSI مبني بـWiX فوق نسخة مجمّدة بـPyInstaller — دون Python على الجهاز.
+الحزمة **تجريبية** في 1.0.02: تُبنى وتُثبَّت آليًا، لكنها ليست مسارًا مدعومًا كاملًا.
+
+---
+
+## القيود المعروفة · Known limitations
+
+نقولها هنا لا في حاشية، لأن من يقرأ الصفحة قبل التنزيل يستحق أن يعرف:
+
+| القيد | التفصيل |
+|---|---|
+| **الوصولية حدّ أدنى** | أسماء للعناصر التي لا نص لها، و`Tab` يصل إلى الشرائح والأزرار. **لم يُجرَّب مع Orca** ولا قارئ شاشة، ولا توجد مراجعة وصولية كاملة. |
+| **تسع ترجمات آلية** | العربية والإنجليزية يدويّة؛ الصينية والهندية والإسبانية والفرنسية والبنغالية والبرتغالية والروسية والأردية **آلية ولم يراجعها متحدّث أصلي**. |
+| **لا تصدير** | Markdown عرض حيّ فقط — لا تصدير إلى HTML أو PDF أو Markdown. |
+| **جلسة بنافذة واحدة** | النافذة الأولى وحدها تحفظ قائمة التبويبات؛ تبويبات النوافذ الإضافية لا تعود بعد إعادة التشغيل. |
+| **لا استرداد لتبويب بلا مسار** | الملفات المحفوظة محميّة؛ تبويب لم يُحفظ بعد يُفقد إن أُغلق البرنامج بانهيار. |
+| **لا بحث عبر التبويبات** | البحث داخل التبويب الحالي فقط. |
+| **Flatpak بصلاحية `home`** | لا portals، ولم يُقدَّم إلى Flathub. إفصاح مقصود في 1.0.02. |
+| **غير مُجرَّب** | إدخال العربية على Wayland/IBus · طابعات حقيقية · التثبيت بـ`apt`/`dnf`/`pacman` على أجهزة مستخدمين. |
+
+التفصيل الكامل، وحجم كل حزمة ومتطلباتها، في [ملاحظات الإصدار](docs/RELEASE_NOTES.md).
+وما هو مؤجَّل بقصد — استرداد المستندات بلا مسار، تصدير HTML، البحث في كل التبويبات،
+Flathub بـportals، تقسيم `MainController`، `mmap`، التغطية و`mypy` — في
+[خارطة الطريق](docs/ROADMAP.md) مع سبب التأجيل.
 
 ---
 
@@ -273,3 +305,8 @@ src/mishkah/
 
 MIT — راجع [LICENSE](LICENSE). خط IBM Plex Sans Arabic المضمَّن تحت
 SIL OFL 1.1، وتفاصيله في [docs/FONTS.md](docs/FONTS.md).
+
+Mishkah Note يعمل على **Qt 6 / PySide6** تحت **LGPL v3**، ويستخدم
+**charset-normalizer** (MIT)، ويحزم في AppImage وMSI مفسّر **CPython** (رخصة PSF).
+المواضع الدقيقة داخل كل حزمة، وكيفية استبدال مكتبات Qt المضمَّنة، في
+[THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

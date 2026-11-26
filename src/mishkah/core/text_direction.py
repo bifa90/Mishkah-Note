@@ -145,7 +145,7 @@ def document_side(text: str, source: str = FIRST_STRONG,
 
     Two rules, and the difference between them is the whole point of CD-20:
 
-    ``first_strong`` (default, the 1.0.01 behaviour)
+    ``first_strong`` (default, the 1.0.02 behaviour)
         the first strong character in the file, skipping numbers and
         punctuation.  Stable from the first keystroke of an empty buffer.
 

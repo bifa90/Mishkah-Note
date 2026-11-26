@@ -42,7 +42,6 @@ from PySide6.QtGui import (
     QPen,
     QSyntaxHighlighter,
     QTextBlock,
-    QTextBlockUserData,
     QTextCharFormat,
     QTextDocument,
 )
@@ -99,16 +98,6 @@ def _is_block_marker(line: markdown.Line, span: markdown.Span) -> bool:
             and span.hidden)
 
 
-class MarkdownBlockData(QTextBlockUserData):
-    """Parse result for one block, cached for the painter."""
-
-    __slots__ = ("line",)
-
-    def __init__(self, line: markdown.Line):
-        super().__init__()
-        self.line = line
-
-
 class MarkdownDecorator(QSyntaxHighlighter):
     """Applies the visual Markdown layer to one document."""
 
@@ -118,6 +107,25 @@ class MarkdownDecorator(QSyntaxHighlighter):
         self._theme = "dark" if theme == "dark" else "light"
         self._base_font = QFont(base_font) if base_font is not None else QFont(document.defaultFont())
         self._active_block = -1
+        #: Only blocks inside this inclusive range are decorated (CD-07).
+        self._window_start = 0
+        self._window_end = MAX_MARKDOWN_BLOCKS
+        #: ``(next block number, fence state)`` from the last parsed block, so
+        #: a sequential pass carries the state forward instead of replaying
+        #: the 400 lines above every single paragraph (CD-07).
+        self._state_cache = None
+        #: block number → parsed line, rebuilt on every change (see highlightBlock).
+        self._parsed: dict = {}
+        document.contentsChange.connect(self._forget_parsed)
+
+    def _forget_parsed(self, *_args) -> None:
+        """Any edit invalidates the block numbers, so drop the cache wholesale.
+
+        Cheap (a dict clear) and safe: the entries are only read by the painter
+        between a highlight pass and the next edit.
+        """
+        if self._parsed:
+            self._parsed.clear()
 
     # ------------------------------------------------------------------
     # configuration
@@ -137,6 +145,30 @@ class MarkdownDecorator(QSyntaxHighlighter):
         self._base_font = QFont(font)
         self.rehighlight()
 
+    def set_window(self, start: int, end: int) -> bool:
+        """Restrict decoration to ``start..end`` (CD-07).
+
+        Returns ``True`` when the window actually moved, so the caller knows
+        a ``rehighlight`` is needed.  Decorating twenty thousand paragraphs
+        nobody can see was the reason a large document scrolled heavily.
+        """
+        start = max(0, int(start))
+        end = max(start, int(end))
+        if (start, end) == (self._window_start, self._window_end):
+            return False
+        self._window_start, self._window_end = start, end
+        return True
+
+    def parsed_line(self, number: int):
+        """The parse result for block *number* (``None`` when out of window)."""
+        return self._parsed.get(number)
+
+    def window(self):
+        return self._window_start, self._window_end
+
+    def _in_window(self, number: int) -> bool:
+        return self._window_start <= number <= self._window_end
+
     def set_active_block(self, number: int) -> None:
         """Reveal the Markdown source of the paragraph under the caret."""
         if number == self._active_block:
@@ -155,11 +187,16 @@ class MarkdownDecorator(QSyntaxHighlighter):
     # ------------------------------------------------------------------
     def highlightBlock(self, text: str) -> None:  # noqa: N802 (Qt naming)
         block = self.currentBlock()
-        if block.blockNumber() > MAX_MARKDOWN_BLOCKS:
-            self.setCurrentBlockUserData(None)
+        number = block.blockNumber()
+        if number > MAX_MARKDOWN_BLOCKS or not self._in_window(number):
+            self._parsed.pop(number, None)
             return
         line, _ = self._parse(block)
-        self.setCurrentBlockUserData(MarkdownBlockData(line))
+        # Kept in a plain dict, keyed by block number, instead of being handed
+        # to Qt as a QTextBlockUserData: Qt deletes those in C++, and the
+        # Python wrapper died during that deletion.  The dict is dropped on any
+        # change, so a stale block number can never be painted.
+        self._parsed[number] = line
 
         active = block.blockNumber() == self._active_block
         for span in line.spans:
@@ -176,17 +213,28 @@ class MarkdownDecorator(QSyntaxHighlighter):
         trusted.  Replaying a bounded window above the block is cheap and
         keeps fenced code correct after any edit.
         """
-        window = min(block.blockNumber(), _STATE_WINDOW)
-        start = block.blockNumber() - window
-        state = markdown._State()  # noqa: SLF001 - module-internal state object
-        current = self.document().findBlockByNumber(start)
-        for _ in range(window):
-            _, state = markdown.parse_line(current.text(), current.next().text()
-                                           if current.next().isValid() else None,
-                                           state)
-            current = current.next()
+        number = block.blockNumber()
+        cached = self._state_cache
+        if cached is not None and cached[0] == number:
+            state = cached[1]
+        else:
+            window = min(number, _STATE_WINDOW)
+            state = markdown._State()  # noqa: SLF001 - module-internal state
+            current = self.document().findBlockByNumber(number - window)
+            for _ in range(window):
+                _, state = markdown.parse_line(
+                    current.text(),
+                    current.next().text() if current.next().isValid() else None,
+                    state)
+                current = current.next()
         following = block.next().text() if block.next().isValid() else None
-        return markdown.parse_line(block.text(), following, state)
+        line, state = markdown.parse_line(block.text(), following, state)
+        self._state_cache = (number + 1, state)
+        return line, state
+
+    def invalidate_cache(self) -> None:
+        """Forget the streaming state (after an edit or a window move)."""
+        self._state_cache = None
 
     # ------------------------------------------------------------------
     # formats
@@ -266,8 +314,12 @@ class MarkdownDecorator(QSyntaxHighlighter):
             carry.setPointSizeF(_HIDDEN_POINT_SIZE)
             fmt.setFontPointSize(_HIDDEN_POINT_SIZE)
             fmt.setFontLetterSpacingType(QFont.SpacingType.AbsoluteSpacing)
-            fmt.setFontLetterSpacing(-QFontMetricsF(carry).horizontalAdvance(
-                line.text) / max(1, len(line.text)))
+            # Bound to a name, not used inline: measuring through a temporary
+            # QFontMetricsF aborts the interpreter ("deallocating None") once
+            # the wrapper of the temporary is collected.
+            metrics = QFontMetricsF(carry)
+            fmt.setFontLetterSpacing(-metrics.horizontalAdvance(line.text)
+                                     / max(1, len(line.text)))
             return fmt
         if line.kind == markdown.TABLE_DELIMITER:
             # The |---|---| row is layout, not content: empty it out.
@@ -283,7 +335,8 @@ class MarkdownDecorator(QSyntaxHighlighter):
         run = line.text[span.start:span.end]
         tiny = QFont(self._base_font)
         tiny.setPointSizeF(_HIDDEN_POINT_SIZE)
-        advance = QFontMetricsF(tiny).horizontalAdvance(run)
+        metrics = QFontMetricsF(tiny)
+        advance = metrics.horizontalAdvance(run)
         fmt.setFontPointSize(_HIDDEN_POINT_SIZE)
         fmt.setFontLetterSpacingType(QFont.SpacingType.AbsoluteSpacing)
         fmt.setFontLetterSpacing(-advance / max(1, len(run)))
@@ -299,11 +352,11 @@ class MarkdownDecorator(QSyntaxHighlighter):
         top = editor.blockBoundingGeometry(block).translated(offset).top()
         height = editor.blockBoundingRect(block).height()
         while block.isValid() and top <= viewport.bottom():
-            data = block.userData()
-            if (block.isVisible() and isinstance(data, MarkdownBlockData)
+            line = self._parsed.get(block.blockNumber())
+            if (line is not None and block.isVisible()
                     and not (block.blockNumber() == self._active_block
-                             and data.line.kind == markdown.RULE)):
-                self._paint_block(painter, editor, block, data.line,
+                             and line.kind == markdown.RULE)):
+                self._paint_block(painter, editor, block, line,
                                   top, height, offset)
             block = block.next()
             top += height

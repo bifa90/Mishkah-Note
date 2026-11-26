@@ -220,3 +220,52 @@ def test_completion_needs_two_characters(qapp):
     type_text(editor, "d")
     editor.show_completions()
     assert editor._completion is None
+
+
+# ---------------------------------------------------------------------------
+# CD-03: pairing respects an opener that is still open in the paragraph
+# ---------------------------------------------------------------------------
+def test_typing_an_opener_inside_an_open_pair_adds_no_closer(qapp):
+    from PySide6.QtTest import QTest
+
+    from mishkah.models.document import DocumentModel
+    from mishkah.views.editor_view import EditorView
+
+    editor = EditorView(DocumentModel())
+    editor.show()
+    QTest.keyClicks(editor, "(")
+    assert editor.document().toPlainText() == "()"
+    QTest.keyClicks(editor, "(")              # an opener is already open
+    assert editor.document().toPlainText() == "(()"
+    QTest.keyClicks(editor, ")")              # steps over the existing closer
+    assert editor.document().toPlainText() == "(()"
+    editor.deleteLater()
+
+
+def test_pairing_is_unaffected_when_the_paragraph_is_balanced(qapp):
+    from PySide6.QtTest import QTest
+
+    from mishkah.models.document import DocumentModel
+    from mishkah.views.editor_view import EditorView
+
+    editor = EditorView(DocumentModel())
+    editor.show()
+    QTest.keyClicks(editor, "(a)")
+    QTest.keyClicks(editor, "[")
+    assert editor.document().toPlainText() == "(a)[]"
+    editor.deleteLater()
+
+
+def test_the_scan_stops_at_the_paragraph_start(qapp):
+    from mishkah.models.document import DocumentModel
+    from mishkah.views.editor_view import EditorView
+
+    editor = EditorView(DocumentModel())
+    editor.setPlainText("(\nsecond paragraph")
+    cursor = editor.textCursor()
+    cursor.movePosition(cursor.MoveOperation.End)
+    editor.setTextCursor(cursor)
+    prefix = editor.paragraph_prefix()
+    assert prefix == "second paragraph"
+    assert len(editor.paragraph_prefix(limit=4)) == 4
+    editor.deleteLater()

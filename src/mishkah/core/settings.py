@@ -52,7 +52,7 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
     # direction
     "default_direction": (_ENUM, (AUTO, RTL, LTR)),
     #: How a whole document's alignment is decided (CD-20).  "first_strong"
-    #: is the 1.0.01 behaviour and stays the default; "first_line" is opt-in.
+    #: is the 1.0.02 behaviour and stays the default; "first_line" is opt-in.
     "document_side_source": (_ENUM, ("first_strong", "first_line")),
     # data safety
     #: The extension a first save adds when the name has none (CD-05).
@@ -70,8 +70,16 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
     "ask_before_mb": (_INT, (1, 4096)),
     "hard_limit_mb": (_INT, (1, 65536)),
     "performance_mode": (_BOOL, None),
+    # shortcuts (CD-08, CD-10)
+    "redo_shortcut": (_ENUM, ("default", "platform")),
+    "replace_shortcut": (_ENUM, ("default", "platform")),
     # session
     "restore_session": (_BOOL, None),
+    #: What closing the last tab does (CD-06): show the welcome page, or quit.
+    "last_tab_action": (_ENUM, ("home", "quit")),
+    #: The category the settings dialog opens on (CD-02).
+    "settings_page": (_ENUM, ("appearance", "editor", "typing", "files",
+                              "tabs", "shortcuts", "advanced")),
     "open_files": (_PATH_LIST, 50),
     "recent_files": (_PATH_LIST, 50),
     "window_geometry": (_OPTIONAL_TEXT, 4096),
@@ -80,6 +88,11 @@ SCHEMA: Dict[str, Tuple[str, Any]] = {
 
 #: Fields that are runtime-only and never written to disk.
 _TRANSIENT = {"path", "repairs"}
+
+#: Persisted, but written by the program rather than chosen by the user:
+#: the open session, the recent list and the window geometry.  The settings
+#: dialog does not (and must not) offer them as controls.
+HIDDEN_FIELDS = {"open_files", "recent_files", "window_geometry", "window_state"}
 
 
 def _is_int(value: object) -> bool:
@@ -129,7 +142,9 @@ class Settings:
     auto_indent: bool = True
     word_completion: bool = True
     #: Off by default: a plain mishkah should not colour code unprompted.
-    syntax_highlighting: bool = False
+    #: On by default: colouring is what a text editor is expected to do, and
+    #: with content detection the correct grammar is chosen without a dialog.
+    syntax_highlighting: bool = True
     #: Off by default: live Markdown is a view, opt-in like highlighting.
     live_markdown: bool = False
 
@@ -138,8 +153,18 @@ class Settings:
     hard_limit_mb: int = 512
     performance_mode: bool = True
 
+    # shortcuts (CD-08, CD-10): "default" keeps this build's keys, "platform"
+    # takes the desktop's habit (KDE: Ctrl+Shift+Z for redo, Ctrl+R for replace)
+    redo_shortcut: str = "default"
+    replace_shortcut: str = "default"
+
     # session
     restore_session: bool = True
+    #: CD-06: ``home`` shows the welcome page when the last tab closes,
+    #: ``quit`` ends the application instead.
+    last_tab_action: str = "home"
+    #: CD-02: which category the settings dialog opens on.
+    settings_page: str = "appearance"
     open_files: List[str] = field(default_factory=list)
     recent_files: List[str] = field(default_factory=list)
     window_geometry: Optional[str] = None

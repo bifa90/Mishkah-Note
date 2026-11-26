@@ -1,11 +1,11 @@
-# جاهزية Mishkah Note 1.0.01
+# جاهزية Mishkah Note 1.0.02
 
 ## ضمانات المصدر والتغليف
 
 | المجال | الضمان | الاختبارات |
 |---|---|---|
 | الهوية والإصدار | حزمة ووحدة وأمر موحّدة، ومدخل إصدار واحد | `tests/test_project_meta.py` |
-| سطر الأوامر | `mishkah --version` و`python -m mishkah --version` يعرضان `1.0.01` دون تحميل Qt | `tests/test_cli.py` |
+| سطر الأوامر | `mishkah --version` و`python -m mishkah --version` يعرضان `1.0.02` دون تحميل Qt | `tests/test_cli.py` |
 | الخطوط | IBM Plex Sans Arabic Regular مضمّن، واختيار المستخدم مقدّم لكل لغة | `tests/test_fonts.py` |
 | السمات | `QWidget` لا يفرض عائلة الخط أو حجمه | `tests/test_packaging_static.py` |
 | Unicode | BOM واحد، وقراءة UTF-16/32، وترميز تدفقي على حدود الدفعات | `tests/test_large_file.py` |
@@ -13,6 +13,8 @@
 | الإغلاق | اختيار الحفظ يؤجل إغلاق التبويب حتى نجاح العملية | `tests/test_controller.py` |
 | المصدر | sdist يتضمن أدوات Windows؛ Arch يستخدم أرشيف checkout البناء | `tests/test_packaging_static.py` |
 | النشر | اكتمال الحزم الثماني وأسمائها قبل الرفع | `tests/test_release_assets.py` |
+| الإشعارات | `THIRD-PARTY-NOTICES.md` في الحزم الست و`sdist`، ويشرح استبدال Qt | `tests/test_third_party_notices.py` |
+| AppImage | يحمل مفسّر CPython مثبَّتًا، ولا يعتمد على `python3` النظام | `tests/test_third_party_notices.py` |
 
 ## التحقق المتاح في بيئة الجلسة
 
@@ -20,8 +22,11 @@
   لواجهات الخطوط واستبعاد اختباري نافذة «حول» من هذه المجموعة.
 - `ruff check src tests tools` نظيف.
 - بناء wheel وsdist وDebian ناجح؛ الخط والترخيص وملفات branding موجودة في wheel.
-- تثبيت wheel في venv نظيف ناجح، وأمر الإصدار يعرض `1.0.01`.
-- `scripts/verify-packaging.sh`: 37 فحصًا ناجحًا، صفر فشل، 8 تخطيات.
+- تثبيت wheel في venv نظيف ناجح، وأمر الإصدار يعرض `1.0.02`.
+- `scripts/verify-packaging.sh`: 54 فحصًا ناجحًا، صفر فشل، 8 تخطيات
+  (`tools/check_version.py` يمرّ: `1.0.02` في كل مكان مشتق).
+- `scripts/smoke-test.sh --build`: 6 ناجحًا، صفر فشل، تخطّيان (MSI وFlatpak
+  غير متاحين هنا) — فحص الحزمة من داخلها لا من الشجرة.
 - Shell وJSON وXML وYAML اجتازت الفحوص البنيوية المتاحة.
 
 ## التحقق على GitHub والحزم
@@ -44,7 +49,7 @@
 - حالة الحزم النهائية والنشر متاحة في
   [سير Release](https://github.com/bifa90/Mishkah-Note/actions/workflows/release.yml).
   نجاح البناء وفحص التشغيل وحدهما لا يعني اكتمال تصدير الحزم أو رفعها.
-- بعد تفويض صاحب المشروع، تسمح علامة `[publish 1.0.01]` في رسالة دفعة
+- بعد تفويض صاحب المشروع، تسمح علامة `[publish 1.0.02]` في رسالة دفعة
   فرع الجلسة بالنشر؛ لا ترفع الحزم إلا بعد نجاح اختبار المصدر وكل وظائف
   التغليف والتحقق من وجود المخرجات الثمانية ثم توليد `SHA256SUMS.txt`.
 - يشير الوسم إلى مصدر البناء نفسه. الدمج منفصل عن النشر، ولا ينفّذ إلا

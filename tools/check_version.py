@@ -37,12 +37,27 @@ FROZEN = {
     "docs/decisions-1.0.02.html",
 }
 
-#: ``1.0.01``, ``v1.0.01`` — three numeric components, not part of a longer word.
+#: A line may opt out of the scan when it names a *different* version on
+#: purpose — prose about the rejected spelling of a version, for instance:
+#:
+#:     | ب) `1.0.2` | ... |   <!-- version-gate: allow -->
+ALLOW_MARKER = "version-gate: allow"
+
+#: ``1.0.02``, ``v1.0.02`` — three numeric components, not part of a longer word.
 VERSION_TOKEN = re.compile(r"(?<![\w.])v?(\d+\.\d+\.\d+)(?![\w.])")
 
 #: Third-party versions that legitimately look like ours and must not be flagged.
-#: ``5.0.2`` is the WiX Toolset version pinned by scripts/build-msi.ps1.
-THIRD_PARTY_VERSIONS = {"5.0.2"}
+#: ``5.0.2`` is the WiX Toolset version pinned by scripts/build-msi.ps1;
+#: ``3.11.18`` is the CPython that packaging/appimage/build-appimage.sh bundles.
+THIRD_PARTY_VERSIONS = {"5.0.2", "3.11.18"}
+
+#: Files that *keep history*: an older release entry there is correct, so they
+#: are checked by their own rule above instead of by the line-by-line scan
+#: (which would flag the previous release for ever).
+HISTORY_FILES = {
+    "packaging/common/org.mishkahnote.Mishkah.metainfo.xml",
+    "packaging/rpm/mishkah-note.spec",
+}
 
 #: ``relative path -> regex with one capture group`` for static packaging files.
 DECLARATIONS = {
@@ -78,10 +93,16 @@ def code_version() -> str:
 
 
 def tracked_text_files() -> Iterable[Path]:
-    """Tracked files (or a directory walk when git is unavailable)."""
+    """Tracked files, plus untracked ones git would commit (a directory walk
+    when git is unavailable).
+
+    ``--others`` matters: a brand-new file is invisible to ``git ls-files`` until
+    it is added, which is exactly when a stale version string slips through a
+    green local run and only CI notices.
+    """
     try:
         out = subprocess.run(
-            ["git", "ls-files", "-z"],
+            ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
             cwd=ROOT, capture_output=True, check=True,
         ).stdout
         names = [n for n in out.decode("utf-8", "replace").split("\0") if n]
@@ -167,14 +188,14 @@ def check(
 
     for path in tracked_text_files():
         relative = path.relative_to(ROOT).as_posix()
-        if relative in frozen:
+        if relative in frozen or relative in HISTORY_FILES:
             continue
         try:
             text = path.read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
         for number, line in enumerate(text.splitlines(), 1):
-            if _comment_only(line):
+            if _comment_only(line) or ALLOW_MARKER in line:
                 continue
             for match in VERSION_TOKEN.finditer(line):
                 found_version = match.group(1)

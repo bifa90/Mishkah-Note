@@ -128,7 +128,7 @@ startup: import 157.8 ms · window 23.2 ms · total 180.9 ms
 | `core/tab_style.py` | ألوان الملاحظات الستة |
 | `core/markdown.py` | تحليل Markdown إلى مقاطع نصية منسّقة (بلا Qt) |
 | `widgets/markdown_decorator.py` | عرض Markdown الحيّ: `QSyntaxHighlighter` + رسّام |
-| `tools/make_screenshots.py` | توليد لقطات README من الواجهة الحقيقية |
+| `tools/make_screenshots.py` | توليد لقطات README من الواجهة الحقيقية — `--only home` يعيد لقطتي صفحة البداية (العربية والأردية) وحدهما |
 
 ### Markdown الحيّ · Live Markdown
 

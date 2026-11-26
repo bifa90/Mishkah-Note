@@ -33,6 +33,14 @@ Mishkah Note is an Arabic-first text editor for Linux, built with Python 3.9+ an
 |---|---|---|
 | ![نص عربي بالسمة الداكنة](docs/screenshots/dark-arabic.png) | ![إعدادات الكتابة](docs/screenshots/settings.png) | ![التبويبات الملوّنة](docs/screenshots/tabs.png) |
 
+صفحة البداية لا تُترجِم الاسم: الشعار ثم **مفكرة مشكاة** ثم **Mishkah Note** ثم
+رقم الإصدار، والموضع وحده يتبع لغة الواجهة — يمينًا في العربية والأردية، ويسارًا
+في غيرها. وقوائم الأردية بخط `Noto Sans Arabic` لا بالنستعليق.
+
+| البداية — العربية · Welcome, Arabic | البداية — الأردية · Welcome, Urdu |
+|---|---|
+| ![صفحة البداية بالعربية](docs/screenshots/home-arabic.png) | ![صفحة البداية بالأردية](docs/screenshots/home-urdu.png) |
+
 ---
 
 ## المزايا الحالية

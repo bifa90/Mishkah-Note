@@ -1426,7 +1426,7 @@ class MainController(QObject):
         except ImportError:
             QMessageBox.warning(
                 self.window,
-                tr("menu.file.print"),
+                i18n.tr("menu.file.print"),
                 "PySide6.QtPrintSupport is not installed on this system.",
             )
             return

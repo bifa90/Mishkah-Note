@@ -64,8 +64,8 @@
 
 | التوزيعة · Distro | الصيغة | أمر التثبيت |
 |---|---|---|
-| **Debian / Ubuntu** | `.deb` | `sudo apt install ./mishkah-note_1.0.02_all.deb` |
-| **Fedora / RHEL / openSUSE** | `.rpm` | `sudo dnf install ./mishkah-note-1.0.02-1.noarch.rpm` |
+| **Debian / Ubuntu** | `.deb` | `sudo apt install ./mishkah-note_1.0.02_all.deb` *(يثبّت `PySide6` و`QtNetwork` تلقائيًا)* |
+| **Fedora / RHEL / openSUSE** | `.rpm` | `sudo dnf install ./mishkah-note-1.0.02-1.*.noarch.rpm` |
 | **Arch / Manjaro** | `.pkg.tar.zst` | `sudo pacman -U mishkah-note-1.0.02-1-any.pkg.tar.zst` |
 | **Flatpak** *(يحتاج `org.kde.Platform//6.7`)* | `.flatpak` | `flatpak install --user org.mishkahnote.Mishkah.flatpak && flatpak run org.mishkahnote.Mishkah` |
 

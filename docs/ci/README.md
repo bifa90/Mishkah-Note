@@ -5,7 +5,7 @@
 
 ```bash
 mkdir -p .github/workflows
-cp docs/ci/ci.yml docs/ci/release.yml .github/workflows/
+cp docs/ci/ci.yml docs/ci/installers.yml docs/ci/release.yml .github/workflows/
 git add .github/workflows
 git commit -m "ci: enable the test and release workflows"
 git push
@@ -13,8 +13,8 @@ git push
 
 | الملف | متى يعمل | ماذا يفعل |
 |-------|-----------|-----------|
-| `ci.yml` | كل دفعة إلى `main` أو `arena/**`، وكل PR، ويدويًا | `ruff` + `pytest` على Python 3.9/3.11/3.13، ثم فحص التغليف: بناء `.deb` و`sdist` و`wheel`، والتثبيت في بيئة نظيفة، والتحقق من الأيقونات والـAppStream |
-| `release.yml` | عند دفع وسم `v*` أو يدويًا | يبني **كل** الصيغ: `.deb`، `.rpm`، `.pkg.tar.zst`، `.AppImage`، `.flatpak`، `.msi` (على `windows-latest`)، ثم يرفقها بالإصدار مع `SHA256SUMS.txt` |
+| `ci.yml` | كل دفعة إلى `main` أو `arena/**`، وكل PR، ويدويًا | `ruff` + `pytest` على Python 3.9/3.11/3.13، ثم فحص التغليف: بناء `.deb` و`sdist` و`wheel`، وفحص `lintian`، والتثبيت في بيئة نظيفة، والتحقق من الأيقونات والـAppStream |
+| `release.yml` | عند دفع وسم `v1.0.02` أو يدويًا | يبني **كل** الصيغ: `.deb`، `.rpm`، `.pkg.tar.zst`، `.AppImage`، `.flatpak`، `.msi` (على `windows-latest`)، ثم يرفقها بالإصدار كـ`Latest` مع `SHA256SUMS.txt` |
 
 ## ما يحتاجه السير
 

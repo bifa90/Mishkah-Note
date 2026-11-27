@@ -104,6 +104,7 @@ smoke_deb() {
 smoke_appimage() {
     local image="$1"
     [ -f "$image" ] || { skip "AppImage not found ($image)"; return; }
+    image="$(realpath "$image")"
     head2 "AppImage"
     chmod +x "$image" 2>/dev/null
     local dir="$WORK/appimage"

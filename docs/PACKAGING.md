@@ -38,7 +38,7 @@ MISHKAH_APPIMAGE_SYSTEM_PYTHON=1 \
 * تضع الشيفرة في `/usr/lib/mishkah-note` (DEB) أو `_libexecdir` (RPM) أو
   `site-packages` (wheel / PKGBUILD / Flatpak).
 * تُنشئ المُشغّل `/usr/bin/mishkah` الذي يضبط `PYTHONPATH` ثم يشغّل
-  `python3 -m mishkah`. (متغيّر `NOTEPAD_PYTHON` يتيح اختيار مفسّر آخر.)
+  `python3 -m mishkah`. (متغيّر `MISHKAH_PYTHON` يتيح اختيار مفسّر آخر.)
 * تثبّت `mishkah-note.desktop` بأسماء عشر لغات.
 * تثبّت الأيقونة بثمانية أحجام (16…512) + SVG في `hicolor`.
 * تثبّت `man 1 mishkah` وبيانات AppStream في `/usr/share/metainfo`، فتظهر
@@ -48,8 +48,8 @@ MISHKAH_APPIMAGE_SYSTEM_PYTHON=1 \
 
 ## الإشعارات القانونية · Third-party notices
 
-البرنامج MIT، لكنه يعتمد على **Qt/PySide6 تحت LGPL v3**، وخط **IBM Plex Sans
-Arabic تحت OFL-1.1**، و**charset-normalizer تحت MIT**، ومفسّر **CPython تحت
+البرنامج MIT، لكنه يعتمد على **Qt/PySide6 تحت LGPL v3**، وخطّي **IBM Plex Sans
+Arabic** و**Noto Sans Arabic** تحت **OFL-1.1**، و**charset-normalizer تحت MIT**، ومفسّر **CPython تحت
 رخصة PSF**. النص الكامل ومواضع المكوّنات وكيفية استبدال مكتبات Qt في
 [`THIRD-PARTY-NOTICES.md`](../THIRD-PARTY-NOTICES.md)، وهو **مضمَّن في كل حزمة**:
 
@@ -134,7 +134,7 @@ bash scripts/smoke-test.sh --appimage dist/*.AppImage # يفكّ الصورة و
 3. يحوّل `LICENSE` إلى RTF لصفحة الترخيص في المثبّت.
 4. ينسخ `THIRD-PARTY-NOTICES.md` و`LICENSE.txt` إلى مجلد الحِزمة، فيصلان مع
    البرنامج إلى `Program Files` (لأن `mishkah.wxs` يشحن كل ملفات المصدر).
-5. يبني `Mishkah_Note-<version>-x64.msi`: تثبيت في `Program Files`، اختصارات في
+5. يبني `Mishkah_Note_<version>_x64.msi`: تثبيت في `Program Files`، اختصارات في
    Start Menu وسطح المكتب، ومدخل «Open with» لملفات `.txt`، مع
    `MajorUpgrade` يمنع الرجوع إلى إصدار أقدم.
 

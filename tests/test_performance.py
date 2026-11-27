@@ -203,7 +203,7 @@ def test_huge_file_enters_performance_mode_even_with_few_lines(qapp):
     doc = DocumentModel(content=payload)
     assert doc.uses_performance_mode is False
 
-    editor = EditorView()
+    editor = EditorView(DocumentModel())
     assert editor.set_document(doc) is True
     assert editor.isUndoRedoEnabled() is False
     assert editor.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap

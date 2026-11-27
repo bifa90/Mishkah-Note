@@ -95,8 +95,10 @@ def graphical(report: Report) -> int:
     families = install_bundled_fonts()
     report.check("bundled fonts load", bool(families), ", ".join(families))
     report.check("application version is importable", bool(APP_VERSION), APP_VERSION)
-    report.check("single-instance QtNetwork is available",
-                 single_instance.QT_NETWORK_AVAILABLE)
+    report.check(
+        "single-instance startup probe does not crash",
+        single_instance.send_to_running_instance([], name="mishkah-smoke-none") is False,
+    )
 
     window = MainWindow()
     home = HomePage(window)
@@ -146,6 +148,10 @@ def main(argv: list[str] | None = None) -> int:
             print("    ✘ Qt was required (MISHKAH_REQUIRE_QT=1) but could not load")
             return 1
         return 77
+    if os.environ.get("MISHKAH_CLEAN_EXIT") == "1" and not args.no_gui:
+        sys.stdout.flush()
+        sys.stderr.flush()
+        os._exit(0)
     return 0
 
 

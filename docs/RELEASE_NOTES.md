@@ -97,11 +97,11 @@
 
 | الحزمة | نظام التشغيل | ما تحتاجه على جهازك | الحجم التقريبي |
 |---|---|---|---|
-| `Mishkah_Note-1.0.02-x86_64.AppImage` | لينكس x86_64 | لا شيء (يحمل Python وPySide6)؛ يحتاج glibc متوافقة وX11/Wayland | ~259 م.ب |
+| `Mishkah_Note-1.0.02-x86_64.AppImage` | لينكس x86_64 | لا شيء (يحمل Python وPySide6-Essentials)؛ يحتاج glibc متوافقة وX11/Wayland | ~77 م.ب |
 | `mishkah-note_1.0.02_all.deb` | Debian/Ubuntu | `python3` و`python3-pyside6.qtwidgets` و`python3-pyside6.qtnetwork` (تُثبَّت تلقائيًا عبر `apt install ./…deb`) | ~1.7 م.ب |
 | `mishkah-note-1.0.02-1.*.noarch.rpm` | Fedora/RHEL/openSUSE | `python3` و`python3-pyside6` | ~1.7 م.ب |
 | `mishkah-note-1.0.02-1-any.pkg.tar.zst` | Arch/Manjaro | `python3` و`pyside6` | ~3.3 م.ب |
-| `org.mishkahnote.Mishkah.flatpak` | أي توزيعة فيها Flatpak | زمن تشغيل `org.kde.Platform//6.7` | ~168 م.ب |
+| `org.mishkahnote.Mishkah.flatpak` | أي توزيعة فيها Flatpak | زمن تشغيل `org.kde.Platform//6.7` | ~32 م.ب |
 | `Mishkah_Note_1.0.02_x64.msi` | Windows 10/11 x64 | لا شيء (يحمل Python وPySide6) | ~39 م.ب |
 | `mishkah_note-1.0.2-py3-none-any.whl` + `.tar.gz` | أي | `pip install` مع PySide6 | ~2.4 / 3.2 م.ب |  <!-- version-gate: allow: PEP 440 normalises the file name -->
 

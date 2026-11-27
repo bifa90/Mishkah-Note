@@ -238,11 +238,18 @@ jobs:
         env:
           QT_QPA_PLATFORM: offscreen
           MISHKAH_REQUIRE_QT: "1"
+          MISHKAH_CLEAN_EXIT: "1"
           APPIMAGE_EXTRACT_AND_RUN: "1"
         run: |
+          mkdir -p build
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends libegl1 libgl1 libxkbcommon0 libdbus-1-3
-          bash scripts/smoke-test.sh --appimage "$(ls dist/*.AppImage | head -1)"
+          bash scripts/smoke-test.sh --appimage "$(ls dist/*.AppImage | head -1)" > build/appimage-smoke.log 2>&1 || {
+            cat build/appimage-smoke.log
+            python3 tools/report_build_failure.py build/appimage-smoke.log
+            exit 1
+          }
+          cat build/appimage-smoke.log
       - uses: actions/upload-artifact@v4
         with:
           name: packages-appimage
@@ -281,7 +288,7 @@ jobs:
       - name: Check the packaged application runtime
         run: |
           mkdir -p build
-          flatpak build --env=QT_QPA_PLATFORM=offscreen --env=RELEASE_VERSION="${{ env.RELEASE_VERSION }}" build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; from mishkah.services import single_instance; from mishkah.views.main_window import MainWindow; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert single_instance.QT_NETWORK_AVAILABLE; assert mishkah.__version__ == os.environ["RELEASE_VERSION"]; w = MainWindow(); w.close(); os._exit(0)' > build/flatpak-runtime.log 2>&1 || {
+          flatpak build --env=QT_QPA_PLATFORM=offscreen --env=RELEASE_VERSION="${{ env.RELEASE_VERSION }}" build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; from mishkah.services import single_instance; from mishkah.views.main_window import MainWindow; from mishkah.widgets.home_page import HomePage; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert single_instance.send_to_running_instance([], name="mishkah-flatpak-probe") is False; assert mishkah.__version__ == os.environ["RELEASE_VERSION"]; w = MainWindow(); h = HomePage(w); assert len(h.brand()) == 4; w.close(); os._exit(0)' > build/flatpak-runtime.log 2>&1 || {
             cat build/flatpak-runtime.log
             python3 tools/report_build_failure.py build/flatpak-runtime.log
             exit 1

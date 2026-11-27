@@ -130,7 +130,12 @@ smoke_appimage() {
     local out
     out=$("$root/AppRun" --version 2>&1)
     [ "$out" = "$VERSION" ] && ok "AppRun prints $VERSION" || bad "AppRun printed '$out'"
-    QT_QPA_PLATFORM=offscreen PYTHONPATH="$root/usr/lib/python-packages" \
+    PYTHONNOUSERSITE=1 \
+    MISHKAH_CLEAN_EXIT=1 \
+    QT_QPA_PLATFORM=offscreen \
+    QT_PLUGIN_PATH="$root/usr/lib/python-packages/PySide6/Qt/plugins" \
+    LD_LIBRARY_PATH="$root/usr/lib/python-packages/PySide6/Qt/lib${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}" \
+    PYTHONPATH="$root/usr/lib/python-packages" \
         run_check "AppImage payload" "$py"
 }
 
@@ -173,7 +178,9 @@ fi
 
 # ------------------------------------------------------------------ driver ---
 head2 "source tree (baseline)"
-QT_QPA_PLATFORM=offscreen PYTHONPATH="$ROOT/src" \
+# The host interpreter on packaging runners (e.g. AppImage) need not carry Qt:
+# MISHKAH_REQUIRE_QT=1 gates the packaged artefact under test, not the baseline.
+MISHKAH_REQUIRE_QT=0 QT_QPA_PLATFORM=offscreen PYTHONPATH="$ROOT/src" \
     run_check "source tree" "$PYTHON"
 
 if [ -n "$TREE" ]; then

@@ -87,18 +87,24 @@ def graphical(report: Report) -> int:
 
     from mishkah import APP_VERSION
     from mishkah.app import install_bundled_fonts
+    from mishkah.services import single_instance
+    from mishkah.views.main_window import MainWindow
+    from mishkah.widgets.home_page import HomePage
 
     app = QApplication.instance() or QApplication([])
     families = install_bundled_fonts()
     report.check("bundled fonts load", bool(families), ", ".join(families))
     report.check("application version is importable", bool(APP_VERSION), APP_VERSION)
-
-    from mishkah.views.main_window import MainWindow
+    report.check("single-instance QtNetwork is available",
+                 single_instance.QT_NETWORK_AVAILABLE)
 
     window = MainWindow()
+    home = HomePage(window)
     try:
         report.check("a window can be constructed", window.tab_count() == 0)
+        report.check("home page renders brand block", len(home.brand()) == 4)
     finally:
+        home.deleteLater()
         window.close()
         window.deleteLater()
         app.processEvents()

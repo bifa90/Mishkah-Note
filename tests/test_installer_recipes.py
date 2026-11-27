@@ -67,3 +67,23 @@ def test_the_installer_checks_both_bundled_typefaces():
             text = (ROOT / folder / name).read_text(encoding="utf-8")
             for font in ("IBMPlexSansArabic-Regular.ttf", "NotoSansArabic-Regular.ttf"):
                 assert f"-Filter {font}" in text, f"{folder}/{name} does not check {font}"
+
+
+def test_deb_declares_qtnetwork_and_does_not_bypass_pyside6_with_pip():
+    text = (ROOT / "scripts/build-deb.sh").read_text(encoding="utf-8")
+    depends_line = next(line for line in text.splitlines() if line.startswith("Depends:"))
+    assert "python3-pyside6.qtwidgets" in depends_line
+    assert "python3-pyside6.qtnetwork" in depends_line
+    assert "python3-charset-normalizer" in depends_line
+    assert "python3-pip" not in depends_line
+
+
+def test_windows_spec_bundles_qtnetwork_for_single_instance():
+    text = (ROOT / "packaging/windows/mishkah.spec").read_text(encoding="utf-8")
+    for mod in ("PySide6.QtNetwork", "PySide6.QtSvg", "PySide6.QtPrintSupport"):
+        assert f'"{mod}"' in text, f"mishkah.spec missing hiddenimport {mod}"
+
+
+def test_appimage_isolates_user_site_packages():
+    text = (ROOT / "packaging/appimage/build-appimage.sh").read_text(encoding="utf-8")
+    assert "export PYTHONNOUSERSITE=1" in text

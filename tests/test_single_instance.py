@@ -48,3 +48,32 @@ def test_no_running_instance_means_a_normal_start(qapp):
     name = server_name("nobody-here")
     InstanceServer(name=name).close()          # make sure nothing listens
     assert send_to_running_instance(["/tmp/x.txt"], name=name) is False
+
+
+def test_bare_second_launch_still_notifies_running_instance(qapp):
+    from PySide6.QtTest import QTest
+
+    name = server_name("test-ping")
+    server = start_server(name=name)
+    assert server is not None
+    pings = []
+    server.paths_received.connect(lambda paths: pings.append(paths))
+    try:
+        assert send_to_running_instance([], name=name) is True
+        deadline = 0
+        while not pings and deadline < 40:
+            QTest.qWait(25)
+            deadline += 1
+        assert pings == [[]]
+    finally:
+        server.close()
+
+
+def test_missing_qtnetwork_degrades_gracefully(monkeypatch):
+    from mishkah.services import single_instance
+
+    monkeypatch.setattr(single_instance, "QT_NETWORK_AVAILABLE", False)
+    monkeypatch.setattr(single_instance, "QLocalSocket", None)
+    monkeypatch.setattr(single_instance, "QLocalServer", None)
+    assert single_instance.send_to_running_instance(["/tmp/a.txt"]) is False
+    assert single_instance.start_server(name="test-disabled") is None

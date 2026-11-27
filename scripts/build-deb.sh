@@ -97,8 +97,8 @@ Version: $VERSION
 Section: editors
 Priority: optional
 Architecture: $ARCH
-Depends: python3 (>= 3.9), python3-pyside6.qtwidgets | python3-pyside6 | python3-pip, python3-charset-normalizer | python3-pip
-Recommends: fonts-noto-core, fonts-liberation, python3-pyside6.qtprintsupport | python3-pyside6
+Depends: python3 (>= 3.9), python3-pyside6.qtwidgets | python3-pyside6, python3-pyside6.qtnetwork | python3-pyside6, python3-charset-normalizer
+Recommends: fonts-noto-core, fonts-liberation, python3-pyside6.qtsvg | python3-pyside6, python3-pyside6.qtprintsupport | python3-pyside6
 Suggests: fonts-noto-cjk
 Installed-Size: $INSTALLED_KB
 Maintainer: Mishkah-Note contributors <noreply@github.com>

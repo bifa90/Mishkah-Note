@@ -47,8 +47,8 @@ small:
   typed allow-list; unknown keys, wrong types and out-of-range values are
   dropped and replaced by defaults, and a structurally corrupt file is backed
   up as `settings.json.bak` before defaults are used.
-* **Bundled assets.** Fonts and icons are static files; the only bundled
-  typeface is IBM Plex Sans Arabic (SIL OFL 1.1).
+* **Bundled assets.** Fonts and icons are static files; the bundled typefaces
+  are IBM Plex Sans Arabic and Noto Sans Arabic (both SIL OFL 1.1).
 
 ### Known limitations
 

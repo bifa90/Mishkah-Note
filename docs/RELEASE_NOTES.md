@@ -46,13 +46,19 @@
   تُبلَغ بالمفتاح `Tab`، وسلسلة تنقّل واحدة صريحة.
 
 **الواجهة والخطوط**
-- صفحة البداية تُظهر في اللغات العشر بالترتيب نفسه: الشعار، ثم **مفكرة مشكاة**،
-  ثم **Mishkah Note**، ثم **الإصدار 1.0.02** — الاسم لا يُترجَم، والموضع يتبع
-  اتجاه لغة الواجهة (يمينًا في العربية والأردية، يسارًا في غيرها).
+- صفحة البداية بعمودين متقابلين: الشعار، ثم **مفكرة مشكاة**، ثم **Mishkah Note**،
+  ثم **الإصدار 1.0.02** في جهة القراءة (يمينًا في العربية والأردية، يسارًا في
+  غيرها)، وقائمة «آخر الملفات» في بطاقة بالجهة المعاكسة.
+- ضبط أحجام الخطوط والهوامش في القوائم المنسدلة لكل لغة، وتعميم نص المساعدة
+  بالذكاء الاصطناعي في نافذة «حول البرنامج» عبر اللغات العشر.
 - نصوص الصفحة تعيد ترجمة نفسها حين تُبدَّل اللغة من داخل التشغيل.
 - **خط الواجهة غير خط الكتابة**: القوائم والأزرار في الأردية بخط
   `Noto Sans Arabic` المضمَّن (النستعليق يبقى للمحرّر)، والعربية بخط
   `IBM Plex Sans Arabic`؛ فلا تعتمد الواجهة على خطوط النظام.
+- **تحصين الإقلاع عبر كل الصيغ**: سقوط لطيف عند غياب `PySide6.QtNetwork`،
+  واعتماديات `.deb` صريحة (`python3-pyside6.qtwidgets` + `python3-pyside6.qtnetwork`)
+  مع اجتياز `lintian --fail-on error`، وتضمين `Qt6Network.dll` و`Qt6Svg.dll`
+  و`Qt6PrintSupport.dll` في `.msi`، وعزل `PYTHONNOUSERSITE=1` في `AppImage`.
 
 ---
 
@@ -68,7 +74,7 @@
 | **التثبيت على توزيعات حقيقية** | الحزم تُبنى وتُفحص آليًا، لكن التثبيت بـ`apt`/`dnf`/`pacman` على جهاز مستخدم لم يُجرَّب في هذا الإصدار. |
 
 ### الترجمات
-- العربية والإنجليزية مكتوبتان يدويًا. **التسع الأخرى (الصينية · الهندية ·
+- العربية والإنجليزية مكتوبتان يدويًا. **الثماني الأخرى (الصينية · الهندية ·
   الإسبانية · الفرنسية · البنغالية · البرتغالية · الروسية · الأردية) آلية لم
   يراجعها متحدّث أصلي.** الأخطاء اللغوية فيها واردة، والترجمة الكاملة شرط لأي
   إصدار يعلنها.
@@ -91,13 +97,13 @@
 
 | الحزمة | نظام التشغيل | ما تحتاجه على جهازك | الحجم التقريبي |
 |---|---|---|---|
-| `Mishkah_Note-1.0.02-x86_64.AppImage` | لينكس x86_64/aarch64 | لا شيء (يحمل Python وPySide6)؛ يحتاج glibc متوافقة وX11/Wayland | +40 م.ب |
-| `mishkah-note_1.0.02_all.deb` | Debian/Ubuntu | `python3` و`python3-pyside6` من المستودع | صغير |
-| `mishkah-note-1.0.02-1.*.noarch.rpm` | Fedora/RHEL/openSUSE | `python3` و`python3-pyside6` | صغير |
-| `mishkah-note-1.0.02-1-any.pkg.tar.zst` | Arch/Manjaro | `python3` و`pyside6` | صغير |
-| `org.mishkahnote.Mishkah.flatpak` | أي توزيعة فيها Flatpak | زمن تشغيل `org.kde.Platform//6.7` | ~200 م.ب |
-| `Mishkah_Note_1.0.02_x64.msi` | Windows 10/11 x64 | لا شيء (يحمل Python وPySide6) | ~120 م.ب |
-| `mishkah_note-1.0.2-py3-none-any.whl` + `.tar.gz` | أي | `pip install` مع PySide6 | — |  <!-- version-gate: allow: PEP 440 normalises the file name -->
+| `Mishkah_Note-1.0.02-x86_64.AppImage` | لينكس x86_64 | لا شيء (يحمل Python وPySide6)؛ يحتاج glibc متوافقة وX11/Wayland | ~259 م.ب |
+| `mishkah-note_1.0.02_all.deb` | Debian/Ubuntu | `python3` و`python3-pyside6.qtwidgets` و`python3-pyside6.qtnetwork` (تُثبَّت تلقائيًا عبر `apt install ./…deb`) | ~1.7 م.ب |
+| `mishkah-note-1.0.02-1.*.noarch.rpm` | Fedora/RHEL/openSUSE | `python3` و`python3-pyside6` | ~1.7 م.ب |
+| `mishkah-note-1.0.02-1-any.pkg.tar.zst` | Arch/Manjaro | `python3` و`pyside6` | ~3.3 م.ب |
+| `org.mishkahnote.Mishkah.flatpak` | أي توزيعة فيها Flatpak | زمن تشغيل `org.kde.Platform//6.7` | ~168 م.ب |
+| `Mishkah_Note_1.0.02_x64.msi` | Windows 10/11 x64 | لا شيء (يحمل Python وPySide6) | ~39 م.ب |
+| `mishkah_note-1.0.2-py3-none-any.whl` + `.tar.gz` | أي | `pip install` مع PySide6 | ~2.4 / 3.2 م.ب |  <!-- version-gate: allow: PEP 440 normalises the file name -->
 
 الخط العربي **مضمَّن** في كل الصيغ؛ لا تحتاج تثبيت خط.
 
@@ -126,8 +132,8 @@ AppImage that carries its own CPython, and a smoke test that runs a built packag
 from the inside.
 
 **Known limitations, stated plainly:** accessibility is a *minimum* (names and Tab
-reachability) and has **not** been tested with Orca or any screen reader; the nine
-non-Arabic interface translations are **machine-made and unreviewed**; Markdown is
+reachability) and has **not** been tested with Orca or any screen reader; the eight
+non-Arabic/non-English interface translations are **machine-made and unreviewed**; Markdown is
 a view only, with **no export**; the session belongs to the first window, so tabs in
 extra windows are not restored; untitled buffers are not recovered after a crash;
 Flatpak uses `--filesystem=home` rather than portals and is not on Flathub; the

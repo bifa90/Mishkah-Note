@@ -2,6 +2,25 @@
 
 ## [1.0.02] — 2026-11-26
 
+### تحصين الإقلاع والتغليف لجميع الأنظمة · Startup & packaging hardening (round 8)
+
+- **منع توقف الإقلاع عند غياب `PySide6.QtNetwork`**: جعل `single_instance.py`
+  يسقط بلطف عند غياب `QtNetwork` بدل إسقاط التطبيق فور إنشاء `QApplication`، مع
+  حماية الاستدعاء في `app.py`، ورفع/إظهار النافذة القائمة عند فتح التطبيق ثانيةً
+  بلا ملفات، وحماية استيراد `PySide6.QtPrintSupport` عند الطباعة.
+- **حزمة Debian / Ubuntu (`.deb`)**: إضافة `python3-pyside6.qtnetwork` إلى
+  `Depends` وإزالة البديل `| python3-pip` الذي كان يمنع `apt install -f` من
+  تثبيت حزم `PySide6`، وإضافة `changelog.gz` القياسي وإزالة `mishkah.1` المكرّرة
+  ليمرّ فحص `lintian --fail-on error` في CI والإصدار دون أخطاء.
+- **حزمة Windows (`.msi`)**: إضافة `PySide6.QtNetwork` و`single_instance`
+  و`charset_normalizer` إلى `hiddenimports` في `packaging/windows/mishkah.spec`،
+  والتحقق بعد التثبيت في CI من وجود `Qt6Network.dll` و`Qt6Svg.dll`
+  و`Qt6PrintSupport.dll`.
+- **AppImage وFlatpak وخط النشر**: عزل `PYTHONNOUSERSITE=1` في `AppRun`، وإضافة
+  اختبار دخان كامل لـAppImage (`scripts/smoke-test.sh --appimage`) مع `realpath`،
+  وتمرير `RELEASE_VERSION` وفحص `MainWindow` + `HomePage` داخل Flatpak، وضمان
+  نشر الإصدار كـ**Latest** (`--draft=false --latest`) تلقائيًا في `release.yml`.
+
 ### صقل الواجهة والتقديم قبل الإطلاق · Pre-release polish (round 7)
 
 - **نافذة «حول البرنامج»**: إزالة قائمة النماذج الفردية واستبدالها بعبارة عامة

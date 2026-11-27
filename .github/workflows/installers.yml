@@ -49,7 +49,7 @@ jobs:
       - name: Check the packaged application runtime
         run: |
           mkdir -p build
-          flatpak build --env=QT_QPA_PLATFORM=offscreen --env=RELEASE_VERSION="${{ env.RELEASE_VERSION }}" build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert mishkah.__version__ == os.environ["RELEASE_VERSION"]; os._exit(0)' > build/flatpak-runtime.log 2>&1 || {
+          flatpak build --env=QT_QPA_PLATFORM=offscreen --env=RELEASE_VERSION="${{ env.RELEASE_VERSION }}" build/flatpak-build python3 -c 'import os; import mishkah; from PySide6.QtWidgets import QApplication; from mishkah.app import install_bundled_fonts; from mishkah.services import single_instance; from mishkah.views.main_window import MainWindow; app=QApplication([]); assert "IBM Plex Sans Arabic" in install_bundled_fonts(); assert single_instance.QT_NETWORK_AVAILABLE; assert mishkah.__version__ == os.environ["RELEASE_VERSION"]; w = MainWindow(); w.close(); os._exit(0)' > build/flatpak-runtime.log 2>&1 || {
             cat build/flatpak-runtime.log
             python3 tools/report_build_failure.py build/flatpak-runtime.log
             exit 1
@@ -116,6 +116,9 @@ jobs:
             if (-not (Test-Path $exe)) { throw "installed executable missing" }
             if (-not (Get-ChildItem $directory -Recurse -Filter IBMPlexSansArabic-Regular.ttf)) { throw "bundled Arabic font missing" }
             if (-not (Get-ChildItem $directory -Recurse -Filter NotoSansArabic-Regular.ttf)) { throw "bundled Urdu font missing" }
+            if (-not (Get-ChildItem $directory -Recurse -Filter Qt6Network.dll)) { throw "bundled Qt6Network.dll missing" }
+            if (-not (Get-ChildItem $directory -Recurse -Filter Qt6Svg.dll)) { throw "bundled Qt6Svg.dll missing" }
+            if (-not (Get-ChildItem $directory -Recurse -Filter Qt6PrintSupport.dll)) { throw "bundled Qt6PrintSupport.dll missing" }
             $check = Start-Process $exe -ArgumentList "--version" -Wait -PassThru
             if ($check.ExitCode -ne 0) { throw "installed executable failed" }
           } catch {

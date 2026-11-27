@@ -1421,7 +1421,15 @@ class MainController(QObject):
         editor = self.window.current_editor()
         if editor is None:
             return
-        from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+        try:
+            from PySide6.QtPrintSupport import QPrintDialog, QPrinter
+        except ImportError:
+            QMessageBox.warning(
+                self.window,
+                tr("menu.file.print"),
+                "PySide6.QtPrintSupport is not installed on this system.",
+            )
+            return
 
         printer = QPrinter()
         dialog = QPrintDialog(printer, self.window)

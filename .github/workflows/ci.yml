@@ -110,6 +110,9 @@ jobs:
             exit 1
           }
           cat build/lintian.log
+          apt-cache show python3-pyside6.qtwidgets python3-pyside6.qtnetwork \
+            python3-pyside6.qtsvg python3-pyside6.qtprintsupport \
+            python3-charset-normalizer >/dev/null
 
       - name: Smoke-test the built .deb from the inside
         env:

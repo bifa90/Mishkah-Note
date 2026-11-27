@@ -23,8 +23,11 @@ a = Analysis(
     binaries=[],
     datas=datas,
     hiddenimports=[
+        "PySide6.QtNetwork",
         "PySide6.QtSvg",
         "PySide6.QtPrintSupport",
+        "mishkah.services.single_instance",
+        "charset_normalizer",
     ],
     hookspath=[],
     runtime_hooks=[],

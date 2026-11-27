@@ -144,17 +144,18 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # A second launch hands its paths to the running window and exits (CD-09).
     paths = [Path(a) for a in argv[1:] if not a.startswith("-")]
-    if not safe_mode:
-        from mishkah.services import single_instance
-
-        if single_instance.send_to_running_instance([str(p) for p in paths]):
-            logger.info("handed %d path(s) to the running instance", len(paths))
-            return 0
     instance_server = None
     if not safe_mode:
-        from mishkah.services import single_instance
+        try:
+            from mishkah.services import single_instance
 
-        instance_server = single_instance.start_server()
+            if single_instance.send_to_running_instance([str(p) for p in paths]):
+                logger.info("handed %d path(s) to the running instance", len(paths))
+                return 0
+            instance_server = single_instance.start_server()
+        except Exception as exc:  # pragma: no cover - never block startup on IPC
+            logger.warning("single-instance channel unavailable: %s", exc)
+            instance_server = None
 
     settings = Settings.load()
     if safe_mode:
@@ -206,6 +207,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             if controller is not None:
                 for path in received:
                     controller.open_path(path)
+                if target.isMinimized():
+                    target.showNormal()
+                target.show()
                 target.raise_()
                 target.activateWindow()
 

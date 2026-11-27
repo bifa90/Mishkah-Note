@@ -125,6 +125,7 @@ cat > "$APPDIR/AppRun" <<EOF
 # AppRun: point Python at the bundled packages and hand over to the app.
 HERE="\$(dirname "\$(readlink -f "\$0")")"
 $PY_GUARD
+export PYTHONNOUSERSITE=1
 export PYTHONPATH="\$HERE/usr/lib/python-packages\${PYTHONPATH:+:\$PYTHONPATH}"
 export QT_PLUGIN_PATH="\$HERE/usr/lib/python-packages/PySide6/Qt/plugins"
 export LD_LIBRARY_PATH="\$HERE/usr/lib/python-packages/PySide6/Qt/lib\${LD_LIBRARY_PATH:+:\$LD_LIBRARY_PATH}"

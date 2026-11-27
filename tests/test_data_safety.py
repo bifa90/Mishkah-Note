@@ -269,6 +269,55 @@ def _has_colour(image, colour, tolerance=12):
     return False
 
 
+def _knob_center_x(image) -> float:
+    from mishkah.widgets.toggle_switch import KNOB
+
+    xs = [
+        x
+        for x in range(image.width())
+        for y in range(image.height())
+        if (abs(image.pixelColor(x, y).red() - KNOB.red()) <= 8
+            and abs(image.pixelColor(x, y).green() - KNOB.green()) <= 8
+            and abs(image.pixelColor(x, y).blue() - KNOB.blue()) <= 8)
+    ]
+    assert xs, "knob pixels must be visible"
+    return sum(xs) / len(xs)
+
+
+def test_toggle_switch_knob_direction_matches_ltr_and_rtl(qapp):
+    from mishkah.widgets.toggle_switch import ToggleSwitch
+
+    sw = ToggleSwitch()
+    try:
+        mid = sw.width() / 2
+        sw.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+        sw.setChecked(False)
+        assert _knob_center_x(sw.grab().toImage()) < mid, "LTR off = left"
+        sw.setChecked(True)
+        assert _knob_center_x(sw.grab().toImage()) > mid, "LTR on = right"
+
+        sw.setLayoutDirection(Qt.LayoutDirection.RightToLeft)
+        sw.setChecked(False)
+        assert _knob_center_x(sw.grab().toImage()) > mid, "RTL off = right"
+        sw.setChecked(True)
+        assert _knob_center_x(sw.grab().toImage()) < mid, "RTL on = left"
+    finally:
+        sw.close()
+
+
+def test_autosave_holder_uses_top_left_corner_in_both_directions(qapp, tmp_path):
+    """QMenuBar mirrors TopLeftCorner natively in RTL; avoid double mirroring."""
+    window, controller, _ = _controller(tmp_path)
+    try:
+        for code in ("ar", "en", "ur"):
+            controller.set_ui_language(code)
+            bar = window.menuBar()
+            assert bar.cornerWidget(Qt.Corner.TopLeftCorner) is window.autosave_holder
+            assert bar.cornerWidget(Qt.Corner.TopRightCorner) is None
+    finally:
+        window.close()
+
+
 def test_the_banner_sits_below_the_tabs(qapp, tmp_path):
     window, controller, _ = _controller(tmp_path)
     try:

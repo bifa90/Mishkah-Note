@@ -157,3 +157,53 @@ def test_pasting_100_kib_stays_under_100_ms(qapp):
     print(f"\n    100 KiB insert: {elapsed:.1f} ms")
     assert editor.document().characterCount() > len(payload)
     assert elapsed < 100, f"100 KiB insert took {elapsed:.1f} ms"
+
+
+def test_large_file_chunked_load_reports_progress_and_supports_cancel(qapp):
+    """Payloads above CHUNK_LOAD_THRESHOLD load in chunks with progress & cancel."""
+    from mishkah.models.document import DocumentModel
+    from mishkah.views.editor_view import EditorView
+
+    payload = ("line of sample text for chunked loading\n" * 35_000)
+    assert len(payload) > EditorView.CHUNK_LOAD_THRESHOLD
+
+    editor = EditorView(DocumentModel())
+    progress: list[tuple[int, int]] = []
+    ok = editor.load_content(
+        payload, progress_cb=lambda done, total: progress.append((done, total)) or True
+    )
+    assert ok is True
+    assert len(progress) >= 2, "chunked load must report incremental progress"
+    assert progress[-1] == (len(payload), len(payload))
+    assert editor.toPlainText() == payload
+
+    # Cancellation mid-load returns False and clears partial buffer.
+    cancelled_editor = EditorView(DocumentModel())
+    calls = 0
+
+    def cancel_after_first(done: int, total: int) -> bool:
+        nonlocal calls
+        calls += 1
+        return False
+
+    assert cancelled_editor.load_content(payload, progress_cb=cancel_after_first) is False
+    assert calls == 1
+    assert cancelled_editor.toPlainText() == ""
+
+
+def test_huge_file_enters_performance_mode_even_with_few_lines(qapp):
+    """A >4 MB file with <2M lines must still disable wrap and undo history."""
+    from PySide6.QtWidgets import QPlainTextEdit
+
+    from mishkah.models.document import DocumentModel
+    from mishkah.views.editor_view import EditorView
+
+    payload = ("0123456789abcdef" * 32 + "\n") * 8_500  # ~4.36 MB, 8,500 lines
+    assert len(payload) > EditorView.HUGE_CHAR_THRESHOLD
+    doc = DocumentModel(content=payload)
+    assert doc.uses_performance_mode is False
+
+    editor = EditorView(DocumentModel())
+    assert editor.set_document(doc) is True
+    assert editor.isUndoRedoEnabled() is False
+    assert editor.lineWrapMode() == QPlainTextEdit.LineWrapMode.NoWrap

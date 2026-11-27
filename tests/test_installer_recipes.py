@@ -87,3 +87,21 @@ def test_windows_spec_bundles_qtnetwork_for_single_instance():
 def test_appimage_isolates_user_site_packages():
     text = (ROOT / "packaging/appimage/build-appimage.sh").read_text(encoding="utf-8")
     assert "export PYTHONNOUSERSITE=1" in text
+
+
+def test_appimage_and_flatpak_use_pyside6_essentials_and_prune_unused_qt():
+    """Avoid bundling QtWebEngine/QtPdf/QtAddons into Linux portable packages."""
+    appimage = (ROOT / "packaging/appimage/build-appimage.sh").read_text(encoding="utf-8")
+    flatpak = (ROOT / "packaging/flatpak/org.mishkahnote.Mishkah.json").read_text(encoding="utf-8")
+    prune = (ROOT / "packaging/common/prune-pyside6.sh").read_text(encoding="utf-8")
+
+    assert '"PySide6-Essentials>=6.5,<7"' in appimage
+    assert '"PySide6>=6.5,<7"' not in appimage
+    assert "prune-pyside6.sh" in appimage
+
+    assert 'PySide6-Essentials>=6.5,<7' in flatpak
+    assert 'PySide6>=6.5,<7' not in flatpak
+    assert "prune-pyside6.sh" in flatpak
+
+    assert "Qt/qml" in prune
+    assert "libQt6Qml" in prune

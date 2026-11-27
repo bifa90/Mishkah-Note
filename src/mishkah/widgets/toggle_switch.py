@@ -8,7 +8,7 @@ dependency for one control.
 
 from __future__ import annotations
 
-from PySide6.QtCore import QRectF, QSize, Qt, Signal
+from PySide6.QtCore import QEvent, QRectF, QSize, Qt, Signal
 from PySide6.QtGui import QColor, QPainter, QPen
 from PySide6.QtWidgets import QWidget
 
@@ -66,16 +66,22 @@ class ToggleSwitch(QWidget):
         painter.drawRoundedRect(track, radius, radius)
 
         knob_size = TRACK_HEIGHT - 2 * KNOB_MARGIN
-        # Right-to-left interfaces put the "on" end on the other side, like
-        # every native switch in an Arabic layout.
+        # Standard switch geometry:
+        #   LTR: off = left, on = right
+        #   RTL: off = right, on = left (mirrored along the reading axis)
         rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
-        on_left = self._checked != rtl
+        on_left = self._checked == rtl
         x = KNOB_MARGIN if on_left else TRACK_WIDTH - KNOB_MARGIN - knob_size
         knob = QRectF(x, KNOB_MARGIN, knob_size, knob_size)
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(KNOB)
         painter.drawEllipse(knob)
         painter.end()
+
+    def changeEvent(self, event: QEvent) -> None:  # noqa: N802 - Qt naming
+        if event.type() == QEvent.Type.LayoutDirectionChange:
+            self.update()
+        super().changeEvent(event)
 
     # ----------------------------------------------------------------- input
     def mouseReleaseEvent(self, event) -> None:   # noqa: N802 - Qt naming

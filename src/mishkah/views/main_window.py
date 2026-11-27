@@ -495,13 +495,13 @@ class MainWindow(QMainWindow):
     def _place_autosave_switch(self) -> None:
         """Pin the switch to the start of the menu row, once.
 
-        ``QMenuBar`` deletes whatever widget it replaces, so the switch is
-        created once, placed once, and never re-parented afterwards; a
-        language change only refreshes its texts.
+        ``QMenuBar`` automatically mirrors ``TopLeftCorner`` to the right edge
+        in right-to-left layouts (before *File* / *ملف*).  Passing
+        ``TopRightCorner`` in RTL double-mirrors it to the opposite end, so the
+        corner is always ``TopLeftCorner``.
         """
-        rtl = self.layoutDirection() == Qt.LayoutDirection.RightToLeft
-        corner = (Qt.Corner.TopRightCorner if rtl else Qt.Corner.TopLeftCorner)
         bar = self.menuBar()
+        corner = Qt.Corner.TopLeftCorner
         if bar.cornerWidget(corner) is not self.autosave_holder:
             bar.setCornerWidget(self.autosave_holder, corner)
         self.autosave_holder.show()
@@ -1310,8 +1310,12 @@ class MainWindow(QMainWindow):
         self.autosave_label.setText(tr("action.autosave_label"))
         self.autosave_switch.setToolTip(self._autosave_tooltip())
         self.autosave_switch.setAccessibleName(tr("action.autosave_label"))
-        for page in self.findChildren(HomePage):
-            page.retranslate()
+        for index in range(self.tabs.count()):
+            widget = self.tabs.widget(index)
+            if isinstance(widget, HomePage):
+                widget.retranslate()
+                self.tabs.setTabText(index, tr("tab.home"))
+                self.tabs.setTabToolTip(index, tr("home.tagline"))
         self.act_banner_dismiss.setAccessibleName(tr("dialog.close"))
         self.act_banner_dismiss.setToolTip(tr("dialog.close"))
         self.autosave_holder.show()

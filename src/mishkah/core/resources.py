@@ -55,8 +55,36 @@ def application_icon():
     return icon
 
 
+_RASTER_SIZES = (16, 24, 32, 48, 64, 128, 256, 512)
+
+
+def _pick_raster_icon(size: int) -> Optional[Path]:
+    """Return the smallest bundled PNG at least *size* px, or the largest available."""
+    for candidate_size in _RASTER_SIZES:
+        if candidate_size >= size:
+            candidate = ICONS_DIR / f"app-{candidate_size}.png"
+            if candidate.exists():
+                return candidate
+    return icon_file()
+
+
+def _scale_pixmap(pixmap, size: int):
+    from PySide6.QtCore import Qt
+
+    if pixmap.isNull() or size <= 0:
+        return pixmap
+    if pixmap.width() == size and pixmap.height() == size:
+        return pixmap
+    return pixmap.scaled(
+        size,
+        size,
+        Qt.AspectRatioMode.KeepAspectRatio,
+        Qt.TransformationMode.SmoothTransformation,
+    )
+
+
 def logo_pixmap(size: int = 128):
-    """The brand mark as a ``QPixmap`` (vector first, raster fallback)."""
+    """The brand mark as a ``QPixmap`` (vector first, crisp scaled raster fallback)."""
     from PySide6.QtCore import QRectF
     from PySide6.QtGui import QColor, QPainter, QPixmap
 
@@ -75,27 +103,23 @@ def logo_pixmap(size: int = 128):
                 return pixmap
         except ImportError:  # pragma: no cover - PySide6 without QtSvg
             pass
-    required = ICONS_DIR / f"app-{size}.png"
-    for candidate in (required, icon_file()):
-        if candidate is not None and candidate.exists():
-            return QPixmap(str(candidate))
+    candidate = _pick_raster_icon(size)
+    if candidate is not None and candidate.exists():
+        return _scale_pixmap(QPixmap(str(candidate)), size)
     return QPixmap()
 
 
 def icon_pixmap(size: int = 64):
-    """Best available icon as a ``QPixmap`` (empty if none is bundled)."""
+    """Best available icon as a ``QPixmap`` scaled to *size* (empty if none is bundled)."""
     from PySide6.QtGui import QIcon, QPixmap
 
-    path = icon_file()
+    path = _pick_raster_icon(size)
     if path is None:
         return QPixmap()
     if path.suffix == ".svg":
         icon = QIcon(str(path))
         return icon.pixmap(size, size)
-    pixmap = QPixmap(str(path))
-    if pixmap.isNull():
-        return pixmap
-    return pixmap
+    return _scale_pixmap(QPixmap(str(path)), size)
 
 
 def stylesheet(theme: str) -> str:

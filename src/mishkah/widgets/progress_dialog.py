@@ -26,7 +26,10 @@ class ProgressDialog(QProgressDialog):
         self.setLabelText(title)
         self.setWindowModality(Qt.WindowModality.WindowModal)
         self.setCancelButtonText(tr("dialog.cancel"))
-        self.setAutoClose(True)
+        # Stay open until the caller explicitly calls ``finish()``/``close()``
+        # so a multi-phase load (disk read → editor population) never closes
+        # early when the first phase finishes.
+        self.setAutoClose(False)
         self.setAutoReset(False)
         self.setMinimumDuration(minimum_duration)
         self.setMinimumWidth(420)

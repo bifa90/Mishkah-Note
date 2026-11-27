@@ -32,8 +32,8 @@
         ]
       },
       "build-commands": [
-        "pip3 install --verbose --prefix=${FLATPAK_DEST} \"setuptools>=68\" wheel",
-        "pip3 install --verbose --prefix=${FLATPAK_DEST} \"PySide6>=6.5,<7\" \"charset-normalizer>=3.0\""
+        "pip3 install --verbose --no-compile --prefix=${FLATPAK_DEST} \"setuptools>=68\" wheel",
+        "pip3 install --verbose --no-compile --prefix=${FLATPAK_DEST} \"PySide6-Essentials>=6.5,<7\" \"charset-normalizer>=3.0\""
       ],
       "sources": []
     },
@@ -41,7 +41,10 @@
       "name": "mishkah-note",
       "buildsystem": "simple",
       "build-commands": [
-        "pip3 install --verbose --no-build-isolation --no-deps --prefix=${FLATPAK_DEST} .",
+        "pip3 install --verbose --no-compile --no-build-isolation --no-deps --prefix=${FLATPAK_DEST} .",
+        "for d in ${FLATPAK_DEST}/lib/python*/site-packages/PySide6; do [ -d \"$d\" ] && bash packaging/common/prune-pyside6.sh \"$d\"; done",
+        "rm -rf ${FLATPAK_DEST}/lib/python*/site-packages/setuptools* ${FLATPAK_DEST}/lib/python*/site-packages/wheel* ${FLATPAK_DEST}/lib/python*/site-packages/pkg_resources*",
+        "find ${FLATPAK_DEST}/lib/python*/site-packages -name '__pycache__' -type d -prune -exec rm -rf {} +",
         "install -Dm644 packaging/common/mishkah.desktop /app/share/applications/mishkah-note.desktop",
         "install -Dm644 packaging/common/org.mishkahnote.Mishkah.metainfo.xml /app/share/metainfo/org.mishkahnote.Mishkah.metainfo.xml",
         "install -Dm644 src/mishkah/resources/icons/app.svg /app/share/icons/hicolor/scalable/apps/mishkah-note.svg",

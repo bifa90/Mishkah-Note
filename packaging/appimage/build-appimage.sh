@@ -97,14 +97,42 @@ fi
 
 # ------------------------------------------------------------- libraries ---
 echo "==> installing python packages for the image"
+# Install PySide6-Essentials rather than the full PySide6 meta-package so
+# unused addons (QtWebEngine/Chromium, QtPdf, Qt3D, QtMultimedia, etc.) are
+# never bundled into the AppImage.
 "$PYTHON_BIN" -m pip install --quiet --no-compile --upgrade \
     --target "$APPDIR/usr/lib/python-packages" \
-    "PySide6>=6.5,<7" "charset-normalizer>=3.0"
+    "PySide6-Essentials>=6.5,<7" "charset-normalizer>=3.0"
 
 echo "==> copying application"
 cp -r src/mishkah "$APPDIR/usr/lib/python-packages/"
+
+# Trim unused Qt modules/QML/stubs and unused CPython dev/test libraries.
+bash "$ROOT/packaging/common/prune-pyside6.sh" \
+    "$APPDIR/usr/lib/python-packages/PySide6"
 find "$APPDIR/usr/lib/python-packages" -name '__pycache__' -type d -prune \
     -exec rm -rf {} +
+
+if [ "$BUNDLE_PYTHON" = "1" ]; then
+    echo "==> trimming unused CPython stdlib/dev files"
+    rm -rf \
+        "$APPDIR/usr/python/include" \
+        "$APPDIR/usr/python/share" \
+        "$APPDIR/usr/python/lib"/libpython*.a \
+        "$APPDIR/usr/python/lib"/python*/test \
+        "$APPDIR/usr/python/lib"/python*/idlelib \
+        "$APPDIR/usr/python/lib"/python*/tkinter \
+        "$APPDIR/usr/python/lib"/python*/turtledemo \
+        "$APPDIR/usr/python/lib"/python*/ensurepip \
+        "$APPDIR/usr/python/lib"/python*/lib2to3 \
+        "$APPDIR/usr/python/lib"/python*/pydoc_data \
+        "$APPDIR/usr/python/lib"/python*/config-* \
+        "$APPDIR/usr/python/lib"/python*/site-packages/pip* \
+        "$APPDIR/usr/python/lib"/python*/site-packages/setuptools* \
+        "$APPDIR/usr/python/lib"/python*/site-packages/wheel*
+    find "$APPDIR/usr/python" -name '__pycache__' -type d -prune -exec rm -rf {} +
+    find "$APPDIR/usr/python" -name '*.pyc' -type f -delete
+fi
 
 # --------------------------------------------------------------- AppRun ---
 if [ "$BUNDLE_PYTHON" = "1" ]; then

@@ -441,3 +441,47 @@ def test_urdu_dropdown_menus_are_compact_and_fit_on_a_laptop_screen(qapp, tmp_pa
         qapp.setStyleSheet(previous_qss)
         qapp.setProperty("mishkah_theme", previous_theme)
         i18n.set_language(previous_lang)
+
+
+def test_home_tab_title_updates_when_language_changes(qapp, tmp_path):
+    """Switching UI language must retranslate the Home tab title too."""
+    from mishkah.core import i18n
+
+    previous_lang = i18n.current_language()
+    window, controller, _ = _controller(tmp_path, ui_language="ar")
+    try:
+        controller.show_home()
+        assert window.tabs.tabText(0) == "البداية"
+
+        controller.set_ui_language("en")
+        assert window.tabs.tabText(0) == "Home"
+
+        controller.set_ui_language("ur")
+        assert window.tabs.tabText(0) == "ہوم"
+
+        controller.set_ui_language("ar")
+        assert window.tabs.tabText(0) == "البداية"
+    finally:
+        window.close()
+        i18n.set_language(previous_lang)
+
+
+def test_logo_pixmap_scales_raster_fallback_when_qtsvg_missing(
+    qapp, tmp_path, monkeypatch
+):
+    """Without PySide6.QtSvg, logo_pixmap(72) must still scale to 72x72."""
+    import sys
+
+    from mishkah.core import resources
+    from mishkah.widgets.home_page import HomePage
+
+    monkeypatch.setitem(sys.modules, "PySide6.QtSvg", None)
+    pm = resources.logo_pixmap(72)
+    assert not pm.isNull()
+    assert pm.width() == 72 and pm.height() == 72
+
+    page = HomePage()
+    try:
+        assert page.lbl_logo.height() <= 72
+    finally:
+        page.close()

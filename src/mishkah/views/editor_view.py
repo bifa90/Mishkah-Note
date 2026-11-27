@@ -28,7 +28,7 @@ from __future__ import annotations
 import re
 import time
 from pathlib import Path
-from typing import Optional, Tuple
+from typing import Callable, Optional, Tuple
 
 from PySide6.QtCore import QMargins, QPoint, QRect, QRectF, Qt, QTimer, Signal
 from PySide6.QtGui import (
@@ -249,22 +249,106 @@ class EditorView(QPlainTextEdit):
     def direction_mode(self) -> str:
         return self._direction_mode
 
-    def set_document(self, document: DocumentModel) -> None:
-        self._doc = document
-        self.load_content(document.content)
-        self.apply_direction(document.direction_mode or AUTO, announce=False)
+    CHUNK_LOAD_THRESHOLD = 1_000_000   # chars: switch to chunked insertion above 1 MB
+    CHUNK_LOAD_SIZE = 512 * 1024       # chars per chunk (~512 KiB)
+    HUGE_CHAR_THRESHOLD = 4_000_000    # chars: engage performance mode (no wrap / no undo)
 
-    def load_content(self, text: str) -> None:
-        """Fast path for big payloads: no undo history, no per-block churn."""
-        huge = len(text) > 4_000_000
-        perf = self._doc.uses_performance_mode if self._doc else huge
-        if perf:
+    def set_document(
+        self,
+        document: DocumentModel,
+        progress_cb: Optional[Callable[[int, int], bool]] = None,
+    ) -> bool:
+        """Populate the editor from *document*.
+
+        Returns ``False`` if *progress_cb* requested cancellation during a
+        chunked large-file load, otherwise ``True``.
+        """
+        self._doc = document
+        completed = self.load_content(document.content, progress_cb=progress_cb)
+        if not completed:
+            return False
+        target_dir = document.direction_mode or AUTO
+        # A freshly cleared/loaded QTextDocument already defaults every block
+        # to LayoutDirectionAuto.  Skipping the whole-document QTextCursor
+        # pass when mode is AUTO avoids re-laying out hundreds of thousands of
+        # paragraphs right after loading a huge file.
+        if target_dir == AUTO:
+            changed = self._direction_mode != AUTO
+            self._direction_mode = AUTO
+            self.setLayoutDirection(Qt.LayoutDirection.LeftToRight)
+            self._document_side = None
+            self._sync_auto_alignment()
+            self._update_gutter_width(0)
+            self._place_gutter()
+            self.viewport().update()
+            if changed:
+                self.direction_changed.emit(AUTO)
+        else:
+            self.apply_direction(target_dir, announce=False)
+        return True
+
+    def load_content(
+        self,
+        text: str,
+        progress_cb: Optional[Callable[[int, int], bool]] = None,
+    ) -> bool:
+        """Load *text* into the widget, chunking huge payloads to stay responsive.
+
+        Returns ``False`` if *progress_cb* signalled cancellation mid-load.
+        """
+        total = len(text)
+        huge = total > self.HUGE_CHAR_THRESHOLD
+        perf = bool(huge or (self._doc is not None and self._doc.uses_performance_mode))
+
+        if total <= self.CHUNK_LOAD_THRESHOLD:
+            if perf:
+                self.setUndoRedoEnabled(False)
+                self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
+            else:
+                self.setUndoRedoEnabled(True)
+            self.setPlainText(text)
+            if progress_cb is not None:
+                progress_cb(total, max(1, total))
+        else:
+            saved_wrap = self.lineWrapMode()
+            was_blocked = self.blockSignals(True)
+            self.setUpdatesEnabled(False)
             self.setUndoRedoEnabled(False)
             self.setLineWrapMode(QPlainTextEdit.LineWrapMode.NoWrap)
-        else:
-            self.setUndoRedoEnabled(True)
+            cancelled = False
+            try:
+                self.clear()
+                cursor = self.textCursor()
+                cursor.movePosition(QTextCursor.MoveOperation.End)
+                pos = 0
+                step = self.CHUNK_LOAD_SIZE
+                while pos < total:
+                    end = min(total, pos + step)
+                    if end < total:
+                        # Align on a newline so a single paragraph is not split
+                        # across two insertText calls.
+                        nl = text.find("\n", end)
+                        if nl != -1 and nl - end <= 65536:
+                            end = nl + 1
+                    cursor.insertText(text[pos:end])
+                    pos = end
+                    if progress_cb is not None and progress_cb(pos, total) is False:
+                        cancelled = True
+                        break
+                if not cancelled:
+                    cursor.movePosition(QTextCursor.MoveOperation.Start)
+                    self.setTextCursor(cursor)
+            finally:
+                if not perf:
+                    self.setLineWrapMode(saved_wrap)
+                    self.setUndoRedoEnabled(True)
+                self.blockSignals(was_blocked)
+                self.setUpdatesEnabled(True)
+            if cancelled:
+                self.clear()
+                self.document().setModified(False)
+                return False
 
-        self.setPlainText(text)
         self.document().setModified(False)
         self._document_side = None          # a new buffer gets a new decision
         self._side_locked = True            # a loaded file is not "one line"
@@ -274,6 +358,7 @@ class EditorView(QPlainTextEdit):
             text[:syntax.SNIFF_TEXT_LIMIT])
         self._sync_auto_alignment()
         self._emit_stats()
+        return True
 
     # ==================================================================
     # text direction

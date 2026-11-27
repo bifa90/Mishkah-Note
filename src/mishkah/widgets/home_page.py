@@ -76,10 +76,17 @@ class HomePage(QWidget):
         self.lbl_logo.setObjectName("HomeLogo")
         pixmap = resources.logo_pixmap(72)
         if not pixmap.isNull():
-            # No fixed size: the label spans the column and its alignment puts
-            # the mark on the reading edge, together with the names under it.
+            if pixmap.width() > 72 or pixmap.height() > 72:
+                pixmap = pixmap.scaled(
+                    72,
+                    72,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            # No fixed width so alignment pins the mark to the reading edge;
+            # fixed height guarantees it can never push the buttons off-screen.
             self.lbl_logo.setPixmap(pixmap)
-            self.lbl_logo.setMinimumHeight(pixmap.height())
+            self.lbl_logo.setFixedHeight(pixmap.height())
         self.lbl_logo.setAccessibleName(APP_NAME_AR)
 
         self.lbl_name_ar = QLabel(APP_NAME_AR)

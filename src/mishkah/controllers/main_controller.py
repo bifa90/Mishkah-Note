@@ -466,7 +466,17 @@ class MainController(QObject):
             dialog.deleteLater()
 
     def _on_loaded(self, doc: DocumentModel) -> None:
-        self._close_load_progress()
+        dialog = getattr(self, "_load_dialog", None)
+        if dialog is not None and dialog.is_cancelled():
+            self._close_load_progress()
+            editor = self._editor_for_path(doc.path)
+            if editor is not None:
+                self.window.close_editor(editor)
+                self._docs.pop(editor, None)
+            if self.window.tab_count() == 0:
+                self.new_document()
+            return
+
         editor = self._editor_for_path(doc.path)
         if editor is None:
             editor = self.new_document()
@@ -475,24 +485,58 @@ class MainController(QObject):
             doc.direction_mode = live.direction_mode
         self._docs[editor] = doc
 
+        def _populate_progress(done: int, total: int) -> bool:
+            dlg = getattr(self, "_load_dialog", None)
+            pct = 70 + (done * 30 // max(1, total))
+            self.window.setWindowTitle(f"{i18n.tr('app.name')} — {pct}%")
+            if dlg is not None:
+                dlg.report(700 + (done * 300 // max(1, total)), 1000)
+                QApplication.processEvents()
+                if dlg.is_cancelled():
+                    return False
+            return True
+
         # Direction: "auto" keeps Qt's per-paragraph rule; an explicit mode
         # in settings is honoured, otherwise the content decides.
         if doc.direction_mode == AUTO:
             doc.direction_mode = AUTO
         blocked = editor.blockSignals(True)
         try:
-            editor.set_document(doc)
+            loaded = editor.set_document(doc, progress_cb=_populate_progress)
+            if not loaded:
+                self.window.close_editor(editor)
+                self._docs.pop(editor, None)
+                if self.window.tab_count() == 0:
+                    self.new_document()
+                return
             # The buffer now holds what is on disk; Qt's own flag must agree,
             # or a later format pass would look like an edit (B1).
             editor.document().setModified(False)
         finally:
             editor.blockSignals(blocked)
-        editor.set_font_size(self.settings.font_size)
-        # The content is in the buffer now: colour it with the grammar the
-        # name or the text itself implies (CD-12), before the first paint.
-        self._apply_highlighting(editor)
+            self._close_load_progress()
 
-        if doc.uses_performance_mode and self.settings.performance_mode:
+        editor.set_font_size(self.settings.font_size)
+        # Skip heavy whole-document highlighting on huge payloads so opening a
+        # multi-megabyte log never stalls after the progress bar finishes.
+        heavy_payload = (
+            doc.uses_performance_mode
+            or len(doc.content) > 2_000_000
+        )
+        if heavy_payload:
+            editor.set_syntax_highlighting(
+                False, language=syntax.PLAIN.code, theme=self.active_theme)
+            editor.set_live_markdown(False, self.active_theme)
+        else:
+            # The content is in the buffer now: colour it with the grammar the
+            # name or the text itself implies (CD-12), before the first paint.
+            self._apply_highlighting(editor)
+
+        large_doc = (
+            doc.uses_performance_mode
+            or len(doc.content) > EditorView.HUGE_CHAR_THRESHOLD
+        )
+        if large_doc and self.settings.performance_mode:
             editor.set_word_wrap(False)
             editor.set_line_numbers_visible(False)
 
@@ -550,11 +594,17 @@ class MainController(QObject):
     def _on_progress(self, done: int, total: int) -> None:
         if total <= 0:
             return
-        self.window.setWindowTitle(
-            f"{i18n.tr('app.name')} — {done * 100 // max(1, total)}%")
+        # Disk reading accounts for 0–70%; editor population fills 70–100% so
+        # the bar never sits frozen at 100% while Qt builds the document.
+        pct = done * 70 // max(1, total)
+        self.window.setWindowTitle(f"{i18n.tr('app.name')} — {pct}%")
         dialog = getattr(self, "_load_dialog", None)
         if dialog is not None:
-            dialog.report_bytes(done, total)
+            dialog.report(
+                done * 700 // max(1, total),
+                1000,
+                f"{_human(done)} / {_human(total)}",
+            )
 
     # ==================================================================
     # saving
